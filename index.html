@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge System</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<!-- 1. ログイン画面 -->
+<div id="login-view" class="view active center-screen">
+    <div class="login-box">
+        <h1><i class="fa-solid fa-cube"></i> Knowledge DB</h1>
+        <p>IDを入力してログインしてください</p>
+        <form id="login-form">
+            <input type="text" id="login-id" placeholder="ユーザーID" required>
+            <button type="submit" class="primary-btn full-width">ログイン</button>
+        </form>
+    </div>
+</div>
+
+<!-- 2. メニュー画面 -->
+<div id="menu-view" class="view center-screen">
+    <div class="menu-container">
+        <h2 id="welcome-msg">ようこそ</h2>
+        
+        <div class="menu-grid">
+            <button onclick="navigate('knowledge')" class="menu-card">
+                <i class="fa-solid fa-book-open"></i>
+                <span>ナレッジ入力・検索</span>
+            </button>
+            <button onclick="navigate('dashboard')" class="menu-card">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>号機・インシデント一覧</span>
+            </button>
+            <!-- マスタ管理ボタン（管理者のみ表示） -->
+            <button id="admin-btn" style="display:none;" onclick="navigate('admin')" class="menu-card admin-card">
+                <i class="fa-solid fa-gears"></i>
+                <span>マスタ管理</span>
+            </button>
+        </div>
+
+        <button onclick="logout()" class="secondary-btn" style="margin-top:20px;">ログアウト</button>
+    </div>
+</div>
+
+<!-- 3. ナレッジ画面 -->
+<div id="knowledge-view" class="view">
+    <div class="container">
+        <aside class="sidebar">
+            <button onclick="navigate('menu')" class="secondary-btn"><i class="fa-solid fa-arrow-left"></i> メニューへ</button>
+            <div class="spacer" style="height:20px;"></div>
+            <button id="add-btn" class="primary-btn"><i class="fa-solid fa-plus"></i> 新規作成</button>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="検索...">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div id="list-area">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h2 class="page-title" style="margin:0;">ナレッジ一覧</h2>
+                    <button onclick="loadData()" class="secondary-btn" style="padding:6px 12px; font-size:0.9rem;">
+                        <i class="fa-solid fa-rotate-right"></i> 更新
+                    </button>
+                </div>
+                <div id="knowledge-list"></div>
+            </div>
+
+            <div id="editor-area" style="display:none;">
+                <div class="editor-header">
+                    <h3><i class="fa-solid fa-pen"></i> ナレッジ編集</h3>
+                    <button id="cancel-btn" class="secondary-btn">閉じる</button>
+                </div>
+                <form id="knowledge-form">
+                    <input type="hidden" id="entry-id">
+                    <div class="form-group">
+                        <label>タイトル</label>
+                        <input type="text" id="title-input" required placeholder="件名を入力">
+                    </div>
+                    <div class="form-row compact-row">
+                        <input type="text" id="machine-input" placeholder="号機 (No.123)">
+                        <input type="text" id="property-input" placeholder="物件名">
+                        <input type="text" id="req-num-input" placeholder="依頼番号">
+                    </div>
+                    <div class="form-group">
+                        <label>インシデント (選択して追加)</label>
+                        <div class="incident-selector">
+                            <select id="incident-select">
+                                <option value="">選択してください</option>
+                            </select>
+                            <div id="selected-incidents" class="selected-chips"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>タグ (#区切り)</label>
+                        <input type="text" id="tags-input" placeholder="#js #error">
+                    </div>
+                    <div class="form-group">
+                        <label>内容</label>
+                        <textarea id="content-input" required placeholder="詳細を入力..."></textarea>
+                    </div>
+                    <button type="submit" class="primary-btn full-width">保存</button>
+                </form>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- 4. ダッシュボード画面 -->
+<div id="dashboard-view" class="view">
+    <div class="dashboard-container">
+        <div class="dash-header">
+            <button onclick="navigate('menu')" class="secondary-btn">戻る</button>
+            <h2>データ集計・一覧</h2>
+        </div>
+        <div class="dash-grid">
+            <div class="dash-panel">
+                <h3><i class="fa-solid fa-server"></i> 号機別 件数</h3>
+                <ul id="machine-list-view"></ul>
+            </div>
+            <div class="dash-panel">
+                <h3><i class="fa-solid fa-triangle-exclamation"></i> インシデント別 件数</h3>
+                <ul id="incident-list-view"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 5. マスタ管理画面 -->
+<div id="admin-view" class="view">
+    <div class="dashboard-container">
+        <div class="dash-header">
+            <button onclick="navigate('menu')" class="secondary-btn">戻る</button>
+            <h2>マスタ管理 (編集内容は保存で反映)</h2>
+            <button onclick="saveMasterData()" class="primary-btn" style="margin-left:auto;">
+                <i class="fa-solid fa-floppy-disk"></i> マスタを一括保存
+            </button>
+        </div>
+
+        <div class="dash-grid">
+            <!-- インシデント管理 -->
+            <div class="dash-panel">
+                <h3>インシデント一覧</h3>
+                <div class="form-row">
+                    <input type="text" id="new-incident-input" placeholder="新しいインシデント名">
+                    <button onclick="addIncident()" class="secondary-btn">追加</button>
+                </div>
+                <ul id="admin-incident-list" class="admin-list"></ul>
+            </div>
+
+            <!-- ユーザー管理 -->
+            <div class="dash-panel">
+                <h3>ユーザー一覧</h3>
+                <div class="form-row compact-row">
+                    <input type="text" id="new-user-id" placeholder="ID (例:user03)">
+                    <input type="text" id="new-user-name" placeholder="名前">
+                    <select id="new-user-role">
+                        <option value="user">一般</option>
+                        <option value="admin">管理者</option>
+                    </select>
+                    <button onclick="addUser()" class="secondary-btn">追加</button>
+                </div>
+                <ul id="admin-user-list" class="admin-list"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ローディング -->
+<div id="loading-overlay" class="loading-overlay">
+    <div style="text-align:center;">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size:3rem; margin-bottom:10px;"></i>
+        <div>Processing...</div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

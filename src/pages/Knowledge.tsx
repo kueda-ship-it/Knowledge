@@ -123,7 +123,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                     data={data}
                 />
 
-                <main className="main-content" style={{ flex: 1, backgroundColor: '#f8fafc', height: 'calc(100vh - 60px)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <main className="main-content" style={{ flex: 1, backgroundColor: 'var(--bg-app)', height: 'calc(100vh - 60px)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     {view === 'list' ? (
                         <KnowledgeList
                             data={filteredData}
@@ -143,7 +143,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                         />
                     ) : (
                         <div style={{ padding: '20px', overflowY: 'auto' }}>
-                            <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                            <div style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px var(--card-shadow)', border: '1px solid var(--card-border)' }}>
                                 <Editor
                                     item={editingItem}
                                     masters={masterData}

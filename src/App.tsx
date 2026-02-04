@@ -6,7 +6,9 @@ import { Menu } from './pages/Menu';
 import { Knowledge } from './pages/Knowledge';
 import { Dashboard } from './pages/Dashboard';
 import { Admin } from './pages/Admin';
+import { Settings } from './pages/Settings';
 import { apiClient } from './api/client';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 function App() {
     const [user, setUser] = useState<User | null>(null);
@@ -60,11 +62,15 @@ function App() {
     };
 
     if (!user) {
-        return <Login onLogin={handleLogin} />;
+        return (
+            <ThemeProvider>
+                <Login onLogin={handleLogin} />
+            </ThemeProvider>
+        );
     }
 
     return (
-        <>
+        <ThemeProvider>
             <Header user={user} onLogout={handleLogout} />
 
             {currentView === 'menu' && (
@@ -86,17 +92,16 @@ function App() {
                 <Admin user={user} onBack={() => navigate('menu')} />
             )}
 
+            {currentView === 'settings' && (
+                <Settings user={user} onBack={() => navigate('menu')} />
+            )}
+
             {loading && (
-                <div className="loading-overlay" style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(255,255,255,0.8)',
-                    display: 'flex', justifyContent: 'center', alignItems: 'center',
-                    zIndex: 9999
-                }}>
-                    <div>Loading...</div>
+                <div className="loading-overlay">
+                    <div style={{ padding: '20px', background: 'var(--card-bg)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', color: 'var(--text-main)' }}>Loading...</div>
                 </div>
             )}
-        </>
+        </ThemeProvider>
     );
 }
 

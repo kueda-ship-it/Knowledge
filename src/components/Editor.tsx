@@ -146,13 +146,22 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         }
     };
 
+    const inputStyle = {
+        width: '100%',
+        padding: '8px',
+        border: '1px solid var(--input-border)',
+        borderRadius: '4px',
+        background: 'var(--input-bg)',
+        color: 'var(--text-main)'
+    };
+
     return (
         <div style={{ padding: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)' }}>
                     <i className="fa-solid fa-pen"></i> ナレッジ編集
                 </h3>
-                <button onClick={onCancel} className="secondary-btn">
+                <button onClick={onCancel} className="secondary-btn" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text-main)', cursor: 'pointer', padding: '8px 16px', borderRadius: '6px' }}>
                     閉じる
                 </button>
             </div>
@@ -176,51 +185,51 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                         </div>
                     </div>
                     <div style={{ flex: 1 }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>タイトル (任意)</label>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>タイトル (任意)</label>
                         <input
                             id="title"
                             type="text"
                             value={formData.title || ''}
                             onChange={handleChange}
                             placeholder="空欄の場合、インシデント名がタイトルになります"
-                            style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                            style={inputStyle}
                         />
                     </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <div style={{ flex: 1 }}>
-                        <label>号機 <span style={{ color: 'red' }}>*</span></label>
-                        <input id="machine" type="text" value={formData.machine || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                        <label style={{ color: 'var(--text-muted)' }}>号機 <span style={{ color: 'red' }}>*</span></label>
+                        <input id="machine" type="text" value={formData.machine || ''} onChange={handleChange} style={inputStyle} />
                     </div>
                     <div style={{ flex: 1 }}>
-                        <label>物件名 <span style={{ color: 'red' }}>*</span></label>
-                        <input id="property" type="text" value={formData.property || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                        <label style={{ color: 'var(--text-muted)' }}>物件名 <span style={{ color: 'red' }}>*</span></label>
+                        <input id="property" type="text" value={formData.property || ''} onChange={handleChange} style={inputStyle} />
                     </div>
                     <div style={{ flex: 1 }}>
-                        <label>依頼番号(11桁) <span style={{ color: 'red' }}>*</span></label>
-                        <input id="req_num" type="text" value={formData.req_num || ''} onChange={(e) => setFormData(p => ({ ...p, req_num: e.target.value }))} maxLength={11} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                        <label style={{ color: 'var(--text-muted)' }}>依頼番号(11桁) <span style={{ color: 'red' }}>*</span></label>
+                        <input id="req_num" type="text" value={formData.req_num || ''} onChange={(e) => setFormData(p => ({ ...p, req_num: e.target.value }))} maxLength={11} style={inputStyle} />
                     </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <div style={{ flex: 1 }}>
-                        <label>インシデント区分 <span style={{ color: 'red' }}>*</span></label>
-                        <select id="category" value={formData.category || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}>
+                        <label style={{ color: 'var(--text-muted)' }}>インシデント区分 <span style={{ color: 'red' }}>*</span></label>
+                        <select id="category" value={formData.category || ''} onChange={handleChange} style={inputStyle}>
                             <option value="">選択してください</option>
                             {masters.categories.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                     </div>
                     <div style={{ flex: 2 }}>
-                        <label>インシデント詳細 (選択追加) <span style={{ color: 'red' }}>*</span></label>
+                        <label style={{ color: 'var(--text-muted)' }}>インシデント詳細 (選択追加) <span style={{ color: 'red' }}>*</span></label>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                            <select onChange={handleIncidentAdd} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}>
+                            <select onChange={handleIncidentAdd} style={inputStyle}>
                                 <option value="">選択してください</option>
                                 {masters.incidents.map(i => <option key={i} value={i}>{i}</option>)}
                             </select>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                                 {selectedIncidents.map(inc => (
-                                    <div key={inc} style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <div key={inc} style={{ background: 'var(--bg-overlap)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-main)', border: '1px solid var(--card-border)' }}>
                                         {inc} <X size={12} cursor="pointer" onClick={() => removeIncident(inc)} />
                                     </div>
                                 ))}
@@ -230,64 +239,64 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                 </div>
 
                 <div>
-                    <label>タグ (#区切り)</label>
-                    <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="#js #error" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                    <label style={{ color: 'var(--text-muted)' }}>タグ (#区切り)</label>
+                    <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="#js #error" style={inputStyle} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                    <label>内容 <span style={{ color: 'red' }}>*</span></label>
-                    <textarea id="content" value={formData.content || ''} onChange={handleChange} style={{ width: '100%', height: '200px', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical' }}></textarea>
+                    <label style={{ color: 'var(--text-muted)' }}>内容 <span style={{ color: 'red' }}>*</span></label>
+                    <textarea id="content" value={formData.content || ''} onChange={handleChange} style={{ ...inputStyle, height: '200px', resize: 'vertical' }}></textarea>
                 </div>
 
                 {/* Attachments Section */}
-                <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ background: 'var(--bg-overlap)', padding: '15px', borderRadius: '8px', border: '1px solid var(--card-border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                        <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem' }}>
+                        <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', color: 'var(--text-main)' }}>
                             <Paperclip size={18} /> OneDrive 添付ファイル
                         </span>
                         {!showLinkInput && (
-                            <button type="button" onClick={() => setShowLinkInput(true)} className="secondary-btn" style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <button type="button" onClick={() => setShowLinkInput(true)} className="secondary-btn" style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--card-border)' }}>
                                 <Plus size={14} /> リンク追加
                             </button>
                         )}
                     </div>
 
                     {showLinkInput && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'white', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--card-bg)', padding: '10px', borderRadius: '6px', border: '1px solid var(--card-border)', marginBottom: '10px' }}>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <input
                                     placeholder="ファイル名 (例: 資料.pdf)"
                                     value={newLink.name}
                                     onChange={(e) => setNewLink(p => ({ ...p, name: e.target.value }))}
-                                    style={{ flex: 1, padding: '6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem' }}
+                                    style={{ flex: 1, padding: '6px', border: '1px solid var(--input-border)', borderRadius: '4px', fontSize: '0.85rem', background: 'var(--input-bg)', color: 'var(--text-main)' }}
                                 />
                                 <input
                                     placeholder="OneDrive 共有リンク"
                                     value={newLink.url}
                                     onChange={(e) => setNewLink(p => ({ ...p, url: e.target.value }))}
-                                    style={{ flex: 2, padding: '6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem' }}
+                                    style={{ flex: 2, padding: '6px', border: '1px solid var(--input-border)', borderRadius: '4px', fontSize: '0.85rem', background: 'var(--input-bg)', color: 'var(--text-main)' }}
                                 />
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                                <button type="button" onClick={() => setShowLinkInput(false)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.8rem', cursor: 'pointer' }}>キャンセル</button>
-                                <button type="button" onClick={addAttachment} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '4px 12px', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer' }}>追加</button>
+                                <button type="button" onClick={() => setShowLinkInput(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer' }}>キャンセル</button>
+                                <button type="button" onClick={addAttachment} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '4px 12px', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer' }}>追加</button>
                             </div>
                         </div>
                     )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {(formData.attachments || []).map((file, idx) => (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                                <a href={file.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#3b82f6', textDecoration: 'none', fontSize: '0.85rem' }}>
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--card-bg)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--card-border)' }}>
+                                <a href={file.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', textDecoration: 'none', fontSize: '0.85rem' }}>
                                     <FileText size={16} />
                                     <span>{file.name}</span>
                                     <Link size={12} style={{ opacity: 0.5 }} />
                                 </a>
-                                <X size={16} cursor="pointer" style={{ color: '#94a3b8' }} onClick={() => removeAttachment(idx)} />
+                                <X size={16} cursor="pointer" style={{ color: 'var(--text-muted)' }} onClick={() => removeAttachment(idx)} />
                             </div>
                         ))}
                         {(!formData.attachments || formData.attachments.length === 0) && !showLinkInput && (
-                            <div style={{ textAlign: 'center', padding: '10px', color: '#94a3b8', fontSize: '0.8rem', border: '1px dashed #cbd5e1', borderRadius: '6px' }}>
+                            <div style={{ textAlign: 'center', padding: '10px', color: 'var(--text-muted)', fontSize: '0.8rem', border: '1px dashed var(--card-border)', borderRadius: '6px' }}>
                                 添付ファイルはありません
                             </div>
                         )}
@@ -296,7 +305,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                     {canEdit && (
-                        <button type="submit" disabled={loading} className="primary-btn" style={{ flex: 1, padding: '12px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}>
+                        <button type="submit" disabled={loading} className="primary-btn" style={{ flex: 1, padding: '12px', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}>
                             {loading ? 'Processing...' : '保存'}
                         </button>
                     )}

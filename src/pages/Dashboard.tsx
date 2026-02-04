@@ -74,36 +74,84 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
         return { machineCounts, incidentCounts, tagCounts, categoryCounts, combinationCounts };
     }, [filteredData]);
 
-    const colors = ['#3b82f6', '#ef4444', '#8b5cf6', '#10b981', '#f59e0b', '#06b6d4', '#ec4899', '#84cc16'];
+    const colors = [
+        '#3b82f6', // Blue
+        '#ef4444', // Red
+        '#10b981', // Emerald
+        '#f59e0b', // Amber
+        '#8b5cf6', // Purple
+        '#ec4899', // Pink
+        '#06b6d4', // Teal
+        '#f97316', // Orange
+        '#6366f1', // Indigo
+        '#84cc16', // Lime
+        '#22d3ee', // Cyan
+        '#f43f5e'  // Rose
+    ];
 
     const renderPieChart = (counts: Record<string, number>, onSelect?: (key: string) => void) => {
-        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
         const total = sorted.reduce((sum, [_, val]) => sum + val, 0);
         if (total === 0) return <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>データなし</div>;
 
-        let lastPercentage = 0;
-        const gradientParts = sorted.map(([_, val], i) => {
-            const percentage = (val / total) * 100;
-            const part = `${colors[i % colors.length]} ${lastPercentage}% ${lastPercentage + percentage}%`;
-            lastPercentage += percentage;
-            return part;
+        let accumulatedAngle = -90; // Start from top
+
+        const slices = sorted.map(([key, val], i) => {
+            const angle = (val / total) * 360;
+            const startAngle = accumulatedAngle;
+            const endAngle = accumulatedAngle + angle;
+            accumulatedAngle = endAngle;
+
+            // Coordinates for SVG path
+            const x1 = 100 + 80 * Math.cos((Math.PI * startAngle) / 180);
+            const y1 = 100 + 80 * Math.sin((Math.PI * startAngle) / 180);
+            const x2 = 100 + 80 * Math.cos((Math.PI * endAngle) / 180);
+            const y2 = 100 + 80 * Math.sin((Math.PI * endAngle) / 180);
+            const largeArcFlag = angle > 180 ? 1 : 0;
+
+            const pathData = `M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+
+            return { key, val, pathData, color: colors[i % colors.length] };
         });
 
         return (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-                <div style={{
-                    width: '180px', height: '180px', borderRadius: '50%',
-                    background: `conic-gradient(${gradientParts.join(', ')})`,
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.1)', cursor: onSelect ? 'pointer' : 'default'
-                }}></div>
+                <div style={{ position: 'relative', width: '200px', height: '200px' }}>
+                    <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%', transform: 'rotate(0deg)' }}>
+                        {slices.map((s, i) => (
+                            <path
+                                key={s.key}
+                                d={s.pathData}
+                                fill={s.color}
+                                className="chart-slice"
+                                onClick={() => onSelect?.(s.key)}
+                                style={{ cursor: onSelect ? 'pointer' : 'default', transition: 'all 0.3s' }}
+                            >
+                                <title>{`${s.key}: ${s.val}件 (${Math.round((s.val / total) * 100)}%)`}</title>
+                            </path>
+                        ))}
+                        {/* Donut hole */}
+                        <circle cx="100" cy="100" r="50" fill="white" />
+                    </svg>
+                    <div style={{
+                        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                        textAlign: 'center', pointerEvents: 'none'
+                    }}>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>合計</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#1e293b' }}>{total}</div>
+                    </div>
+                </div>
+
                 <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    {sorted.slice(0, 8).map(([key, val], i) => (
-                        <div key={key}
-                            onClick={() => onSelect?.(key)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', cursor: onSelect ? 'pointer' : 'default', padding: '2px', borderRadius: '4px' }}>
-                            <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: colors[i % colors.length] }}></div>
-                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{key}</span>
-                            <span style={{ fontWeight: 'bold' }}>{Math.round((val / total) * 100)}%</span>
+                    {slices.map((s, i) => (
+                        <div key={s.key}
+                            onClick={() => onSelect?.(s.key)}
+                            title={`${s.key}: ${s.val}件`}
+                            className="chart-legend-item"
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', cursor: onSelect ? 'pointer' : 'default', padding: '4px', borderRadius: '4px', transition: 'background 0.2s' }}>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: s.color }}></div>
+                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.key}</span>
+                            <span style={{ fontWeight: 'bold', minWidth: '35px', textAlign: 'right' }}>{Math.round((s.val / total) * 100)}%</span>
                         </div>
                     ))}
                 </div>
@@ -238,7 +286,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
             </div>
             <style>{`
                 .dash-panel div:hover {
+                    opacity: 0.95;
+                }
+                .chart-legend-item:hover {
+                    background-color: #f1f5f9;
+                    transform: translateX(2px);
+                }
+                .chart-slice:hover {
                     opacity: 0.8;
+                    transform: scale(1.02);
+                    transform-origin: center;
                 }
             `}</style>
         </div>

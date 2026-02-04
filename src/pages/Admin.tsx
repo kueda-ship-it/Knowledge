@@ -50,6 +50,12 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
         setFunc('');
     };
 
+    const updateSimple = (type: 'incidents' | 'categories', index: number, newVal: string) => {
+        const list = [...masterData[type]];
+        list[index] = newVal;
+        setMasterData(prev => ({ ...prev, [type]: list }));
+    };
+
     const removeSimple = (type: 'incidents' | 'categories', index: number) => {
         if (!confirm("削除しますか？")) return;
         setMasterData(prev => ({
@@ -63,6 +69,12 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
         if (masterData.users.some(u => u.id === newUser.id)) return alert("ID重複");
         setMasterData(prev => ({ ...prev, users: [...prev.users, newUser] }));
         setNewUser({ id: '', name: '', role: 'viewer' });
+    };
+
+    const updateUser = (index: number, field: keyof User, val: string) => {
+        const newUsers = [...masterData.users];
+        (newUsers[index] as any)[field] = val;
+        setMasterData(prev => ({ ...prev, users: newUsers }));
     };
 
     const removeUser = (index: number) => {
@@ -93,7 +105,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     </button>
                 </div>
 
-                <div className="dash-grid" style={{ display: 'grid', gridTemplateColumns: isFullAdmin ? 'repeat(auto-fit, minmax(300px, 1fr))' : '1fr', gap: '20px' }}>
+                <div className="dash-grid" style={{ display: 'grid', gridTemplateColumns: isFullAdmin ? '1fr 1fr' : '1fr', gap: '24px' }}>
                     {/* Categories */}
                     {isFullAdmin && (
                         <div className="dash-panel" style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
@@ -104,9 +116,13 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                             </div>
                             <ul className="admin-list" style={{ listStyle: 'none', padding: 0 }}>
                                 {masterData.categories.map((item, i) => (
-                                    <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee' }}>
-                                        {item}
-                                        <Trash2 size={16} cursor="pointer" onClick={() => removeSimple('categories', i)} />
+                                    <li key={i} className="admin-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px', borderRadius: '4px', borderBottom: '1px solid #f1f5f9' }}>
+                                        <input
+                                            value={item}
+                                            onChange={(e) => updateSimple('categories', i, e.target.value)}
+                                            style={{ border: 'none', background: 'transparent', flex: 1, padding: '4px', fontSize: '0.95rem', color: '#334155' }}
+                                        />
+                                        <Trash2 size={16} className="trash-icon" style={{ cursor: 'pointer' }} onClick={() => removeSimple('categories', i)} />
                                     </li>
                                 ))}
                             </ul>
@@ -122,17 +138,21 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                         </div>
                         <ul className="admin-list" style={{ listStyle: 'none', padding: 0 }}>
                             {masterData.incidents.map((item, i) => (
-                                <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee' }}>
-                                    {item}
-                                    <Trash2 size={16} cursor="pointer" onClick={() => removeSimple('incidents', i)} />
+                                <li key={i} className="admin-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px', borderRadius: '4px', borderBottom: '1px solid #f1f5f9' }}>
+                                    <input
+                                        value={item}
+                                        onChange={(e) => updateSimple('incidents', i, e.target.value)}
+                                        style={{ border: 'none', background: 'transparent', flex: 1, padding: '4px', fontSize: '0.95rem', color: '#334155' }}
+                                    />
+                                    <Trash2 size={16} className="trash-icon" style={{ cursor: 'pointer' }} onClick={() => removeSimple('incidents', i)} />
                                 </li>
                             ))}
                         </ul>
                     </div>
 
-                    {/* Users */}
+                    {/* Users - Always in a new row if full admin */}
                     {isFullAdmin && (
-                        <div className="dash-panel" style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                        <div className="dash-panel" style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', gridColumn: '1 / -1', marginTop: '10px' }}>
                             <h3>ユーザーマスタ</h3>
                             <div style={{ display: 'flex', gap: '5px', marginBottom: '10px', flexWrap: 'wrap' }}>
                                 <input value={newUser.id} onChange={(e) => setNewUser({ ...newUser, id: e.target.value })} placeholder="ID" style={{ width: '60px', padding: '5px' }} />
@@ -145,19 +165,53 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                 </select>
                                 <button onClick={addUser}><Plus size={16} /></button>
                             </div>
-                            <ul className="admin-list" style={{ listStyle: 'none', padding: 0, height: '300px', overflowY: 'scroll' }}>
+                            <ul className="admin-list" style={{ listStyle: 'none', padding: '0 20px 0 0', height: '350px', overflowY: 'auto' }}>
                                 {masterData.users.map((u, i) => (
-                                    <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee' }}>
-                                        <div style={{ fontSize: '0.85rem' }}>
-                                            <b>{u.id}</b>: {u.name}
-                                            <select value={u.role} onChange={(e) => changeUserRole(i, e.target.value)} style={{ marginLeft: '5px', fontSize: '0.75rem' }}>
-                                                <option value="viewer">VIEW</option>
-                                                <option value="user">USER</option>
-                                                <option value="manager">MNGR</option>
-                                                <option value="master">MSTR</option>
-                                            </select>
+                                    <li key={i} className="admin-item" style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '80px 1fr 100px 40px',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        borderBottom: '1px solid #f1f5f9',
+                                        marginBottom: '4px'
+                                    }}>
+                                        <b style={{ fontSize: '0.85rem', color: '#64748b' }}>{u.id}</b>
+                                        <input
+                                            value={u.name || ''}
+                                            onChange={(e) => updateUser(i, 'name', e.target.value)}
+                                            style={{
+                                                border: '1px solid #cbd5e1',
+                                                background: 'white',
+                                                padding: '6px 10px',
+                                                borderRadius: '6px',
+                                                fontSize: '0.9rem',
+                                                color: '#1e293b',
+                                                width: '100%'
+                                            }}
+                                            placeholder="名前を入力"
+                                        />
+                                        <select
+                                            value={u.role}
+                                            onChange={(e) => updateUser(i, 'role', e.target.value)}
+                                            style={{
+                                                fontSize: '0.8rem',
+                                                padding: '6px',
+                                                borderRadius: '6px',
+                                                border: '1px solid #cbd5e1',
+                                                background: 'white',
+                                                color: '#334155'
+                                            }}
+                                        >
+                                            <option value="viewer">VIEW</option>
+                                            <option value="user">USER</option>
+                                            <option value="manager">MNGR</option>
+                                            <option value="master">MSTR</option>
+                                        </select>
+                                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                            <Trash2 size={18} className="trash-icon" style={{ cursor: 'pointer' }} onClick={() => removeUser(i)} />
                                         </div>
-                                        <Trash2 size={16} cursor="pointer" onClick={() => removeUser(i)} />
                                     </li>
                                 ))}
                             </ul>
@@ -165,6 +219,28 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     )}
                 </div>
             </div>
+            <style>{`
+                .admin-item {
+                    transition: all 0.2s ease;
+                }
+                .admin-item:hover {
+                    background-color: #f8fafc !important;
+                }
+                .trash-icon {
+                    color: #94a3b8;
+                    transition: color 0.2s;
+                    opacity: 0.3;
+                }
+                .admin-item:hover .trash-icon {
+                    color: #ef4444;
+                    opacity: 1;
+                }
+                .admin-item input:focus {
+                    outline: none;
+                    background-color: white !important;
+                    border-bottom: 1px solid #3b82f6 !important;
+                }
+            `}</style>
         </div>
     );
 };

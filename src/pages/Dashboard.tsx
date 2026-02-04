@@ -1,4 +1,3 @@
-```
 import React, { useState, useMemo } from 'react';
 import { KnowledgeItem } from '../types';
 import { ArrowLeft, Server, AlertTriangle, Hash, Combine, BarChart3, PieChart as PieChartIcon, LayoutGrid, XCircle } from 'lucide-react';
@@ -14,7 +13,7 @@ type ChartType = 'bar' | 'pie';
 export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
     const [timeRange, setTimeRange] = useState<TimeRange>('all');
     const [chartType, setChartType] = useState<ChartType>('bar');
-    
+
     // Selection Filters (Cross-filtering)
     const [selMachine, setSelMachine] = useState<string | null>(null);
     const [selIncident, setSelIncident] = useState<string | null>(null);
@@ -54,13 +53,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
         filteredData.forEach(item => {
             if (item.machine) machineCounts[item.machine] = (machineCounts[item.machine] || 0) + 1;
             if (item.category) categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
-            
+
             if (item.incidents) {
                 item.incidents.forEach(inc => {
                     incidentCounts[inc] = (incidentCounts[inc] || 0) + 1;
                     if (item.tags) {
                         item.tags.forEach(tag => {
-                            const combo = `${ inc } + ${ tag } `;
+                            const combo = `${inc} + ${tag}`;
                             combinationCounts[combo] = (combinationCounts[combo] || 0) + 1;
                         });
                     }
@@ -85,7 +84,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
         let lastPercentage = 0;
         const gradientParts = sorted.map(([_, val], i) => {
             const percentage = (val / total) * 100;
-            const part = `${ colors[i % colors.length] } ${ lastPercentage }% ${ lastPercentage + percentage }% `;
+            const part = `${colors[i % colors.length]} ${lastPercentage}% ${lastPercentage + percentage}%`;
             lastPercentage += percentage;
             return part;
         });
@@ -94,14 +93,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
                 <div style={{
                     width: '180px', height: '180px', borderRadius: '50%',
-                    background: `conic - gradient(${ gradientParts.join(', ') })`,
+                    background: `conic-gradient(${gradientParts.join(', ')})`,
                     boxShadow: '0 4px 10px rgba(0,0,0,0.1)', cursor: onSelect ? 'pointer' : 'default'
                 }}></div>
                 <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     {sorted.slice(0, 8).map(([key, val], i) => (
-                        <div key={key} 
-                             onClick={() => onSelect?.(key)}
-                             style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', cursor: onSelect ? 'pointer' : 'default', padding: '2px', borderRadius: '4px', hover: {background: '#f1f5f9'} }}>
+                        <div key={key}
+                            onClick={() => onSelect?.(key)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', cursor: onSelect ? 'pointer' : 'default', padding: '2px', borderRadius: '4px', hover: { background: '#f1f5f9' } }}>
                             <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: colors[i % colors.length] }}></div>
                             <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{key}</span>
                             <span style={{ fontWeight: 'bold' }}>{Math.round((val / total) * 100)}%</span>
@@ -124,8 +123,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                     <span style={{ color: '#64748b' }}>{val}件</span>
                 </div>
                 <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ 
-                        width: `${ (val / max) * 100 }% `, height: '100%', background: color,
+                    <div style={{
+                        width: `${(val / max) * 100}%`, height: '100%', background: color,
                         borderRadius: '4px', transition: 'width 0.5s ease'
                     }}></div>
                 </div>
@@ -168,13 +167,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                             ))}
                         </div>
                         <div style={{ display: 'flex', gap: '5px' }}>
-                            <button onClick={() => setChartType('bar')} className="secondary-btn" style={{ 
-                                padding: '8px', background: chartType === 'bar' ? '#3b82f6' : 'white', color: chartType === 'bar' ? 'white' : '#64748b' 
+                            <button onClick={() => setChartType('bar')} className="secondary-btn" style={{
+                                padding: '8px', background: chartType === 'bar' ? '#3b82f6' : 'white', color: chartType === 'bar' ? 'white' : '#64748b'
                             }}>
                                 <BarChart3 size={18} />
                             </button>
-                            <button onClick={() => setChartType('pie')} className="secondary-btn" style={{ 
-                                padding: '8px', background: chartType === 'pie' ? '#3b82f6' : 'white', color: chartType === 'pie' ? 'white' : '#64748b' 
+                            <button onClick={() => setChartType('pie')} className="secondary-btn" style={{
+                                padding: '8px', background: chartType === 'pie' ? '#3b82f6' : 'white', color: chartType === 'pie' ? 'white' : '#64748b'
                             }}>
                                 <PieChartIcon size={18} />
                             </button>
@@ -191,8 +190,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                                 <XCircle size={14} style={{ cursor: 'pointer' }} onClick={f.clear} />
                             </div>
                         ))}
-                        <button onClick={() => { setSelMachine(null); setSelIncident(null); setSelTag(null); setSelCategory(null); }} 
-                                style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>
+                        <button onClick={() => { setSelMachine(null); setSelIncident(null); setSelTag(null); setSelCategory(null); }}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>
                             全てクリア
                         </button>
                     </div>
@@ -238,11 +237,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                 </div>
             </div>
             <style>{`
-    .dash - panel div:hover {
-    opacity: 0.8;
-}
-`}</style>
+                .dash-panel div:hover {
+                    opacity: 0.8;
+                }
+            `}</style>
         </div>
     );
 };
-```
+

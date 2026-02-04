@@ -4,6 +4,11 @@ export interface User {
     role: 'viewer' | 'user' | 'manager' | 'master';
 }
 
+export interface Attachment {
+    name: string;
+    url: string;
+}
+
 export interface KnowledgeItem {
     id: string;
     title: string;
@@ -17,6 +22,7 @@ export interface KnowledgeItem {
     status: 'solved' | 'unsolved';
     updatedAt: string;
     author: string;
+    attachments?: Attachment[];
 }
 
 export interface MasterData {

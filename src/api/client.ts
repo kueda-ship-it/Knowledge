@@ -1,7 +1,7 @@
 import { KnowledgeItem, MasterData, User } from '../types';
 
 // ↓↓↓ 【重要】URLを書き換えてください ↓↓↓
-const API_URL = "https://script.google.com/macros/s/AKfycbzHDWftZHnxIa0y7GJpiwYbIUqZXGv1e3xO00pkJQ5n4YxXQb-Wi9RIam9No5VPj_kzUQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwPK_-4Qs39p96zc_VqkSc_yJn3YJodN71eirv7_qjitjTc9wNPpTL-eQzWY68J_sRu_g/exec";
 
 export const apiClient = {
     async login(id: string): Promise<{ status: string, message?: string, user?: User }> {

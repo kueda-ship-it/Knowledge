@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { KnowledgeItem, MasterData } from '../types';
-import { Trash2, X, RotateCcw, Check } from 'lucide-react';
+import { Trash2, X, RotateCcw, Check, Paperclip, Link, FileText, Plus } from 'lucide-react';
 import { apiClient } from '../api/client';
 
 interface EditorProps {
@@ -16,15 +16,17 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
     const [formData, setFormData] = useState<Partial<KnowledgeItem>>({
         title: '', machine: '', property: '', req_num: '',
         category: '', incidents: [], tags: [], content: '',
-        status: 'unsolved'
+        status: 'unsolved', attachments: []
     });
     const [selectedIncidents, setSelectedIncidents] = useState<string[]>([]);
     const [tagInput, setTagInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [newLink, setNewLink] = useState({ name: '', url: '' });
+    const [showLinkInput, setShowLinkInput] = useState(false);
 
     useEffect(() => {
         if (item) {
-            setFormData(item);
+            setFormData({ ...item, attachments: item.attachments || [] });
             setSelectedIncidents(item.incidents || []);
             setTagInput((item.tags || []).join(' #'));
         } else {
@@ -102,7 +104,8 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             content: formData.content || '',
             status: formData.status || 'unsolved',
             updatedAt: new Date().toISOString(),
-            author: item?.author || user.name
+            author: item?.author || user.name,
+            attachments: formData.attachments || []
         };
 
         setLoading(true);
@@ -114,6 +117,19 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         } finally {
             setLoading(false);
         }
+    };
+
+    const addAttachment = () => {
+        if (!newLink.name || !newLink.url) return alert("名前とURLを入力してください");
+        const updated = [...(formData.attachments || []), newLink];
+        setFormData(prev => ({ ...prev, attachments: updated }));
+        setNewLink({ name: '', url: '' });
+        setShowLinkInput(false);
+    };
+
+    const removeAttachment = (index: number) => {
+        const updated = (formData.attachments || []).filter((_, i) => i !== index);
+        setFormData(prev => ({ ...prev, attachments: updated }));
     };
 
     const handleDelete = async () => {
@@ -221,6 +237,61 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <label>内容 <span style={{ color: 'red' }}>*</span></label>
                     <textarea id="content" value={formData.content || ''} onChange={handleChange} style={{ width: '100%', height: '200px', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical' }}></textarea>
+                </div>
+
+                {/* Attachments Section */}
+                <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem' }}>
+                            <Paperclip size={18} /> OneDrive 添付ファイル
+                        </span>
+                        {!showLinkInput && (
+                            <button type="button" onClick={() => setShowLinkInput(true)} className="secondary-btn" style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Plus size={14} /> リンク追加
+                            </button>
+                        )}
+                    </div>
+
+                    {showLinkInput && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'white', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', marginBottom: '10px' }}>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <input
+                                    placeholder="ファイル名 (例: 資料.pdf)"
+                                    value={newLink.name}
+                                    onChange={(e) => setNewLink(p => ({ ...p, name: e.target.value }))}
+                                    style={{ flex: 1, padding: '6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem' }}
+                                />
+                                <input
+                                    placeholder="OneDrive 共有リンク"
+                                    value={newLink.url}
+                                    onChange={(e) => setNewLink(p => ({ ...p, url: e.target.value }))}
+                                    style={{ flex: 2, padding: '6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.85rem' }}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                <button type="button" onClick={() => setShowLinkInput(false)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.8rem', cursor: 'pointer' }}>キャンセル</button>
+                                <button type="button" onClick={addAttachment} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '4px 12px', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer' }}>追加</button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {(formData.attachments || []).map((file, idx) => (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                <a href={file.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#3b82f6', textDecoration: 'none', fontSize: '0.85rem' }}>
+                                    <FileText size={16} />
+                                    <span>{file.name}</span>
+                                    <Link size={12} style={{ opacity: 0.5 }} />
+                                </a>
+                                <X size={16} cursor="pointer" style={{ color: '#94a3b8' }} onClick={() => removeAttachment(idx)} />
+                            </div>
+                        ))}
+                        {(!formData.attachments || formData.attachments.length === 0) && !showLinkInput && (
+                            <div style={{ textAlign: 'center', padding: '10px', color: '#94a3b8', fontSize: '0.8rem', border: '1px dashed #cbd5e1', borderRadius: '6px' }}>
+                                添付ファイルはありません
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>

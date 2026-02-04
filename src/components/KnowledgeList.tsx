@@ -1,6 +1,6 @@
 import React from 'react';
 import { KnowledgeItem, User } from '../types';
-import { RotateCcw, Check } from 'lucide-react';
+import { RotateCcw, Check, Paperclip, Link } from 'lucide-react';
 
 interface KnowledgeListProps {
     data: KnowledgeItem[];
@@ -109,11 +109,30 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                 {item.category && <span style={{ fontWeight: 'bold' }}>[{item.category}] </span>}
                                 {item.incidents?.join(', ')}
                             </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                                 {item.tags?.map((tag, i) => (
                                     <span key={i} style={{ fontSize: '0.8rem', color: '#3b82f6' }}>#{tag}</span>
                                 ))}
                             </div>
+
+                            {item.attachments && item.attachments.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                                    {item.attachments.map((file, idx) => (
+                                        <a
+                                            key={idx}
+                                            href={file.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#64748b', textDecoration: 'none', background: '#f8fafc', padding: '2px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}
+                                        >
+                                            <Paperclip size={12} />
+                                            <span>{file.name}</span>
+                                            <Link size={10} style={{ opacity: 0.5 }} />
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     ))
                 )}

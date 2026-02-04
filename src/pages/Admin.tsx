@@ -4,10 +4,12 @@ import { ArrowLeft, Save, Trash2, Plus } from 'lucide-react';
 import { apiClient } from '../api/client';
 
 interface AdminProps {
+    user: User;
     onBack: () => void;
 }
 
-export const Admin: React.FC<AdminProps> = ({ onBack }) => {
+export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
+    const isFullAdmin = ['master', 'manager'].includes(user.role);
     const [masterData, setMasterData] = useState<MasterData>({ incidents: [], categories: [], users: [] });
 
     // Inputs
@@ -91,23 +93,25 @@ export const Admin: React.FC<AdminProps> = ({ onBack }) => {
                     </button>
                 </div>
 
-                <div className="dash-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+                <div className="dash-grid" style={{ display: 'grid', gridTemplateColumns: isFullAdmin ? 'repeat(auto-fit, minmax(300px, 1fr))' : '1fr', gap: '20px' }}>
                     {/* Categories */}
-                    <div className="dash-panel" style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                        <h3>区分マスタ</h3>
-                        <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-                            <input value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="区分名" style={{ flex: 1, padding: '5px' }} />
-                            <button onClick={() => addSimple('categories', newCat, setNewCat)}><Plus size={16} /></button>
+                    {isFullAdmin && (
+                        <div className="dash-panel" style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                            <h3>区分マスタ</h3>
+                            <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
+                                <input value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="区分名" style={{ flex: 1, padding: '5px' }} />
+                                <button onClick={() => addSimple('categories', newCat, setNewCat)}><Plus size={16} /></button>
+                            </div>
+                            <ul className="admin-list" style={{ listStyle: 'none', padding: 0 }}>
+                                {masterData.categories.map((item, i) => (
+                                    <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee' }}>
+                                        {item}
+                                        <Trash2 size={16} cursor="pointer" onClick={() => removeSimple('categories', i)} />
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
-                        <ul className="admin-list" style={{ listStyle: 'none', padding: 0 }}>
-                            {masterData.categories.map((item, i) => (
-                                <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee' }}>
-                                    {item}
-                                    <Trash2 size={16} cursor="pointer" onClick={() => removeSimple('categories', i)} />
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                    )}
 
                     {/* Incidents */}
                     <div className="dash-panel" style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
@@ -127,36 +131,38 @@ export const Admin: React.FC<AdminProps> = ({ onBack }) => {
                     </div>
 
                     {/* Users */}
-                    <div className="dash-panel" style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                        <h3>ユーザーマスタ</h3>
-                        <div style={{ display: 'flex', gap: '5px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                            <input value={newUser.id} onChange={(e) => setNewUser({ ...newUser, id: e.target.value })} placeholder="ID" style={{ width: '60px', padding: '5px' }} />
-                            <input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} placeholder="名前" style={{ width: '80px', padding: '5px' }} />
-                            <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value as any })} style={{ padding: '5px' }}>
-                                <option value="viewer">VIEW</option>
-                                <option value="user">USER</option>
-                                <option value="manager">MNGR</option>
-                                <option value="master">MSTR</option>
-                            </select>
-                            <button onClick={addUser}><Plus size={16} /></button>
+                    {isFullAdmin && (
+                        <div className="dash-panel" style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                            <h3>ユーザーマスタ</h3>
+                            <div style={{ display: 'flex', gap: '5px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                                <input value={newUser.id} onChange={(e) => setNewUser({ ...newUser, id: e.target.value })} placeholder="ID" style={{ width: '60px', padding: '5px' }} />
+                                <input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} placeholder="名前" style={{ width: '80px', padding: '5px' }} />
+                                <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value as any })} style={{ padding: '5px' }}>
+                                    <option value="viewer">VIEW</option>
+                                    <option value="user">USER</option>
+                                    <option value="manager">MNGR</option>
+                                    <option value="master">MSTR</option>
+                                </select>
+                                <button onClick={addUser}><Plus size={16} /></button>
+                            </div>
+                            <ul className="admin-list" style={{ listStyle: 'none', padding: 0, height: '300px', overflowY: 'scroll' }}>
+                                {masterData.users.map((u, i) => (
+                                    <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee' }}>
+                                        <div style={{ fontSize: '0.85rem' }}>
+                                            <b>{u.id}</b>: {u.name}
+                                            <select value={u.role} onChange={(e) => changeUserRole(i, e.target.value)} style={{ marginLeft: '5px', fontSize: '0.75rem' }}>
+                                                <option value="viewer">VIEW</option>
+                                                <option value="user">USER</option>
+                                                <option value="manager">MNGR</option>
+                                                <option value="master">MSTR</option>
+                                            </select>
+                                        </div>
+                                        <Trash2 size={16} cursor="pointer" onClick={() => removeUser(i)} />
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
-                        <ul className="admin-list" style={{ listStyle: 'none', padding: 0, height: '300px', overflowY: 'scroll' }}>
-                            {masterData.users.map((u, i) => (
-                                <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee' }}>
-                                    <div style={{ fontSize: '0.85rem' }}>
-                                        <b>{u.id}</b>: {u.name}
-                                        <select value={u.role} onChange={(e) => changeUserRole(i, e.target.value)} style={{ marginLeft: '5px', fontSize: '0.75rem' }}>
-                                            <option value="viewer">VIEW</option>
-                                            <option value="user">USER</option>
-                                            <option value="manager">MNGR</option>
-                                            <option value="master">MSTR</option>
-                                        </select>
-                                    </div>
-                                    <Trash2 size={16} cursor="pointer" onClick={() => removeUser(i)} />
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>

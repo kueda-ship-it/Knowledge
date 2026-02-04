@@ -3,10 +3,11 @@ import { BookOpen, PieChart, Settings } from 'lucide-react';
 
 interface MenuProps {
     onNavigate: (view: string) => void;
-    isAdmin: boolean;
+    role: string;
 }
 
-export const Menu: React.FC<MenuProps> = ({ onNavigate, isAdmin }) => {
+export const Menu: React.FC<MenuProps> = ({ onNavigate, role }) => {
+    const isAdmin = role !== 'viewer';
     return (
         <div className="view active center-screen">
             <div className="menu-container" style={{

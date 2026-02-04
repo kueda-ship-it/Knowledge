@@ -70,7 +70,7 @@ function App() {
             {currentView === 'menu' && (
                 <Menu
                     onNavigate={navigate}
-                    isAdmin={['master', 'manager'].includes(user.role)}
+                    role={user.role}
                 />
             )}
 
@@ -83,7 +83,7 @@ function App() {
             )}
 
             {currentView === 'admin' && (
-                <Admin onBack={() => navigate('menu')} />
+                <Admin user={user} onBack={() => navigate('menu')} />
             )}
 
             {loading && (

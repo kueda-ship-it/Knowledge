@@ -26,7 +26,7 @@ export const Admin: React.FC<AdminProps> = ({ onBack }) => {
         } catch (e) {
             alert("マスタ読み込み失敗");
         } finally {
-            setLoading(false);
+            // Loading state removed
         }
     };
 

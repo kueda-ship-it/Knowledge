@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: 'main' # Or your default branch name
+    branches: 'new_260204' # Or your default branch name
 
 permissions:
   contents: read

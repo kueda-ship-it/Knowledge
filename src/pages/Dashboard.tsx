@@ -151,7 +151,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', background: '#e2e8f0', p: '4px', borderRadius: '8px', padding: '4px' }}>
+                        <div style={{ display: 'flex', background: '#e2e8f0', padding: '4px', borderRadius: '8px' }}>
                             {(['all', 'year', 'month', 'week', 'day'] as TimeRange[]).map((r) => (
                                 <button key={r} onClick={() => setTimeRange(r)}
                                     style={{

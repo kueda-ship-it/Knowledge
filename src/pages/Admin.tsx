@@ -9,7 +9,6 @@ interface AdminProps {
 
 export const Admin: React.FC<AdminProps> = ({ onBack }) => {
     const [masterData, setMasterData] = useState<MasterData>({ incidents: [], categories: [], users: [] });
-    const [loading, setLoading] = useState(false);
 
     // Inputs
     const [newCat, setNewCat] = useState('');
@@ -21,7 +20,6 @@ export const Admin: React.FC<AdminProps> = ({ onBack }) => {
     }, []);
 
     const loadMasters = async () => {
-        setLoading(true);
         try {
             const data = await apiClient.fetchMasters();
             setMasterData(data);
@@ -34,7 +32,6 @@ export const Admin: React.FC<AdminProps> = ({ onBack }) => {
 
     const handleSave = async () => {
         if (!confirm("保存しますか？")) return;
-        setLoading(true);
         try {
             await apiClient.updateMasters(masterData);
             alert("保存しました");

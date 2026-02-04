@@ -38,7 +38,7 @@ export const Admin: React.FC<AdminProps> = ({ onBack }) => {
         } catch (e) {
             alert("保存失敗");
         } finally {
-            setLoading(false);
+            // Loading state removed
         }
     };
 

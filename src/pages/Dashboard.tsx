@@ -100,7 +100,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                     {sorted.slice(0, 8).map(([key, val], i) => (
                         <div key={key}
                             onClick={() => onSelect?.(key)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', cursor: onSelect ? 'pointer' : 'default', padding: '2px', borderRadius: '4px', hover: { background: '#f1f5f9' } }}>
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', cursor: onSelect ? 'pointer' : 'default', padding: '2px', borderRadius: '4px' }}>
                             <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: colors[i % colors.length] }}></div>
                             <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{key}</span>
                             <span style={{ fontWeight: 'bold' }}>{Math.round((val / total) * 100)}%</span>

@@ -143,7 +143,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                 </div>
 
                 <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    {slices.map((s, i) => (
+                    {slices.map((s) => (
                         <div key={s.key}
                             onClick={() => onSelect?.(s.key)}
                             title={`${s.key}: ${s.val}件`}

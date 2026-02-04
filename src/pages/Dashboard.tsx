@@ -118,7 +118,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
                 <div style={{ position: 'relative', width: '200px', height: '200px' }}>
                     <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%', transform: 'rotate(0deg)' }}>
-                        {slices.map((s, i) => (
+                        {slices.map((s) => (
                             <path
                                 key={s.key}
                                 d={s.pathData}

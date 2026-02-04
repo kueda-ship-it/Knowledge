@@ -86,11 +86,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
         }));
     };
 
-    const changeUserRole = (index: number, role: any) => {
-        const newUsers = [...masterData.users];
-        newUsers[index].role = role;
-        setMasterData(prev => ({ ...prev, users: newUsers }));
-    };
 
     return (
         <div className="view active">

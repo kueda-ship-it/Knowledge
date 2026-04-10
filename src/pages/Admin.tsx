@@ -148,7 +148,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                         borderBottom: '1px solid #f1f5f9',
                                         marginBottom: '4px'
                                     }}>
-                                        <span style={{ fontSize: '0.9rem', color: '#1e293b' }}>{u.name}</span>
+                                        <span style={{ fontSize: '0.9rem', color: 'var(--text)' }}>{u.name}</span>
                                         <select
                                             value={u.role}
                                             onChange={(e) => updateUser(i, 'role', e.target.value)}

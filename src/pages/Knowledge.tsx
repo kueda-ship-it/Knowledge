@@ -131,6 +131,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
 
                 <main className="main-content" style={{ flex: 1, backgroundColor: 'var(--bg)', height: 'calc(100vh - 60px)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     {view === 'list' ? (
+                        <>
                         {error && (
                             <div style={{ margin: '20px', padding: '16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#dc2626', fontSize: '0.9rem' }}>
                                 <strong>読み込みエラー:</strong> {error}
@@ -153,6 +154,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                             }}
                             loading={loading}
                         />
+                        </>
                     ) : (
                         <div style={{ padding: '20px', overflowY: 'auto' }}>
                             <div style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>

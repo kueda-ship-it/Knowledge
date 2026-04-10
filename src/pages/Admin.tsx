@@ -99,7 +99,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                         <input
                                             value={item}
                                             onChange={(e) => updateSimple('categories', i, e.target.value)}
-                                            style={{ border: 'none', background: 'transparent', flex: 1, padding: '4px', fontSize: '0.95rem', color: '#334155' }}
+                                            style={{ border: 'none', background: 'transparent', flex: 1, padding: '4px', fontSize: '0.95rem', color: 'var(--text)' }}
                                         />
                                         <Trash2 size={16} className="trash-icon" style={{ cursor: 'pointer' }} onClick={() => removeSimple('categories', i)} />
                                     </li>
@@ -121,7 +121,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                     <input
                                         value={item}
                                         onChange={(e) => updateSimple('incidents', i, e.target.value)}
-                                        style={{ border: 'none', background: 'transparent', flex: 1, padding: '4px', fontSize: '0.95rem', color: '#334155' }}
+                                        style={{ border: 'none', background: 'transparent', flex: 1, padding: '4px', fontSize: '0.95rem', color: 'var(--text)' }}
                                     />
                                     <Trash2 size={16} className="trash-icon" style={{ cursor: 'pointer' }} onClick={() => removeSimple('incidents', i)} />
                                 </li>

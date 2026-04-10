@@ -16,6 +16,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
     const [filteredData, setFilteredData] = useState<KnowledgeItem[]>([]);
     const [masterData, setMasterData] = useState<MasterData>({ incidents: [], categories: [], users: [] });
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Filters state
     const [searchKeyword, setSearchKeyword] = useState('');
@@ -71,16 +72,21 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
 
     const refreshData = async () => {
         setLoading(true);
+        setError(null);
         try {
-            // ナレッジを先に取得してリストを表示し、マスタは後から取得
-            const kData = await apiClient.fetchAll();
+            const timeout = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('接続タイムアウト（15秒）')), 15000)
+            );
+            const kData = await Promise.race([apiClient.fetchAll(), timeout]);
             setData(kData);
             setLoading(false);
 
             const mData = await apiClient.fetchMasters();
             setMasterData(mData);
-        } catch (e) {
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : '不明なエラー';
             console.error("Failed to load data", e);
+            setError(msg);
             setLoading(false);
         }
     };
@@ -125,6 +131,12 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
 
                 <main className="main-content" style={{ flex: 1, backgroundColor: 'var(--bg)', height: 'calc(100vh - 60px)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     {view === 'list' ? (
+                        {error && (
+                            <div style={{ margin: '20px', padding: '16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#dc2626', fontSize: '0.9rem' }}>
+                                <strong>読み込みエラー:</strong> {error}
+                                <button onClick={refreshData} style={{ marginLeft: '12px', padding: '4px 12px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>再試行</button>
+                            </div>
+                        )}
                         <KnowledgeList
                             data={filteredData}
                             onReload={refreshData}

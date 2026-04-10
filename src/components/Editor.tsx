@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { KnowledgeItem, MasterData } from '../types';
-import { Trash2, X, RotateCcw, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { KnowledgeItem, MasterData, Attachment } from '../types';
+import { Trash2, X, RotateCcw, Check, Paperclip, ExternalLink, FileText, Image } from 'lucide-react';
 import { apiClient } from '../api/client';
+import { useOneDriveUpload } from '../hooks/useOneDriveUpload';
 
 interface EditorProps {
     item: KnowledgeItem | null;
@@ -9,7 +10,7 @@ interface EditorProps {
     onSave: (data: any) => void;
     onDelete: (id: string) => void;
     onCancel: () => void;
-    user: { name: string, role: string };
+    user: { name: string, role: string, email?: string };
 }
 
 export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete, onCancel, user }) => {
@@ -21,12 +22,16 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
     const [selectedIncidents, setSelectedIncidents] = useState<string[]>([]);
     const [tagInput, setTagInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [attachments, setAttachments] = useState<Attachment[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { uploadFile, uploading, statusMessage } = useOneDriveUpload(user.email as string | undefined);
 
     useEffect(() => {
         if (item) {
             setFormData(item);
             setSelectedIncidents(item.incidents || []);
             setTagInput((item.tags || []).join(' #'));
+            setAttachments(item.attachments || []);
         } else {
             setFormData({
                 title: '', machine: '', property: '', req_num: '',
@@ -35,6 +40,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             });
             setSelectedIncidents([]);
             setTagInput('');
+            setAttachments([]);
         }
     }, [item]);
 
@@ -102,7 +108,8 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             content: formData.content || '',
             status: formData.status || 'unsolved',
             updatedAt: new Date().toISOString(),
-            author: item?.author || user.name
+            author: item?.author || user.name,
+            attachments,
         };
 
         setLoading(true);
@@ -128,6 +135,19 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        for (const file of files) {
+            const attachment = await uploadFile(file);
+            if (attachment) setAttachments(prev => [...prev, attachment]);
+        }
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const removeAttachment = (id: string) => {
+        setAttachments(prev => prev.filter(a => a.id !== id));
     };
 
     return (
@@ -221,6 +241,54 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <label>内容 <span style={{ color: 'red' }}>*</span></label>
                     <textarea id="content" value={formData.content || ''} onChange={handleChange} style={{ width: '100%', height: '200px', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)', resize: 'vertical' }}></textarea>
+                </div>
+
+                {/* Attachments */}
+                <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Paperclip size={14} /> 添付ファイル (OneDrive)
+                    </label>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        onChange={handleFileSelect}
+                        style={{ display: 'none' }}
+                    />
+                    {attachments.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+                            {attachments.map(att => (
+                                <div key={att.id} style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    padding: '6px 10px', background: 'var(--bg)',
+                                    border: '1px solid var(--border)', borderRadius: '6px',
+                                    fontSize: '0.85rem',
+                                }}>
+                                    {att.type.startsWith('image/') ? <Image size={14} color="#3b82f6" /> : <FileText size={14} color="#64748b" />}
+                                    <a href={att.url} target="_blank" rel="noopener noreferrer"
+                                        style={{ flex: 1, color: '#3b82f6', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {att.name}
+                                    </a>
+                                    <ExternalLink size={12} color="#94a3b8" />
+                                    {canEdit && (
+                                        <X size={14} style={{ cursor: 'pointer', color: '#94a3b8', flexShrink: 0 }}
+                                            onClick={() => removeAttachment(att.id)} />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {canEdit && (
+                        <button type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                            className="secondary-btn"
+                            style={{ fontSize: '0.85rem', gap: '6px', display: 'flex', alignItems: 'center' }}
+                        >
+                            <Paperclip size={14} />
+                            {uploading ? statusMessage || 'アップロード中...' : 'ファイルを追加'}
+                        </button>
+                    )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>

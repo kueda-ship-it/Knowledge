@@ -5,6 +5,15 @@ export interface User {
     role: 'viewer' | 'user' | 'manager' | 'master';  // profiles.knl_role
 }
 
+export interface Attachment {
+    id: string;
+    url: string;
+    name: string;
+    type: string;
+    size: number;
+    thumbnailUrl?: string;
+}
+
 export interface KnowledgeItem {
     id: string;
     title: string;
@@ -18,6 +27,7 @@ export interface KnowledgeItem {
     status: 'solved' | 'unsolved';
     updatedAt: string;
     author: string;
+    attachments?: Attachment[];
 }
 
 export interface MasterData {

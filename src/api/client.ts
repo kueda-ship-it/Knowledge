@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { KnowledgeItem, MasterData, User } from '../types';
+import { KnowledgeItem, MasterData, User, Attachment } from '../types';
 
 // DB行 → KnowledgeItem の変換
 function toItem(row: Record<string, unknown>): KnowledgeItem {
@@ -16,6 +16,7 @@ function toItem(row: Record<string, unknown>): KnowledgeItem {
         status: row.status as 'solved' | 'unsolved',
         updatedAt: row.updated_at as string,
         author: row.author as string,
+        attachments: (row.attachments as Attachment[]) ?? [],
     };
 }
 
@@ -64,6 +65,7 @@ export const apiClient = {
                 status: item.status,
                 updated_at: item.updatedAt,
                 author: item.author,
+                attachments: item.attachments ?? [],
             });
 
         if (error) throw error;

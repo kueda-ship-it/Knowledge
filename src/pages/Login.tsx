@@ -7,12 +7,13 @@ export const Login: React.FC = () => {
     return (
         <div style={{
             display: 'flex', justifyContent: 'center', alignItems: 'center',
-            minHeight: '100vh', backgroundColor: '#f8fafc'
+            minHeight: '100vh', backgroundColor: 'var(--bg)'
         }}>
             <div style={{
-                background: 'white', padding: '40px', borderRadius: '12px',
+                background: 'var(--card-bg)', padding: '40px', borderRadius: '12px',
                 boxShadow: '0 4px 6px rgba(0,0,0,0.07)', width: '100%',
-                maxWidth: '400px', textAlign: 'center'
+                maxWidth: '400px', textAlign: 'center',
+                border: '1px solid var(--border)'
             }}>
                 <h1 style={{
                     color: '#3b82f6', marginBottom: '10px',
@@ -21,7 +22,7 @@ export const Login: React.FC = () => {
                 }}>
                     <Box size={28} /> Knowledge DB
                 </h1>
-                <p style={{ color: '#64748b', marginBottom: '32px', fontSize: '0.9rem' }}>
+                <p style={{ color: 'var(--muted)', marginBottom: '32px', fontSize: '0.9rem' }}>
                     社内アカウントでサインインしてください
                 </p>
 
@@ -30,13 +31,13 @@ export const Login: React.FC = () => {
                     style={{
                         width: '100%', padding: '12px 20px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                        border: '1px solid #e2e8f0', borderRadius: '8px',
-                        background: 'white', cursor: 'pointer', fontSize: '0.95rem',
-                        fontWeight: '500', color: '#1e293b',
+                        border: '1px solid var(--input-border)', borderRadius: '8px',
+                        background: 'var(--input-bg)', cursor: 'pointer', fontSize: '0.95rem',
+                        fontWeight: '500', color: 'var(--text)',
                         transition: 'background 0.2s'
                     }}
-                    onMouseOver={e => (e.currentTarget.style.background = '#f1f5f9')}
-                    onMouseOut={e => (e.currentTarget.style.background = 'white')}
+                    onMouseOver={e => (e.currentTarget.style.background = 'var(--border)')}
+                    onMouseOut={e => (e.currentTarget.style.background = 'var(--input-bg)')}
                 >
                     {/* Microsoft ロゴ */}
                     <svg width="20" height="20" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
@@ -48,7 +49,7 @@ export const Login: React.FC = () => {
                     Microsoft アカウントでサインイン
                 </button>
 
-                <p style={{ marginTop: '20px', fontSize: '0.8rem', color: '#94a3b8' }}>
+                <p style={{ marginTop: '20px', fontSize: '0.8rem', color: 'var(--muted)' }}>
                     社内ネットワークのアカウントを使用してください
                 </p>
             </div>

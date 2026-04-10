@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MasterData, User } from '../types';
 import { ArrowLeft, Save, Trash2, Plus } from 'lucide-react';
+// Trash2 is used in incident/category lists; Plus is used in add buttons
 import { apiClient } from '../api/client';
 
 interface AdminProps {
@@ -15,7 +16,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     // Inputs
     const [newCat, setNewCat] = useState('');
     const [newInc, setNewInc] = useState('');
-    const [newUser, setNewUser] = useState({ id: '', name: '', role: 'viewer' as User['role'] });
 
     useEffect(() => {
         loadMasters();
@@ -64,26 +64,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
         }));
     };
 
-    const addUser = () => {
-        if (!newUser.id || !newUser.name) return;
-        if (masterData.users.some(u => u.id === newUser.id)) return alert("ID重複");
-        setMasterData(prev => ({ ...prev, users: [...prev.users, newUser] }));
-        setNewUser({ id: '', name: '', role: 'viewer' });
-    };
-
     const updateUser = (index: number, field: keyof User, val: string) => {
         const newUsers = [...masterData.users];
         (newUsers[index] as any)[field] = val;
         setMasterData(prev => ({ ...prev, users: newUsers }));
-    };
-
-    const removeUser = (index: number) => {
-        if (masterData.users[index].id === 'admin') return alert("不可");
-        if (!confirm("削除しますか？")) return;
-        setMasterData(prev => ({
-            ...prev,
-            users: prev.users.filter((_, i) => i !== index)
-        }));
     };
 
 
@@ -103,7 +87,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 <div className="dash-grid" style={{ display: 'grid', gridTemplateColumns: isFullAdmin ? '1fr 1fr' : '1fr', gap: '24px' }}>
                     {/* Categories */}
                     {isFullAdmin && (
-                        <div className="dash-panel" style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                        <div className="dash-panel" style={{ background: 'var(--card-bg)', color: 'var(--text)', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                             <h3>区分マスタ</h3>
                             <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
                                 <input value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="区分名" style={{ flex: 1, padding: '5px' }} />
@@ -125,7 +109,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     )}
 
                     {/* Incidents */}
-                    <div className="dash-panel" style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                    <div className="dash-panel" style={{ background: 'var(--card-bg)', color: 'var(--text)', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                         <h3>インシデントマスタ</h3>
                         <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
                             <input value={newInc} onChange={(e) => setNewInc(e.target.value)} placeholder="インシデント名" style={{ flex: 1, padding: '5px' }} />
@@ -145,26 +129,18 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                         </ul>
                     </div>
 
-                    {/* Users - Always in a new row if full admin */}
+                    {/* Users - ロール管理のみ（SSO経由でサインインしたユーザーが対象） */}
                     {isFullAdmin && (
-                        <div className="dash-panel" style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', gridColumn: '1 / -1', marginTop: '10px' }}>
-                            <h3>ユーザーマスタ</h3>
-                            <div style={{ display: 'flex', gap: '5px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                                <input value={newUser.id} onChange={(e) => setNewUser({ ...newUser, id: e.target.value })} placeholder="ID" style={{ width: '60px', padding: '5px' }} />
-                                <input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} placeholder="名前" style={{ width: '80px', padding: '5px' }} />
-                                <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value as any })} style={{ padding: '5px' }}>
-                                    <option value="viewer">VIEW</option>
-                                    <option value="user">USER</option>
-                                    <option value="manager">MNGR</option>
-                                    <option value="master">MSTR</option>
-                                </select>
-                                <button onClick={addUser}><Plus size={16} /></button>
-                            </div>
-                            <ul className="admin-list" style={{ listStyle: 'none', padding: '0 20px 0 0', height: '350px', overflowY: 'auto' }}>
+                        <div className="dash-panel" style={{ background: 'var(--card-bg)', color: 'var(--text)', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', gridColumn: '1 / -1', marginTop: '10px' }}>
+                            <h3 style={{ marginBottom: '4px' }}>ユーザーロール管理</h3>
+                            <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '16px' }}>
+                                Microsoftアカウントでサインイン済みのユーザーのナレッジロールを設定できます
+                            </p>
+                            <ul className="admin-list" style={{ listStyle: 'none', padding: '0 20px 0 0', maxHeight: '400px', overflowY: 'auto' }}>
                                 {masterData.users.map((u, i) => (
-                                    <li key={i} className="admin-item" style={{
+                                    <li key={u.id} className="admin-item" style={{
                                         display: 'grid',
-                                        gridTemplateColumns: '80px 1fr 100px 40px',
+                                        gridTemplateColumns: '1fr 120px',
                                         alignItems: 'center',
                                         gap: '12px',
                                         padding: '10px 12px',
@@ -172,41 +148,24 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                         borderBottom: '1px solid #f1f5f9',
                                         marginBottom: '4px'
                                     }}>
-                                        <b style={{ fontSize: '0.85rem', color: '#64748b' }}>{u.id}</b>
-                                        <input
-                                            value={u.name || ''}
-                                            onChange={(e) => updateUser(i, 'name', e.target.value)}
-                                            style={{
-                                                border: '1px solid #cbd5e1',
-                                                background: 'white',
-                                                padding: '6px 10px',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                color: '#1e293b',
-                                                width: '100%'
-                                            }}
-                                            placeholder="名前を入力"
-                                        />
+                                        <span style={{ fontSize: '0.9rem', color: '#1e293b' }}>{u.name}</span>
                                         <select
                                             value={u.role}
                                             onChange={(e) => updateUser(i, 'role', e.target.value)}
                                             style={{
-                                                fontSize: '0.8rem',
+                                                fontSize: '0.85rem',
                                                 padding: '6px',
                                                 borderRadius: '6px',
-                                                border: '1px solid #cbd5e1',
-                                                background: 'white',
-                                                color: '#334155'
+                                                border: '1px solid var(--input-border)',
+                                                background: 'var(--input-bg)',
+                                                color: 'var(--text)'
                                             }}
                                         >
-                                            <option value="viewer">VIEW</option>
+                                            <option value="viewer">VIEWER</option>
                                             <option value="user">USER</option>
-                                            <option value="manager">MNGR</option>
-                                            <option value="master">MSTR</option>
+                                            <option value="manager">MANAGER</option>
+                                            <option value="master">MASTER</option>
                                         </select>
-                                        <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                            <Trash2 size={18} className="trash-icon" style={{ cursor: 'pointer' }} onClick={() => removeUser(i)} />
-                                        </div>
                                     </li>
                                 ))}
                             </ul>

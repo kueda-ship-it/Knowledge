@@ -5,10 +5,36 @@
   --danger: #ef4444;
   --header-height: 60px;
   --unsolved-bg: #fff1f2;
+  --card-bg: #ffffff;
+  --sidebar-bg: #1e293b;
+  --sidebar-text: #cbd5e1;
+  --header-bg: #ffffff;
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --panel-bg: #ffffff;
+  --muted: #64748b;
+  --border: #e2e8f0;
 
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+}
+
+body.dark {
+  --primary: #3b82f6;
+  --bg: #0f172a;
+  --text: #e2e8f0;
+  --danger: #f87171;
+  --unsolved-bg: #3b0f0f;
+  --card-bg: #1e293b;
+  --sidebar-bg: #0f172a;
+  --sidebar-text: #94a3b8;
+  --header-bg: #1e293b;
+  --input-bg: #1e293b;
+  --input-border: #334155;
+  --panel-bg: #1e293b;
+  --muted: #94a3b8;
+  --border: #334155;
 }
 
 body {
@@ -17,6 +43,7 @@ body {
   color: var(--text);
   height: 100vh;
   overflow: hidden;
+  transition: background 0.2s, color 0.2s;
 }
 
 /* 画面制御 */
@@ -322,4 +349,77 @@ select {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+/* ダークモード */
+body.dark .knowledge-card {
+  background: var(--card-bg);
+  color: var(--text);
+}
+
+body.dark .knowledge-card.unsolved {
+  background-color: var(--unsolved-bg);
+}
+
+body.dark input,
+body.dark textarea,
+body.dark select {
+  background: var(--input-bg);
+  color: var(--text);
+  border-color: var(--input-border);
+}
+
+body.dark .dash-panel,
+body.dark .admin-item,
+body.dark [style*="background: white"],
+body.dark [style*="background-color: white"],
+body.dark [style*="background:#fff"],
+body.dark [style*="backgroundColor: 'white'"] {
+  background: var(--panel-bg) !important;
+  color: var(--text) !important;
+}
+
+body.dark .secondary-btn {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+body.dark .secondary-btn:hover {
+  background: #475569;
+  color: white;
+}
+
+body.dark .loading-overlay {
+  background: rgba(15, 23, 42, 0.8);
+}
+
+body.dark .center-screen {
+  background: #0f172a;
+}
+
+body.dark .login-box,
+body.dark .menu-container {
+  background: #1e293b;
+  color: var(--text);
+}
+
+body.dark .menu-card:hover {
+  background: #334155 !important;
+}
+
+/* ダークモードトグルボタン */
+.dark-toggle-btn {
+  background: none;
+  border: 1px solid var(--input-border);
+  cursor: pointer;
+  color: var(--text);
+  padding: 5px 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.dark-toggle-btn:hover {
+  background: var(--border);
 }

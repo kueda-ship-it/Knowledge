@@ -1,72 +1,56 @@
-import React, { useState } from 'react';
-import { apiClient } from '../api/client';
-import { User } from '../types';
 import { Box } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
-interface LoginProps {
-    onLogin: (user: User) => void;
-}
-
-export const Login: React.FC<LoginProps> = ({ onLogin }) => {
-    const [id, setId] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            const res = await apiClient.login(id);
-            if (res.status === 'success' && res.user) {
-                onLogin(res.user);
-            } else {
-                alert("ログイン失敗: " + res.message);
-            }
-        } catch (error) {
-            alert("通信エラーしました");
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
+export const Login: React.FC = () => {
+    const { signInWithMicrosoft } = useAuth();
 
     return (
-        <div className="view active center-screen">
-            <div className="login-box" style={{
-                background: 'white',
-                padding: '40px',
-                borderRadius: '12px',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-                width: '100%',
-                maxWidth: '400px',
-                textAlign: 'center'
+        <div style={{
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            minHeight: '100vh', backgroundColor: '#f8fafc'
+        }}>
+            <div style={{
+                background: 'white', padding: '40px', borderRadius: '12px',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.07)', width: '100%',
+                maxWidth: '400px', textAlign: 'center'
             }}>
-                <h1 style={{ color: '#3b82f6', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                    <Box /> Knowledge DB
+                <h1 style={{
+                    color: '#3b82f6', marginBottom: '10px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                    fontSize: '1.5rem'
+                }}>
+                    <Box size={28} /> Knowledge DB
                 </h1>
-                <p style={{ color: '#64748b', marginBottom: '30px' }}>IDを入力してログインしてください</p>
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                    <input
-                        type="text"
-                        placeholder="ユーザーID"
-                        value={id}
-                        onChange={(e) => setId(e.target.value)}
-                        required
-                        style={{
-                            padding: '12px',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '8px',
-                            fontSize: '1rem',
-                            outline: 'none'
-                        }}
-                    />
-                    <button
-                        type="submit"
-                        className="primary-btn full-width"
-                        disabled={loading}
-                    >
-                        {loading ? 'Processing...' : 'ログイン'}
-                    </button>
-                </form>
+                <p style={{ color: '#64748b', marginBottom: '32px', fontSize: '0.9rem' }}>
+                    社内アカウントでサインインしてください
+                </p>
+
+                <button
+                    onClick={signInWithMicrosoft}
+                    style={{
+                        width: '100%', padding: '12px 20px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                        border: '1px solid #e2e8f0', borderRadius: '8px',
+                        background: 'white', cursor: 'pointer', fontSize: '0.95rem',
+                        fontWeight: '500', color: '#1e293b',
+                        transition: 'background 0.2s'
+                    }}
+                    onMouseOver={e => (e.currentTarget.style.background = '#f1f5f9')}
+                    onMouseOut={e => (e.currentTarget.style.background = 'white')}
+                >
+                    {/* Microsoft ロゴ */}
+                    <svg width="20" height="20" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="0"  y="0"  width="10" height="10" fill="#F25022"/>
+                        <rect x="11" y="0"  width="10" height="10" fill="#7FBA00"/>
+                        <rect x="0"  y="11" width="10" height="10" fill="#00A4EF"/>
+                        <rect x="11" y="11" width="10" height="10" fill="#FFB900"/>
+                    </svg>
+                    Microsoft アカウントでサインイン
+                </button>
+
+                <p style={{ marginTop: '20px', fontSize: '0.8rem', color: '#94a3b8' }}>
+                    社内ネットワークのアカウントを使用してください
+                </p>
             </div>
         </div>
     );

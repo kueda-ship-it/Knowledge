@@ -167,7 +167,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                             value={formData.title || ''}
                             onChange={handleChange}
                             placeholder="空欄の場合、インシデント名がタイトルになります"
-                            style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                            style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }}
                         />
                     </div>
                 </div>
@@ -175,22 +175,22 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <div style={{ flex: 1 }}>
                         <label>号機 <span style={{ color: 'red' }}>*</span></label>
-                        <input id="machine" type="text" value={formData.machine || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                        <input id="machine" type="text" value={formData.machine || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }} />
                     </div>
                     <div style={{ flex: 1 }}>
                         <label>物件名 <span style={{ color: 'red' }}>*</span></label>
-                        <input id="property" type="text" value={formData.property || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                        <input id="property" type="text" value={formData.property || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }} />
                     </div>
                     <div style={{ flex: 1 }}>
                         <label>依頼番号(11桁) <span style={{ color: 'red' }}>*</span></label>
-                        <input id="req_num" type="text" value={formData.req_num || ''} onChange={(e) => setFormData(p => ({ ...p, req_num: e.target.value }))} maxLength={11} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                        <input id="req_num" type="text" value={formData.req_num || ''} onChange={(e) => setFormData(p => ({ ...p, req_num: e.target.value }))} maxLength={11} style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }} />
                     </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <div style={{ flex: 1 }}>
                         <label>インシデント区分 <span style={{ color: 'red' }}>*</span></label>
-                        <select id="category" value={formData.category || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}>
+                        <select id="category" value={formData.category || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }}>
                             <option value="">選択してください</option>
                             {masters.categories.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
@@ -198,13 +198,13 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                     <div style={{ flex: 2 }}>
                         <label>インシデント詳細 (選択追加) <span style={{ color: 'red' }}>*</span></label>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                            <select onChange={handleIncidentAdd} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}>
+                            <select onChange={handleIncidentAdd} style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }}>
                                 <option value="">選択してください</option>
                                 {masters.incidents.map(i => <option key={i} value={i}>{i}</option>)}
                             </select>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                                 {selectedIncidents.map(inc => (
-                                    <div key={inc} style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <div key={inc} style={{ background: 'var(--border)', color: 'var(--text)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                         {inc} <X size={12} cursor="pointer" onClick={() => removeIncident(inc)} />
                                     </div>
                                 ))}
@@ -215,12 +215,12 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
 
                 <div>
                     <label>タグ (#区切り)</label>
-                    <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="#js #error" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                    <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="#js #error" style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <label>内容 <span style={{ color: 'red' }}>*</span></label>
-                    <textarea id="content" value={formData.content || ''} onChange={handleChange} style={{ width: '100%', height: '200px', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical' }}></textarea>
+                    <textarea id="content" value={formData.content || ''} onChange={handleChange} style={{ width: '100%', height: '200px', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)', resize: 'vertical' }}></textarea>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, KnowledgeItem } from './types';
+import { KnowledgeItem } from './types';
 import { Header } from './components/Header';
 import { Login } from './pages/Login';
 import { Menu } from './pages/Menu';
@@ -7,71 +7,56 @@ import { Knowledge } from './pages/Knowledge';
 import { Dashboard } from './pages/Dashboard';
 import { Admin } from './pages/Admin';
 import { apiClient } from './api/client';
+import { useAuth } from './contexts/AuthContext';
 
 function App() {
-    const [user, setUser] = useState<User | null>(null);
-    const [currentView, setCurrentView] = useState('login');
-    const [loading, setLoading] = useState(false);
-
-    // Dashboard data cache
-    const [data, setData] = useState<KnowledgeItem[]>([]);
+    const { user, isLoading, signOut } = useAuth();
+    const [currentView, setCurrentView] = useState('menu');
+    const [dashboardData, setDashboardData] = useState<KnowledgeItem[]>([]);
+    const [dashboardLoading, setDashboardLoading] = useState(false);
+    const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
 
     useEffect(() => {
-        // Check local storage for session
-        const stored = localStorage.getItem('kb_user');
-        if (stored) {
-            try {
-                const u = JSON.parse(stored);
-                setUser(u);
-                setCurrentView('menu');
-            } catch (e) {
-                localStorage.removeItem('kb_user');
-            }
+        if (darkMode) {
+            document.body.classList.add('dark');
+        } else {
+            document.body.classList.remove('dark');
         }
-    }, []);
+        localStorage.setItem('darkMode', String(darkMode));
+    }, [darkMode]);
 
-    const handleLogin = (u: User) => {
-        setUser(u);
-        localStorage.setItem('kb_user', JSON.stringify(u));
-        setCurrentView('menu');
-    };
-
-    const handleLogout = () => {
-        setUser(null);
-        localStorage.removeItem('kb_user');
-        setCurrentView('login');
-    };
-
-    const prefetchData = async () => {
-        setLoading(true);
+    const prefetchDashboard = async () => {
+        setDashboardLoading(true);
         try {
             const d = await apiClient.fetchAll();
-            setData(d);
+            setDashboardData(d);
         } catch (e) { console.error(e); }
-        setLoading(false);
-    }
+        setDashboardLoading(false);
+    };
 
     const navigate = (view: string) => {
-        // Preload data for dashboard
-        if (view === 'dashboard') {
-            prefetchData();
-        }
+        if (view === 'dashboard') prefetchDashboard();
         setCurrentView(view);
     };
 
+    if (isLoading) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <div>読み込み中...</div>
+            </div>
+        );
+    }
+
     if (!user) {
-        return <Login onLogin={handleLogin} />;
+        return <Login />;
     }
 
     return (
         <>
-            <Header user={user} onLogout={handleLogout} />
+            <Header user={user} onLogout={signOut} darkMode={darkMode} onToggleDark={() => setDarkMode(d => !d)} />
 
             {currentView === 'menu' && (
-                <Menu
-                    onNavigate={navigate}
-                    role={user.role}
-                />
+                <Menu onNavigate={navigate} role={user.role} />
             )}
 
             {currentView === 'knowledge' && (
@@ -79,15 +64,15 @@ function App() {
             )}
 
             {currentView === 'dashboard' && (
-                <Dashboard data={data} onBack={() => navigate('menu')} />
+                <Dashboard data={dashboardData} onBack={() => navigate('menu')} />
             )}
 
             {currentView === 'admin' && (
                 <Admin user={user} onBack={() => navigate('menu')} />
             )}
 
-            {loading && (
-                <div className="loading-overlay" style={{
+            {dashboardLoading && (
+                <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
                     backgroundColor: 'rgba(255,255,255,0.8)',
                     display: 'flex', justifyContent: 'center', alignItems: 'center',

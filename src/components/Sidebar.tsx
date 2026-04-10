@@ -29,8 +29,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return (
         <aside className="sidebar" style={{
             width: '280px',
-            backgroundColor: 'white',
-            borderRight: '1px solid #e2e8f0',
+            backgroundColor: 'var(--card-bg)',
+            borderRight: '1px solid var(--border)',
             padding: '20px',
             display: 'flex',
             flexDirection: 'column',
@@ -59,15 +59,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onChange={(e) => onSearch(e.target.value)}
                     style={{
                         width: '100%', padding: '10px 10px 10px 35px',
-                        border: '1px solid #e2e8f0', borderRadius: '8px',
-                        fontSize: '0.9rem'
+                        border: '1px solid var(--input-border)', borderRadius: '8px',
+                        fontSize: '0.9rem', background: 'var(--input-bg)', color: 'var(--text)'
                     }}
                 />
                 <Search size={16} style={{ position: 'absolute', left: '10px', top: '12px', color: '#94a3b8' }} />
             </div>
 
             <div className="tag-cloud-area" style={{ flex: 1, overflowY: 'auto' }}>
-                <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', color: '#64748b', fontSize: '0.9rem' }}>
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', color: 'var(--muted)', fontSize: '0.9rem' }}>
                     <Tags size={16} /> タグ一覧
                 </h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>

@@ -29,13 +29,13 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
     return (
         <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e293b' }}>ナレッジ一覧</h2>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text)' }}>ナレッジ一覧</h2>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <select
                         value={filterType}
                         onChange={(e) => onFilterChange(e.target.value as any)}
-                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)' }}
                     >
                         <option value="all">全て</option>
                         <option value="unsolved">未解決</option>
@@ -45,7 +45,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
 
                     <button onClick={onReload} className="secondary-btn" style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'white', cursor: 'pointer',
+                        padding: '8px', border: '1px solid var(--input-border)', borderRadius: '6px', background: 'var(--card-bg)', cursor: 'pointer',
                         minWidth: '36px'
                     }} title="更新">
                         <RotateCcw size={18} />
@@ -54,17 +54,17 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
             </div>
 
             {/* Category Filters */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #eee' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid var(--border)' }}>
                 {categories.map(cat => (
                     <button
                         key={cat}
                         onClick={() => onCategoryToggle(cat)}
                         style={{
-                            padding: '6px 12px', borderRadius: '20px', border: '1px solid #e2e8f0', cursor: 'pointer',
+                            padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border)', cursor: 'pointer',
                             fontSize: '0.9rem',
-                            backgroundColor: selectedCategories.includes(cat) ? '#8b5cf6' : 'white',
-                            color: selectedCategories.includes(cat) ? 'white' : '#64748b',
-                            borderColor: selectedCategories.includes(cat) ? '#8b5cf6' : '#e2e8f0',
+                            backgroundColor: selectedCategories.includes(cat) ? '#8b5cf6' : 'var(--card-bg)',
+                            color: selectedCategories.includes(cat) ? 'white' : 'var(--muted)',
+                            borderColor: selectedCategories.includes(cat) ? '#8b5cf6' : 'var(--border)',
                             fontWeight: selectedCategories.includes(cat) ? 'bold' : 'normal',
                             transition: 'all 0.2s'
                         }}
@@ -102,10 +102,10 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     {new Date(item.updatedAt).toLocaleDateString()} | {item.author} | {item.machine}
                                 </div>
                             </div>
-                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#334155', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text)', marginBottom: '8px' }}>
                                 {item.title}
                             </div>
-                            <div style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: '8px' }}>
                                 {item.category && <span style={{ fontWeight: 'bold' }}>[{item.category}] </span>}
                                 {item.incidents?.join(', ')}
                             </div>

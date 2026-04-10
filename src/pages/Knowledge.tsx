@@ -72,15 +72,15 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
     const refreshData = async () => {
         setLoading(true);
         try {
-            const [kData, mData] = await Promise.all([
-                apiClient.fetchAll(),
-                apiClient.fetchMasters()
-            ]);
+            // ナレッジを先に取得してリストを表示し、マスタは後から取得
+            const kData = await apiClient.fetchAll();
             setData(kData);
+            setLoading(false);
+
+            const mData = await apiClient.fetchMasters();
             setMasterData(mData);
         } catch (e) {
             console.error("Failed to load data", e);
-        } finally {
             setLoading(false);
         }
     };
@@ -123,7 +123,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                     data={data}
                 />
 
-                <main className="main-content" style={{ flex: 1, backgroundColor: '#f8fafc', height: 'calc(100vh - 60px)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <main className="main-content" style={{ flex: 1, backgroundColor: 'var(--bg)', height: 'calc(100vh - 60px)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     {view === 'list' ? (
                         <KnowledgeList
                             data={filteredData}
@@ -143,7 +143,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                         />
                     ) : (
                         <div style={{ padding: '20px', overflowY: 'auto' }}>
-                            <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                            <div style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
                                 <Editor
                                     item={editingItem}
                                     masters={masterData}

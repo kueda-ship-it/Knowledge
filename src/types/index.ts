@@ -1,7 +1,8 @@
 export interface User {
-    id: string;
-    name: string;
-    role: 'viewer' | 'user' | 'manager' | 'master';
+    id: string;        // profiles.id (uuid)
+    name: string;      // profiles.full_name
+    email?: string;    // profiles.email
+    role: 'viewer' | 'user' | 'manager' | 'master';  // profiles.knl_role
 }
 
 export interface KnowledgeItem {

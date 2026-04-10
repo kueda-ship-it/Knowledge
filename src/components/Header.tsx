@@ -44,10 +44,22 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, darkMode, onTogg
                     title="ログアウト"
                     style={{
                         background: 'none',
-                        border: 'none',
+                        border: '1px solid transparent',
                         cursor: 'pointer',
                         color: 'var(--muted)',
-                        padding: '5px'
+                        padding: '5px 8px',
+                        borderRadius: '6px',
+                        transition: 'color 0.2s, background 0.2s, border-color 0.2s'
+                    }}
+                    onMouseOver={e => {
+                        e.currentTarget.style.color = '#ef4444';
+                        e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
+                        e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)';
+                    }}
+                    onMouseOut={e => {
+                        e.currentTarget.style.color = 'var(--muted)';
+                        e.currentTarget.style.background = 'none';
+                        e.currentTarget.style.borderColor = 'transparent';
                     }}
                 >
                     <LogOut size={20} />

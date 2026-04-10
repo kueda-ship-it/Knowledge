@@ -92,7 +92,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
     const renderPieChart = (counts: Record<string, number>, onSelect?: (key: string) => void) => {
         const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
         const total = sorted.reduce((sum, [_, val]) => sum + val, 0);
-        if (total === 0) return <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>データなし</div>;
+        if (total === 0) return <div style={{ textAlign: 'center', padding: '20px', color: 'var(--muted)' }}>データなし</div>;
 
         let accumulatedAngle = -90; // Start from top
 
@@ -137,8 +137,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                         position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
                         textAlign: 'center', pointerEvents: 'none'
                     }}>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>合計</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#1e293b' }}>{total}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>合計</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text)' }}>{total}</div>
                     </div>
                 </div>
 
@@ -167,10 +167,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
         return sorted.slice(0, 10).map(([key, val]) => (
             <div key={key} style={{ marginBottom: '12px', cursor: onSelect ? 'pointer' : 'default' }} onClick={() => onSelect?.(key)}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: '500', color: '#1e293b' }}>{key}</span>
-                    <span style={{ color: '#64748b' }}>{val}件</span>
+                    <span style={{ fontWeight: '500', color: 'var(--text)' }}>{key}</span>
+                    <span style={{ color: 'var(--muted)' }}>{val}件</span>
                 </div>
-                <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ width: '100%', height: '8px', background: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
                     <div style={{
                         width: `${(val / max) * 100}%`, height: '100%', background: color,
                         borderRadius: '4px', transition: 'width 0.5s ease'
@@ -192,21 +192,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
             <div className="dashboard-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <button onClick={onBack} className="secondary-btn" style={{ gap: '8px', background: 'white', border: '1px solid #cbd5e1' }}>
+                        <button onClick={onBack} className="secondary-btn" style={{ gap: '8px', background: 'var(--card-bg)', border: '1px solid var(--input-border)' }}>
                             <ArrowLeft size={16} /> 戻る
                         </button>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a' }}>集計ダッシュボード</h2>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text)' }}>集計ダッシュボード</h2>
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', background: '#e2e8f0', padding: '4px', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', background: 'var(--border)', padding: '4px', borderRadius: '8px' }}>
                             {(['all', 'year', 'month', 'week', 'day'] as TimeRange[]).map((r) => (
                                 <button key={r} onClick={() => setTimeRange(r)}
                                     style={{
                                         padding: '6px 12px', border: 'none', borderRadius: '6px', cursor: 'pointer',
                                         fontSize: '0.85rem', fontWeight: '500',
-                                        background: timeRange === r ? 'white' : 'transparent',
-                                        color: timeRange === r ? '#3b82f6' : '#64748b',
+                                        background: timeRange === r ? 'var(--card-bg)' : 'transparent',
+                                        color: timeRange === r ? '#3b82f6' : 'var(--muted)',
                                         boxShadow: timeRange === r ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
                                     }}
                                 >
@@ -216,12 +216,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                         </div>
                         <div style={{ display: 'flex', gap: '5px' }}>
                             <button onClick={() => setChartType('bar')} className="secondary-btn" style={{
-                                padding: '8px', background: chartType === 'bar' ? '#3b82f6' : 'white', color: chartType === 'bar' ? 'white' : '#64748b'
+                                padding: '8px', background: chartType === 'bar' ? '#3b82f6' : 'var(--card-bg)', color: chartType === 'bar' ? 'white' : 'var(--muted)'
                             }}>
                                 <BarChart3 size={18} />
                             </button>
                             <button onClick={() => setChartType('pie')} className="secondary-btn" style={{
-                                padding: '8px', background: chartType === 'pie' ? '#3b82f6' : 'white', color: chartType === 'pie' ? 'white' : '#64748b'
+                                padding: '8px', background: chartType === 'pie' ? '#3b82f6' : 'var(--card-bg)', color: chartType === 'pie' ? 'white' : 'var(--muted)'
                             }}>
                                 <PieChartIcon size={18} />
                             </button>
@@ -230,8 +230,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                 </div>
 
                 {activeFilters.length > 0 && (
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-                        <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>絞り込み中:</span>
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center', padding: '10px', background: 'var(--bg)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 'bold' }}>絞り込み中:</span>
                         {activeFilters.map(f => (
                             <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#3b82f6', color: 'white', borderRadius: '20px', fontSize: '0.8rem' }}>
                                 <span>{f.label}: {f.value}</span>
@@ -246,36 +246,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                 )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px' }}>
-                    <div className="dash-panel" style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#334155', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px' }}>
+                    <div className="dash-panel" style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: 'var(--text)', borderBottom: '2px solid var(--border)', paddingBottom: '10px' }}>
                             <LayoutGrid size={20} color="#f59e0b" /> カテゴリ別
                         </h3>
                         {chartType === 'bar' ? renderBarList(stats.categoryCounts, '#f59e0b', setSelCategory) : renderPieChart(stats.categoryCounts, setSelCategory)}
                     </div>
 
-                    <div className="dash-panel" style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#334155', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px' }}>
+                    <div className="dash-panel" style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: 'var(--text)', borderBottom: '2px solid var(--border)', paddingBottom: '10px' }}>
                             <Server size={20} color="#3b82f6" /> 号機別
                         </h3>
                         {chartType === 'bar' ? renderBarList(stats.machineCounts, '#3b82f6', setSelMachine) : renderPieChart(stats.machineCounts, setSelMachine)}
                     </div>
 
-                    <div className="dash-panel" style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#334155', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px' }}>
+                    <div className="dash-panel" style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: 'var(--text)', borderBottom: '2px solid var(--border)', paddingBottom: '10px' }}>
                             <AlertTriangle size={20} color="#ef4444" /> 内容別
                         </h3>
                         {chartType === 'bar' ? renderBarList(stats.incidentCounts, '#ef4444', setSelIncident) : renderPieChart(stats.incidentCounts, setSelIncident)}
                     </div>
 
-                    <div className="dash-panel" style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#334155', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px' }}>
+                    <div className="dash-panel" style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: 'var(--text)', borderBottom: '2px solid var(--border)', paddingBottom: '10px' }}>
                             <Hash size={20} color="#8b5cf6" /> タグ別
                         </h3>
                         {chartType === 'bar' ? renderBarList(stats.tagCounts, '#8b5cf6', setSelTag) : renderPieChart(stats.tagCounts, setSelTag)}
                     </div>
 
-                    <div className="dash-panel" style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', gridColumn: '1 / -1' }}>
-                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#334155', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px' }}>
+                    <div className="dash-panel" style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', gridColumn: '1 / -1' }}>
+                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: 'var(--text)', borderBottom: '2px solid var(--border)', paddingBottom: '10px' }}>
                             <Combine size={20} color="#10b981" /> 組み合わせ詳細 (内容 × タグ)
                         </h3>
                         <div style={{ display: 'grid', gridTemplateColumns: chartType === 'bar' ? '1fr 1fr' : '1fr', gap: '30px' }}>
@@ -289,7 +289,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                     opacity: 0.95;
                 }
                 .chart-legend-item:hover {
-                    background-color: #f1f5f9;
+                    background-color: var(--border);
                     transform: translateX(2px);
                 }
                 .chart-slice:hover {

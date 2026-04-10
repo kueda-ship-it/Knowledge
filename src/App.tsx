@@ -6,6 +6,7 @@ import { Menu } from './pages/Menu';
 import { Knowledge } from './pages/Knowledge';
 import { Dashboard } from './pages/Dashboard';
 import { Admin } from './pages/Admin';
+import { Chat } from './pages/Chat';
 import { apiClient } from './api/client';
 import { useAuth } from './contexts/AuthContext';
 
@@ -35,7 +36,7 @@ function App() {
     };
 
     const navigate = (view: string) => {
-        if (view === 'dashboard') prefetchDashboard();
+        if (view === 'dashboard' || view === 'chat') prefetchDashboard();
         setCurrentView(view);
     };
 
@@ -65,6 +66,10 @@ function App() {
 
             {currentView === 'dashboard' && (
                 <Dashboard data={dashboardData} onBack={() => navigate('menu')} />
+            )}
+
+            {currentView === 'chat' && (
+                <Chat data={dashboardData} onBack={() => navigate('menu')} />
             )}
 
             {currentView === 'admin' && (

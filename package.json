@@ -13,6 +13,7 @@
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@supabase/supabase-js": "^2.49.4",
     "@types/microsoft-graph": "^2.40.1",
+    "csv-parse": "^6.2.1",
     "lucide-react": "^0.475.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
@@ -21,6 +22,8 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
+    "dotenv-cli": "^11.0.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vite": "^6.1.0"
   }

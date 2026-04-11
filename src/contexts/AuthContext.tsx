@@ -54,6 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return
         console.log('[Auth] session:', data.session?.user?.email ?? 'none')
         setSession(data.session)
+        if (data.session?.provider_token) {
+          localStorage.setItem('microsoft_graph_token', data.session.provider_token)
+        }
         if (data.session) {
           const profile = await fetchProfile(data.session).catch((e) => {
             console.error('[Auth] fetchProfile error:', e)
@@ -74,9 +77,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
       if (session) {
+        if (session.provider_token) {
+          localStorage.setItem('microsoft_graph_token', session.provider_token)
+        }
         const profile = await fetchProfile(session).catch(() => null)
         setUser(profile)
       } else {
+        localStorage.removeItem('microsoft_graph_token')
         setUser(null)
       }
     })
@@ -92,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.signInWithOAuth({
       provider: 'azure',
       options: {
-        scopes: 'email profile openid',
+        scopes: 'email profile openid Files.ReadWrite User.Read',
         redirectTo: window.location.origin,
         queryParams: { response_type: 'code' },
       },

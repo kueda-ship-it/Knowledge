@@ -423,3 +423,6 @@ body.dark .menu-card:hover {
 .dark-toggle-btn:hover {
   background: var(--border);
 }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

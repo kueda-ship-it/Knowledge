@@ -1,6 +1,6 @@
 import React from 'react';
 import { KnowledgeItem, User } from '../types';
-import { RotateCcw, Check } from 'lucide-react';
+import { RotateCcw, Check, Paperclip } from 'lucide-react';
 
 interface KnowledgeListProps {
     data: KnowledgeItem[];
@@ -13,6 +13,7 @@ interface KnowledgeListProps {
     selectedCategories: string[];
     onCategoryToggle: (cat: string) => void;
     loading?: boolean;
+    loadingMsg?: string;
 }
 
 export const KnowledgeList: React.FC<KnowledgeListProps> = ({
@@ -24,7 +25,8 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
     categories,
     selectedCategories,
     onCategoryToggle,
-    loading
+    loading,
+    loadingMsg
 }) => {
     return (
         <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
@@ -76,8 +78,9 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {loading ? (
-                    <div style={{ textAlign: 'center', color: '#3b82f6', marginTop: '40px', fontWeight: 'bold' }}>
-                        Processing...
+                    <div style={{ textAlign: 'center', marginTop: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                        <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>{loadingMsg || 'データを読み込み中...'}</span>
                     </div>
                 ) : data.length === 0 ? (
                     <p style={{ textAlign: 'center', color: '#94a3b8', marginTop: '40px' }}>データがありません</p>
@@ -109,10 +112,15 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                 {item.category && <span style={{ fontWeight: 'bold' }}>[{item.category}] </span>}
                                 {item.incidents?.join(', ')}
                             </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                                 {item.tags?.map((tag, i) => (
                                     <span key={i} style={{ fontSize: '0.8rem', color: '#3b82f6' }}>#{tag}</span>
                                 ))}
+                                {item.attachments && item.attachments.length > 0 && (
+                                    <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                        <Paperclip size={11} /> {item.attachments.length}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     ))

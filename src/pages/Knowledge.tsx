@@ -10,12 +10,28 @@ interface KnowledgeProps {
     onBack: () => void;
 }
 
+const CACHE_KEY = 'knowledge_data_v1';
+const MASTERS_CACHE_KEY = 'knowledge_masters_v1';
+
+function loadCache<T>(key: string, fallback: T): T {
+    try {
+        const s = localStorage.getItem(key);
+        return s ? (JSON.parse(s) as T) : fallback;
+    } catch { return fallback; }
+}
+
 export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
     const [view, setView] = useState<'list' | 'editor'>('list');
-    const [data, setData] = useState<KnowledgeItem[]>([]);
+    const [data, setData] = useState<KnowledgeItem[]>(() =>
+        loadCache<KnowledgeItem[]>(CACHE_KEY, [])
+    );
     const [filteredData, setFilteredData] = useState<KnowledgeItem[]>([]);
-    const [masterData, setMasterData] = useState<MasterData>({ incidents: [], categories: [], users: [] });
+    const [masterData, setMasterData] = useState<MasterData>(() =>
+        loadCache<MasterData>(MASTERS_CACHE_KEY, { incidents: [], categories: [], users: [] })
+    );
     const [loading, setLoading] = useState(false);
+    const [loadingMsg, setLoadingMsg] = useState('');
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Filters state
@@ -30,8 +46,8 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
     // Initial load
     useEffect(() => {
         refreshData();
-        // Auto-update every 60s
-        const timer = setInterval(refreshData, 60000);
+        // Auto-update every 60s silently
+        const timer = setInterval(() => refreshData(true), 60000);
         return () => clearInterval(timer);
     }, []);
 
@@ -70,24 +86,48 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
         setFilteredData(res);
     }, [data, searchKeyword, selectedTags, selectedCategories, filterType, user]);
 
-    const refreshData = async () => {
-        setLoading(true);
+    const refreshData = async (silent = false) => {
         setError(null);
+        const hasCache = data.length > 0;
+
+        if (!silent && !hasCache) {
+            setLoading(true);
+            setLoadingMsg('データを読み込み中...');
+        } else {
+            setRefreshing(true);
+        }
+
+        // Progressive wake-up messages (no timeout — wait until Supabase responds)
+        const timers: ReturnType<typeof setTimeout>[] = [];
+        if (!hasCache) {
+            timers.push(setTimeout(() => setLoadingMsg('接続中... Supabaseが起動中の場合は1分ほどかかります'), 8000));
+            timers.push(setTimeout(() => setLoadingMsg('もう少しお待ちください...'), 25000));
+            timers.push(setTimeout(() => setLoadingMsg('起動完了まで間もなくです...'), 45000));
+        }
+        const clearTimers = () => timers.forEach(clearTimeout);
+
         try {
-            const timeout = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('接続タイムアウト（15秒）')), 15000)
-            );
-            const kData = await Promise.race([apiClient.fetchAll(), timeout]);
+            const kData = await apiClient.fetchAll();
+            clearTimers();
+
             setData(kData);
+            localStorage.setItem(CACHE_KEY, JSON.stringify(kData));
+            setLoadingMsg('');
             setLoading(false);
+            setRefreshing(false);
 
             const mData = await apiClient.fetchMasters();
             setMasterData(mData);
+            localStorage.setItem(MASTERS_CACHE_KEY, JSON.stringify(mData));
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : '不明なエラー';
+            clearTimers();
             console.error("Failed to load data", e);
-            setError(msg);
+            if (!hasCache) {
+                setError('接続できませんでした。Supabaseが起動中の可能性があります。しばらく待ってから再試行してください。');
+            }
+            setLoadingMsg('');
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
@@ -135,7 +175,13 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                         {error && (
                             <div style={{ margin: '20px', padding: '16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#dc2626', fontSize: '0.9rem' }}>
                                 <strong>読み込みエラー:</strong> {error}
-                                <button onClick={refreshData} style={{ marginLeft: '12px', padding: '4px 12px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>再試行</button>
+                                <button onClick={() => refreshData()} style={{ marginLeft: '12px', padding: '4px 12px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>再試行</button>
+                            </div>
+                        )}
+                        {refreshing && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 20px', fontSize: '0.78rem', color: 'var(--muted)' }}>
+                                <div style={{ width: '10px', height: '10px', border: '2px solid var(--border)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                更新中...
                             </div>
                         )}
                         <KnowledgeList
@@ -153,6 +199,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                                 );
                             }}
                             loading={loading}
+                            loadingMsg={loadingMsg}
                         />
                         </>
                     ) : (

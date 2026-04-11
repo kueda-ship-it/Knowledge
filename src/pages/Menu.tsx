@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, PieChart, Settings, MessageSquare } from 'lucide-react';
+import { BookOpen, PieChart, Settings, MessageSquare, Paperclip } from 'lucide-react';
 
 interface MenuProps {
     onNavigate: (view: string) => void;
@@ -41,6 +41,13 @@ export const Menu: React.FC<MenuProps> = ({ onNavigate, role }) => {
                         cursor: 'pointer', transition: 'all 0.2s', fontSize: '1.2rem', color: '#8b5cf6', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                     }}>
                         <MessageSquare size={48} /> <span>ナレッジ検索チャット</span>
+                    </button>
+                    <button onClick={() => onNavigate('filelist')} className="menu-card" style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '15px',
+                        padding: '30px', background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '12px',
+                        cursor: 'pointer', transition: 'all 0.2s', fontSize: '1.2rem', color: '#f59e0b', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                    }}>
+                        <Paperclip size={48} /> <span>添付ファイル一覧</span>
                     </button>
                     {isAdmin && (
                         <button onClick={() => onNavigate('admin')} className="menu-card admin-card" style={{

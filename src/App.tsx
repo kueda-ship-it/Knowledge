@@ -7,6 +7,7 @@ import { Knowledge } from './pages/Knowledge';
 import { Dashboard } from './pages/Dashboard';
 import { Admin } from './pages/Admin';
 import { Chat } from './pages/Chat';
+import { FileList } from './pages/FileList';
 import { apiClient } from './api/client';
 import { useAuth } from './contexts/AuthContext';
 
@@ -16,6 +17,8 @@ function App() {
     const [dashboardData, setDashboardData] = useState<KnowledgeItem[]>([]);
     const [dashboardLoading, setDashboardLoading] = useState(false);
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+
+
 
     useEffect(() => {
         if (darkMode) {
@@ -36,7 +39,7 @@ function App() {
     };
 
     const navigate = (view: string) => {
-        if (view === 'dashboard' || view === 'chat') prefetchDashboard();
+        if (view === 'dashboard' || view === 'chat' || view === 'filelist') prefetchDashboard();
         setCurrentView(view);
     };
 
@@ -70,6 +73,10 @@ function App() {
 
             {currentView === 'chat' && (
                 <Chat data={dashboardData} onBack={() => navigate('menu')} />
+            )}
+
+            {currentView === 'filelist' && (
+                <FileList data={dashboardData} onBack={() => navigate('menu')} />
             )}
 
             {currentView === 'admin' && (

@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { msalInstance, getGraphClient, initializeMsal, signIn, ssoLogin } from '../lib/microsoftGraph';
-import { EventType } from "@azure/msal-browser";
+import { getGraphClient, getToken } from '../lib/microsoftGraph';
 
 export interface Attachment {
     id: string;
@@ -19,29 +18,33 @@ export function useOneDriveUpload(userEmail?: string) {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
-        const init = async () => {
-            await initializeMsal();
-            // Try SSO with user's email if available
-            if (userEmail) await ssoLogin(userEmail);
-            setIsAuthenticated(!!msalInstance.getActiveAccount());
+        const checkAuth = async () => {
+            const token = await getToken();
+            setIsAuthenticated(!!token);
         };
-        init();
-
-        const id = msalInstance.addEventCallback((event: any) => {
-            if ([EventType.LOGIN_SUCCESS, EventType.ACQUIRE_TOKEN_SUCCESS, EventType.ACTIVE_ACCOUNT_CHANGED].includes(event.eventType)) {
-                setIsAuthenticated(!!msalInstance.getActiveAccount());
+        checkAuth();
+        
+        // localStorageの変更を監視（別タブやAuthContextでのトークン更新検知）
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === 'microsoft_graph_token') {
+                setIsAuthenticated(!!e.newValue);
             }
-        });
-        return () => { if (id) msalInstance.removeEventCallback(id); };
-    }, [userEmail]);
+        };
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, []);
+
+    const authenticate = useCallback(async (): Promise<boolean> => {
+        const token = await getToken();
+        setIsAuthenticated(!!token);
+        return !!token;
+    }, []);
 
     const ensureClient = useCallback(async () => {
         try {
             return await getGraphClient();
         } catch {
-            const account = await signIn();
-            if (!account) throw new Error("LoginRequired");
-            return await getGraphClient();
+            throw new Error("LoginRequired");
         }
     }, []);
 
@@ -50,9 +53,11 @@ export function useOneDriveUpload(userEmail?: string) {
             return await op();
         } catch (e: any) {
             const s = JSON.stringify(e);
-            if (s.includes("AADSTS65001") || s.includes("invalid_grant") || e.code === "InvalidAuthenticationToken") {
-                await signIn("consent");
-                return await op();
+            if (s.includes("AADSTS65001") || s.includes("invalid_grant") || e.code === "InvalidAuthenticationToken" || e.message === "LoginRequired") {
+                // トークンが無効または期限切れの場合、localStorageから削除して未認証状態にする
+                localStorage.removeItem('microsoft_graph_token');
+                setIsAuthenticated(false);
+                throw new Error("LoginRequired");
             }
             throw e;
         }
@@ -118,7 +123,11 @@ export function useOneDriveUpload(userEmail?: string) {
 
             return { id: driveItem.id, url: webUrl, name: file.name, type: file.type, size: file.size, thumbnailUrl };
         } catch (e: any) {
-            if (e.message !== "LoginRequired") alert(`アップロード失敗: ${e.message}`);
+            if (e.message === "LoginRequired") {
+                alert("Microsoft認証の期限が切れました。一度ログアウトし、再度ログインしてください。");
+            } else {
+                alert(`アップロード失敗: ${e.message}`);
+            }
             return null;
         } finally {
             setUploading(false);
@@ -126,5 +135,5 @@ export function useOneDriveUpload(userEmail?: string) {
         }
     };
 
-    return { uploadFile, uploading, statusMessage, isAuthenticated };
+    return { uploadFile, uploading, statusMessage, isAuthenticated, authenticate };
 }

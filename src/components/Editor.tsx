@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { KnowledgeItem, MasterData, Attachment } from '../types';
-import { Trash2, X, RotateCcw, Check, Paperclip, ExternalLink, FileText, Image } from 'lucide-react';
+import { Trash2, X, RotateCcw, Check, Paperclip, ExternalLink, FileText, Image, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { useOneDriveUpload } from '../hooks/useOneDriveUpload';
 
@@ -24,7 +24,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
     const [loading, setLoading] = useState(false);
     const [attachments, setAttachments] = useState<Attachment[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { uploadFile, uploading, statusMessage } = useOneDriveUpload(user.email as string | undefined);
+    const { uploadFile, uploading, statusMessage, isAuthenticated, authenticate } = useOneDriveUpload(user.email as string | undefined);
 
     useEffect(() => {
         if (item) {
@@ -245,8 +245,27 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
 
                 {/* Attachments */}
                 <div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Paperclip size={14} /> 添付ファイル (OneDrive)
+                        {/* Auth status badge */}
+                        {isAuthenticated ? (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.75rem', color: '#22c55e', marginLeft: '4px' }}>
+                                <ShieldCheck size={13} /> 認証済み
+                            </span>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={authenticate}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '3px',
+                                    fontSize: '0.75rem', color: '#f59e0b', background: 'none',
+                                    border: '1px solid #f59e0b', borderRadius: '4px',
+                                    padding: '2px 7px', cursor: 'pointer', marginLeft: '4px',
+                                }}
+                            >
+                                <ShieldAlert size={13} /> Microsoft認証
+                            </button>
+                        )}
                     </label>
                     <input
                         ref={fileInputRef}
@@ -280,7 +299,13 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                     )}
                     {canEdit && (
                         <button type="button"
-                            onClick={() => fileInputRef.current?.click()}
+                            onClick={() => {
+                                if (!isAuthenticated) {
+                                    authenticate().then(ok => { if (ok) fileInputRef.current?.click(); });
+                                } else {
+                                    fileInputRef.current?.click();
+                                }
+                            }}
                             disabled={uploading}
                             className="secondary-btn"
                             style={{ fontSize: '0.85rem', gap: '6px', display: 'flex', alignItems: 'center' }}

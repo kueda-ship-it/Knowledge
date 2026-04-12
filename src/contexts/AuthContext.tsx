@@ -8,6 +8,8 @@ interface AuthContextType {
   session: Session | null
   isLoading: boolean
   signInWithMicrosoft: () => void
+  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>
+  signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => void
 }
 
@@ -16,17 +18,47 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   isLoading: true,
   signInWithMicrosoft: () => {},
+  signInWithEmail: async () => ({ error: null }),
+  signUpWithEmail: async () => ({ error: null }),
   signOut: () => {},
 })
 
 async function fetchProfile(session: Session): Promise<User | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('profiles')
     .select('id, display_name, knl_role, email, avatar_url')
     .eq('id', session.user.id)
     .single()
 
-  if (!data) return null
+  if (!data || error) {
+    console.log('[Auth] Profile not found, creating new profile for:', session.user.email)
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('profiles')
+      .upsert({
+        id: session.user.id,
+        email: session.user.email,
+        display_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '新規ユーザー',
+        avatar_url: session.user.user_metadata?.avatar_url || null,
+        knl_role: 'viewer'
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      console.error('[Auth] Initial registration failed:', insertError)
+      return null
+    }
+
+    return {
+      id: inserted.id,
+      name: inserted.display_name ?? session.user.email ?? '不明',
+      email: inserted.email ?? session.user.email,
+      role: (inserted.knl_role as User['role']) ?? 'viewer',
+      avatarUrl: inserted.avatar_url ?? undefined,
+    }
+  }
+
   return {
     id: data.id,
     name: data.display_name ?? session.user.email ?? '不明',
@@ -43,8 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true
-
-    // 最大5秒でローディング解除（フォールバック）
     const fallback = setTimeout(() => {
       if (mounted) setIsLoading(false)
     }, 5000)
@@ -53,7 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data } = await supabase.auth.getSession()
         if (!mounted) return
-        console.log('[Auth] session:', data.session?.user?.email ?? 'none')
         setSession(data.session)
         if (data.session?.provider_token) {
           localStorage.setItem('microsoft_graph_token', data.session.provider_token)
@@ -107,10 +136,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  const signInWithEmail = async (email: string, password: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      if (error.message.includes('Invalid login credentials')) {
+        return { error: 'メールアドレスまたはパスワードが正しくありません。' }
+      }
+      return { error: error.message }
+    }
+    return { error: null }
+  }
+
+  const signUpWithEmail = async (email: string, password: string): Promise<{ error: string | null }> => {
+    // ホワイトリスト照合
+    const { data: wl, error: wlError } = await supabase
+      .from('whitelist')
+      .select('email')
+      .eq('email', email.toLowerCase())
+      .maybeSingle()
+
+    if (wlError) {
+      return { error: 'ホワイトリストの確認中にエラーが発生しました。' }
+    }
+    if (!wl) {
+      return { error: 'このメールアドレスは登録が許可されていません。管理者にお問い合わせください。' }
+    }
+
+    const { error } = await supabase.auth.signUp({ email, password })
+    if (error) {
+      if (error.message.includes('already registered')) {
+        return { error: 'このメールアドレスはすでに登録されています。ログインしてください。' }
+      }
+      return { error: error.message }
+    }
+    return { error: null }
+  }
+
   const signOut = () => supabase.auth.signOut()
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signInWithMicrosoft, signOut }}>
+    <AuthContext.Provider value={{ user, session, isLoading, signInWithMicrosoft, signInWithEmail, signUpWithEmail, signOut }}>
       {children}
     </AuthContext.Provider>
   )

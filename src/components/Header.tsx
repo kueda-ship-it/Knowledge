@@ -132,13 +132,13 @@ export const Header: React.FC<HeaderProps> = ({
                                         </div>
                                         <div>
                                             <div style={{ fontSize: '0.85rem', marginBottom: '4px', color: note.is_read ? 'var(--muted)' : 'var(--text)' }}>
-                                                <strong>{note.senderName}</strong> が
+                                                <strong>{note.sender_name}</strong> が
                                                 {note.type === 'like' ? ' いいね！しました' : 
                                                  note.type === 'wrong' ? ' 違うよ！と指摘しました' : 
                                                  ' ナレッジを編集しました'}
                                             </div>
                                             <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-                                                {new Date(note.createdAt).toLocaleString()}
+                                                {new Date(note.created_at).toLocaleString()}
                                             </div>
                                         </div>
                                     </div>

@@ -180,12 +180,12 @@ export const apiClient = {
         if (error) throw error;
         return (data ?? []).map(row => ({
             id: row.id,
-            recipientId: row.recipient_id,
-            senderName: row.sender_name,
+            recipient_id: row.recipient_id,
+            sender_name: row.sender_name,
             type: row.type as any,
-            knowledgeId: row.knowledge_id,
-            isRead: row.is_read,
-            createdAt: row.created_at
+            knowledge_id: row.knowledge_id,
+            is_read: row.is_read,
+            created_at: row.created_at
         }));
     },
 

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { KnowledgeItem, User } from '../types';
-import { RotateCcw, Check, Paperclip } from 'lucide-react';
+import { RotateCcw, Check, Paperclip, ThumbsUp, AlertTriangle, ChevronDown, Filter } from 'lucide-react';
 
 interface KnowledgeListProps {
     data: KnowledgeItem[];
@@ -14,6 +14,7 @@ interface KnowledgeListProps {
     onCategoryToggle: (cat: string) => void;
     loading?: boolean;
     loadingMsg?: string;
+    users: User[];
 }
 
 export const KnowledgeList: React.FC<KnowledgeListProps> = ({
@@ -26,24 +27,108 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
     selectedCategories,
     onCategoryToggle,
     loading,
-    loadingMsg
+    loadingMsg,
+    users
 }) => {
+    const getAuthorAvatar = (name: string) => {
+        const u = users.find(user => user.name === name);
+        return u?.avatarUrl;
+    };
+
+    const getInitial = (name: string) => name.charAt(0).toUpperCase();
+
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const filterRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+                setIsFilterOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     return (
         <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text)' }}>ナレッジ一覧</h2>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <select
-                        value={filterType}
-                        onChange={(e) => onFilterChange(e.target.value as any)}
-                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)' }}
-                    >
-                        <option value="all">全て</option>
-                        <option value="unsolved">未解決</option>
-                        <option value="solved">解決済</option>
-                        <option value="mine">自分の投稿</option>
-                    </select>
+                    <div style={{ position: 'relative' }} ref={filterRef}>
+                        <button
+                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                padding: '8px 16px', borderRadius: '12px', 
+                                border: '1px solid var(--glass-border)', 
+                                background: 'var(--glass-bg)', color: 'var(--text)',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                transition: 'all 0.2s',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                            }}
+                        >
+                            <Filter size={16} color="var(--muted)" />
+                            {filterType === 'all' && '全て'}
+                            {filterType === 'unsolved' && '未解決'}
+                            {filterType === 'solved' && '解決済'}
+                            {filterType === 'mine' && '自分の投稿'}
+                            <ChevronDown size={16} color="var(--muted)" style={{ transition: 'transform 0.2s', transform: isFilterOpen ? 'rotate(180deg)' : 'rotate(0)' }} />
+                        </button>
+
+                        {isFilterOpen && (
+                            <div className="glass-elevated" style={{
+                                position: 'absolute',
+                                top: '100%', right: 0, marginTop: '8px',
+                                borderRadius: '12px',
+                                padding: '6px',
+                                minWidth: '160px',
+                                zIndex: 100,
+                                display: 'flex', flexDirection: 'column', gap: '4px',
+                                animation: 'chatPop 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                                transformOrigin: 'top right'
+                            }}>
+                                {[
+                                    { value: 'all', label: '全て' },
+                                    { value: 'unsolved', label: '未解決' },
+                                    { value: 'solved', label: '解決済' },
+                                    { value: 'mine', label: '自分の投稿' }
+                                ].map(option => (
+                                    <button
+                                        key={option.value}
+                                        onClick={() => {
+                                            onFilterChange(option.value as any);
+                                            setIsFilterOpen(false);
+                                        }}
+                                        style={{
+                                            padding: '8px 12px',
+                                            background: filterType === option.value ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                            color: filterType === option.value ? '#3b82f6' : 'var(--text)',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            textAlign: 'left',
+                                            cursor: 'pointer',
+                                            fontSize: '0.9rem',
+                                            fontWeight: filterType === option.value ? 'bold' : 'normal',
+                                            transition: 'background 0.2s',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (filterType !== option.value) e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (filterType !== option.value) e.currentTarget.style.background = 'transparent';
+                                        }}
+                                    >
+                                        {option.label}
+                                        {filterType === option.value && <Check size={14} />}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     <button onClick={onReload} className="secondary-btn" style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -62,13 +147,14 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                         key={cat}
                         onClick={() => onCategoryToggle(cat)}
                         style={{
-                            padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border)', cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            backgroundColor: selectedCategories.includes(cat) ? '#8b5cf6' : 'var(--card-bg)',
-                            color: selectedCategories.includes(cat) ? 'white' : 'var(--muted)',
-                            borderColor: selectedCategories.includes(cat) ? '#8b5cf6' : 'var(--border)',
+                            padding: '6px 16px', borderRadius: '20px', border: '1px solid var(--glass-border)', cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            backgroundColor: selectedCategories.includes(cat) ? 'rgba(99, 102, 241, 0.5)' : 'rgba(255,255,255,0.05)',
+                            color: selectedCategories.includes(cat) ? 'white' : 'rgba(255,255,255,0.6)',
+                            borderColor: selectedCategories.includes(cat) ? 'rgba(99, 102, 241, 0.8)' : 'rgba(255,255,255,0.15)',
                             fontWeight: selectedCategories.includes(cat) ? 'bold' : 'normal',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                            backdropFilter: 'blur(8px)'
                         }}
                     >
                         {cat}
@@ -101,8 +187,20 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         未解決
                                     </span>
                                 )}
-                                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                                    {new Date(item.updatedAt).toLocaleDateString()} | {item.author} | {item.machine}
+                                <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span className="date-badge">{new Date(item.updatedAt).toLocaleDateString()}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '12px' }}>
+                                        {getAuthorAvatar(item.author) ? (
+                                            <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#64748b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 'bold' }}>
+                                                {getInitial(item.author)}
+                                            </div>
+                                        )}
+                                        <span style={{ fontWeight: '500' }}>{item.author}</span>
+                                    </div>
+                                    <span style={{ opacity: 0.6 }}>|</span>
+                                    <span>{item.machine}</span>
                                 </div>
                             </div>
                             <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text)', marginBottom: '8px' }}>
@@ -117,10 +215,45 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     <span key={i} style={{ fontSize: '0.8rem', color: '#3b82f6' }}>#{tag}</span>
                                 ))}
                                 {item.attachments && item.attachments.length > 0 && (
-                                    <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                    <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '3px' }}>
                                         <Paperclip size={11} /> {item.attachments.length}
                                     </span>
                                 )}
+                                <div style={{ 
+                                    marginLeft: 'auto', 
+                                    display: 'flex', 
+                                    gap: '12px', 
+                                    alignItems: 'center',
+                                    padding: '4px 12px',
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    borderRadius: '20px',
+                                    border: '1px solid var(--glass-border)'
+                                }}>
+                                    <span style={{ 
+                                        fontSize: '0.85rem', 
+                                        color: (item.likeCount || 0) > 0 ? '#3b82f6' : 'var(--muted)', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '5px', 
+                                        fontWeight: 'bold',
+                                        textShadow: (item.likeCount || 0) > 0 ? '0 0 10px rgba(59, 130, 246, 0.5)' : 'none'
+                                    }}>
+                                        <ThumbsUp size={14} fill={(item.likeCount || 0) > 0 ? '#3b82f6' : 'transparent'} /> 
+                                        {item.likeCount || 0}
+                                    </span>
+                                    <span style={{ 
+                                        fontSize: '0.85rem', 
+                                        color: (item.wrongCount || 0) > 0 ? '#ef4444' : 'var(--muted)', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '5px', 
+                                        fontWeight: 'bold',
+                                        textShadow: (item.wrongCount || 0) > 0 ? '0 0 10px rgba(239, 68, 68, 0.5)' : 'none'
+                                    }}>
+                                        <AlertTriangle size={14} fill={(item.wrongCount || 0) > 0 ? '#ef4444' : 'transparent'} /> 
+                                        {item.wrongCount || 0}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     ))

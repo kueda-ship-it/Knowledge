@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { KnowledgeItem } from '../types';
-import { ArrowLeft, Server, AlertTriangle, Hash, Combine, BarChart3, PieChart as PieChartIcon, LayoutGrid, XCircle } from 'lucide-react';
+import { Server, AlertTriangle, Hash, Combine, BarChart3, PieChart as PieChartIcon, LayoutGrid, XCircle } from 'lucide-react';
+import { BackButton } from '../components/common/BackButton';
 
 interface DashboardProps {
     data: KnowledgeItem[];
@@ -131,14 +132,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                             </path>
                         ))}
                         {/* Donut hole */}
-                        <circle cx="100" cy="100" r="50" fill="white" />
+                        <circle cx="100" cy="100" r="50" fill="var(--bg)" />
                     </svg>
                     <div style={{
                         position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
                         textAlign: 'center', pointerEvents: 'none'
                     }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>合計</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text)' }}>{total}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--muted)', fontWeight: 'bold' }}>合計</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#3b82f6', lineHeight: 1 }}>{total}</div>
                     </div>
                 </div>
 
@@ -192,9 +193,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
             <div className="dashboard-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <button onClick={onBack} className="secondary-btn" style={{ gap: '8px', background: 'var(--card-bg)', border: '1px solid var(--input-border)' }}>
-                            <ArrowLeft size={16} /> 戻る
-                        </button>
+                        <BackButton onClick={onBack} />
                         <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text)' }}>集計ダッシュボード</h2>
                     </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { KnowledgeItem, Attachment } from '../types';
-import { ArrowLeft, Paperclip, FileText, Image, ExternalLink, Search } from 'lucide-react';
+import { Paperclip, FileText, Image, ExternalLink, Search } from 'lucide-react';
+import { BackButton } from '../components/common/BackButton';
 
 interface FileListProps {
     data: KnowledgeItem[];
@@ -47,9 +48,7 @@ export const FileList: React.FC<FileListProps> = ({ data, onBack }) => {
     return (
         <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <button onClick={onBack} className="secondary-btn" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <ArrowLeft size={16} /> 戻る
-                </button>
+                <BackButton onClick={onBack} />
                 <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Paperclip size={20} /> 添付ファイル一覧
                 </h2>
@@ -65,7 +64,7 @@ export const FileList: React.FC<FileListProps> = ({ data, onBack }) => {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="ファイル名・ナレッジ名で検索"
-                        style={{ width: '100%', padding: '8px 8px 8px 32px', border: '1px solid var(--input-border)', borderRadius: '6px', background: 'var(--input-bg)', color: 'var(--text)', boxSizing: 'border-box' }}
+                        style={{ width: '100%', padding: '8px 8px 8px 28px', border: '1px solid var(--input-border)', borderRadius: '6px', background: 'var(--input-bg)', color: 'var(--text)', boxSizing: 'border-box' }}
                     />
                 </div>
                 <div style={{ display: 'flex', gap: '6px' }}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, PieChart, Settings, MessageSquare, Paperclip } from 'lucide-react';
+import { BookOpen, PieChart, Settings, MessageSquare, Paperclip, Star } from 'lucide-react';
 
 interface MenuProps {
     onNavigate: (view: string) => void;
@@ -8,55 +8,43 @@ interface MenuProps {
 
 export const Menu: React.FC<MenuProps> = ({ onNavigate, role }) => {
     const isAdmin = role !== 'viewer';
+
+    const GlassCard: React.FC<{ onClick: () => void; color: string; icon: React.ReactNode; label: string; isAdminCard?: boolean }> = 
+        ({ onClick, color, icon, label, isAdminCard }) => (
+        <button 
+            onClick={onClick} 
+            className={`menu-card glass-elevated glass-refract-wrap${isAdminCard ? ' admin-card' : ''}`} 
+            style={{ 
+                color: color, 
+                '--icon-color': color,
+                overflow: 'hidden' 
+            } as React.CSSProperties}
+        >
+            <div className="glass-refraction" />
+            <div className="glass-specular" />
+            <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+                {icon}
+                <span>{label}</span>
+            </div>
+        </button>
+    );
+
     return (
         <div className="view active center-screen">
             <div className="menu-container" style={{
-                background: 'var(--card-bg)',
-                padding: '40px',
-                borderRadius: '12px',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
                 width: '100%',
                 maxWidth: '800px',
-                textAlign: 'center'
+                textAlign: 'center',
+                padding: '40px'
             }}>
-                <h2 style={{ marginBottom: '30px', color: 'var(--text)' }}>メインメニュー</h2>
-                <div className="menu-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                    <button onClick={() => onNavigate('knowledge')} className="menu-card" style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '15px',
-                        padding: '30px', background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '12px',
-                        cursor: 'pointer', transition: 'all 0.2s', fontSize: '1.2rem', color: '#3b82f6', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                    }}>
-                        <BookOpen size={48} /> <span>ナレッジ入力・検索</span>
-                    </button>
-                    <button onClick={() => onNavigate('dashboard')} className="menu-card" style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '15px',
-                        padding: '30px', background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '12px',
-                        cursor: 'pointer', fontSize: '1.2rem', color: '#10b981', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                    }}>
-                        <PieChart size={48} /> <span>集計ダッシュボード</span>
-                    </button>
-                    <button onClick={() => onNavigate('chat')} className="menu-card" style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '15px',
-                        padding: '30px', background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '12px',
-                        cursor: 'pointer', transition: 'all 0.2s', fontSize: '1.2rem', color: '#8b5cf6', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                    }}>
-                        <MessageSquare size={48} /> <span>ナレッジ検索チャット</span>
-                    </button>
-                    <button onClick={() => onNavigate('filelist')} className="menu-card" style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '15px',
-                        padding: '30px', background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '12px',
-                        cursor: 'pointer', transition: 'all 0.2s', fontSize: '1.2rem', color: '#f59e0b', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                    }}>
-                        <Paperclip size={48} /> <span>添付ファイル一覧</span>
-                    </button>
+                <h2 style={{ marginBottom: '40px', color: 'var(--text)', fontWeight: 700, fontSize: '2rem', letterSpacing: '0.05em' }}>メインメニュー</h2>
+                <div className="menu-grid">
+                    <GlassCard onClick={() => onNavigate('knowledge')} color="#60a5fa" icon={<BookOpen size={48} />} label="ナレッジ入力・検索" />
+                    <GlassCard onClick={() => onNavigate('dashboard')} color="#34d399" icon={<PieChart size={48} />} label="集計ダッシュボード" />
+                    <GlassCard onClick={() => onNavigate('filelist')} color="#fbbf24" icon={<Paperclip size={48} />} label="添付ファイル一覧" />
+                    <GlassCard onClick={() => onNavigate('evaluation')} color="#a78bfa" icon={<Star size={48} />} label="評価の確認" />
                     {isAdmin && (
-                        <button onClick={() => onNavigate('admin')} className="menu-card admin-card" style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '15px',
-                            padding: '30px', background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '12px',
-                            cursor: 'pointer', transition: 'all 0.2s', fontSize: '1.2rem', color: '#ef4444', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                        }}>
-                            <Settings size={48} /> <span>マスタ管理</span>
-                        </button>
+                        <GlassCard onClick={() => onNavigate('admin')} color="#f87171" icon={<Settings size={48} />} label="マスタ管理" isAdminCard />
                     )}
                 </div>
             </div>

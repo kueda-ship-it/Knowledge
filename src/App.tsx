@@ -6,28 +6,57 @@ import { Menu } from './pages/Menu';
 import { Knowledge } from './pages/Knowledge';
 import { Dashboard } from './pages/Dashboard';
 import { Admin } from './pages/Admin';
-import { Chat } from './pages/Chat';
 import { FileList } from './pages/FileList';
+import { Evaluation } from './pages/Evaluation';
 import { apiClient } from './api/client';
 import { useAuth } from './contexts/AuthContext';
+import { AppNotification } from './types';
+
+type Theme = 'light' | 'dark' | 'liquid';
+const THEME_ORDER: Theme[] = ['light', 'dark', 'liquid'];
 
 function App() {
     const { user, isLoading, signOut } = useAuth();
     const [currentView, setCurrentView] = useState('menu');
     const [dashboardData, setDashboardData] = useState<KnowledgeItem[]>([]);
     const [dashboardLoading, setDashboardLoading] = useState(false);
-    const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+    const [theme, setTheme] = useState<Theme>(() => {
+        const saved = localStorage.getItem('theme') as Theme | null;
+        return saved && THEME_ORDER.includes(saved) ? saved : 'liquid';
+    });
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
 
-
+    const cycleTheme = () => {
+        setTheme(prev => {
+            const idx = THEME_ORDER.indexOf(prev);
+            return THEME_ORDER[(idx + 1) % THEME_ORDER.length];
+        });
+    };
 
     useEffect(() => {
-        if (darkMode) {
-            document.body.classList.add('dark');
-        } else {
-            document.body.classList.remove('dark');
-        }
-        localStorage.setItem('darkMode', String(darkMode));
-    }, [darkMode]);
+        document.body.dataset.theme = theme;
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    // 通知の取得
+    useEffect(() => {
+        if (!user) return;
+        
+        const fetchNotes = async () => {
+            try {
+                const notes = await apiClient.fetchNotifications(user.id);
+                setNotifications(notes);
+                setUnreadCount(notes.filter(n => !n.is_read).length);
+            } catch (e) {
+                console.error("Failed to fetch notifications:", e);
+            }
+        };
+
+        fetchNotes();
+        const interval = setInterval(fetchNotes, 30000); // 30秒ごとに更新
+        return () => clearInterval(interval);
+    }, [user]);
 
     const prefetchDashboard = async () => {
         setDashboardLoading(true);
@@ -39,7 +68,7 @@ function App() {
     };
 
     const navigate = (view: string) => {
-        if (view === 'dashboard' || view === 'chat' || view === 'filelist') prefetchDashboard();
+        if (view === 'dashboard' || view === 'filelist' || view === 'evaluation') prefetchDashboard();
         setCurrentView(view);
     };
 
@@ -56,44 +85,53 @@ function App() {
     }
 
     return (
-        <>
-            <Header user={user} onLogout={signOut} darkMode={darkMode} onToggleDark={() => setDarkMode(d => !d)} />
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+            <Header 
+                user={user} 
+                onLogout={signOut} 
+                theme={theme}
+                onCycleTheme={cycleTheme}
+                notifications={notifications}
+                unreadCount={unreadCount}
+                onReadNotification={async (id) => {
+                    await apiClient.markNotificationAsRead(id);
+                    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+                    setUnreadCount(prev => Math.max(0, prev - 1));
+                }}
+            />
 
-            {currentView === 'menu' && (
-                <Menu onNavigate={navigate} role={user.role} />
-            )}
+            <div style={{ flex: 1, overflow: 'hidden', position: 'relative', display: 'flex' }}>
+                {currentView === 'menu' && (
+                    <Menu onNavigate={navigate} role={user.role} />
+                )}
 
-            {currentView === 'knowledge' && (
-                <Knowledge user={user} onBack={() => navigate('menu')} />
-            )}
+                {currentView === 'knowledge' && (
+                    <Knowledge user={user} onBack={() => navigate('menu')} />
+                )}
 
-            {currentView === 'dashboard' && (
-                <Dashboard data={dashboardData} onBack={() => navigate('menu')} />
-            )}
+                {currentView === 'dashboard' && (
+                    <Dashboard data={dashboardData} onBack={() => navigate('menu')} />
+                )}
 
-            {currentView === 'chat' && (
-                <Chat data={dashboardData} onBack={() => navigate('menu')} />
-            )}
+                {currentView === 'filelist' && (
+                    <FileList data={dashboardData} onBack={() => navigate('menu')} />
+                )}
 
-            {currentView === 'filelist' && (
-                <FileList data={dashboardData} onBack={() => navigate('menu')} />
-            )}
+                {currentView === 'admin' && (
+                    <Admin user={user} onBack={() => navigate('menu')} />
+                )}
 
-            {currentView === 'admin' && (
-                <Admin user={user} onBack={() => navigate('menu')} />
-            )}
+                {currentView === 'evaluation' && (
+                    <Evaluation data={dashboardData} onBack={() => navigate('menu')} user={user} />
+                )}
+            </div>
 
             {dashboardLoading && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(255,255,255,0.8)',
-                    display: 'flex', justifyContent: 'center', alignItems: 'center',
-                    zIndex: 9999
-                }}>
-                    <div>Loading...</div>
+                <div className="loading-overlay" style={{ zIndex: 9999 }}>
+                    <div style={{ color: 'var(--text)' }}>Loading...</div>
                 </div>
             )}
-        </>
+        </div>
     );
 }
 

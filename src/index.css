@@ -1,57 +1,279 @@
+/* ======================================== */
+/* テーマ CSS変数定義                         */
+/* ======================================== */
+
 :root {
+  --radius: 0.75rem;
+  --header-height: 64px;
+  font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Light テーマ（デフォルト） ---------- */
+body[data-theme="light"] {
   --primary: #2563eb;
-  --bg: #f8fafc;
+  --primary-fg: #ffffff;
   --text: #334155;
+  --text-secondary: #64748b;
   --danger: #ef4444;
-  --header-height: 60px;
-  --unsolved-bg: #fff1f2;
-  --card-bg: #ffffff;
-  --sidebar-bg: #1e293b;
-  --sidebar-text: #cbd5e1;
-  --header-bg: #ffffff;
-  --input-bg: #ffffff;
+  --bg: #f1f5f9;
+  --card-bg: rgba(255, 255, 255, 0.85);
+  --card-border: #e2e8f0;
+  --card-shadow: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.04);
+  --card-shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+  --header-bg: rgba(255,255,255,0.82);
+  --input-bg: rgba(255,255,255,0.9);
   --input-border: #cbd5e1;
-  --panel-bg: #ffffff;
+  --input-text: #334155;
   --muted: #64748b;
   --border: #e2e8f0;
-
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  --glass-bg: rgba(255,255,255,0.7);
+  --glass-border: rgba(0,0,0,0.08);
+  --glass-blur: 20px;
+  --glass-highlight: rgba(255,255,255,0.8);
+  --overlay-bg: rgba(241,245,249,0.85);
+  --tag-active-bg: #2563eb;
+  --tag-active-text: #fff;
+  --sidebar-hover: rgba(37,99,235,0.06);
+  --btn-icon-bg: rgba(0,0,0,0.04);
+  --btn-icon-border: rgba(0,0,0,0.08);
+  --btn-icon-color: #64748b;
+  --btn-icon-hover-bg: rgba(0,0,0,0.08);
+  --btn-icon-hover-color: #334155;
 }
 
-body.dark {
+/* ---------- Dark テーマ ---------- */
+body[data-theme="dark"] {
   --primary: #3b82f6;
-  --bg: #0f172a;
-  --text: #e2e8f0;
+  --primary-fg: #ffffff;
+  --text: #f1f5f9;
+  --text-secondary: #94a3b8;
   --danger: #f87171;
-  --unsolved-bg: #3b0f0f;
-  --card-bg: #1e293b;
-  --sidebar-bg: #0f172a;
-  --sidebar-text: #94a3b8;
-  --header-bg: #1e293b;
+  --bg: #0f172a;
+  --card-bg: rgba(30,41,59,0.85);
+  --card-border: #1e293b;
+  --card-shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.25);
+  --card-shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -4px rgba(0,0,0,0.4);
+  --header-bg: rgba(15,23,42,0.85);
   --input-bg: #1e293b;
   --input-border: #334155;
-  --panel-bg: #1e293b;
+  --input-text: #f1f5f9;
   --muted: #94a3b8;
-  --border: #334155;
+  --border: #1e293b;
+  --glass-bg: rgba(30,41,59,0.7);
+  --glass-border: rgba(255,255,255,0.08);
+  --glass-blur: 20px;
+  --glass-highlight: rgba(255,255,255,0.06);
+  --overlay-bg: rgba(15,23,42,0.85);
+  --tag-active-bg: #3b82f6;
+  --tag-active-text: #fff;
+  --sidebar-hover: rgba(59,130,246,0.08);
+  --btn-icon-bg: rgba(255,255,255,0.06);
+  --btn-icon-border: rgba(255,255,255,0.1);
+  --btn-icon-color: #94a3b8;
+  --btn-icon-hover-bg: rgba(255,255,255,0.12);
+  --btn-icon-hover-color: #f1f5f9;
 }
+
+/* ---------- Liquid Glass テーマ ---------- */
+body[data-theme="liquid"] {
+  --primary: oklch(0.62 0.22 260);
+  --primary-fg: #ffffff;
+  --text: #ffffff;
+  --text-secondary: rgba(255,255,255,0.5);
+  --danger: oklch(0.65 0.22 25);
+  --bg: #0d1b4b;
+  --card-bg: transparent;
+  --card-border: rgba(255,255,255,0.12);
+  --card-shadow: none;
+  --card-shadow-lg: none;
+  --header-bg: rgba(255,255,255,0.04);
+  --input-bg: rgba(255,255,255,0.06);
+  --input-border: rgba(255,255,255,0.15);
+  --input-text: #ffffff;
+  --muted: rgba(255,255,255,0.5);
+  --border: rgba(255,255,255,0.1);
+  --glass-bg: transparent;
+  --glass-border: rgba(255,255,255,0.1);
+  --glass-blur: 24px;
+  --glass-highlight: rgba(255,255,255,0.15);
+  --overlay-bg: rgba(13,27,75,0.6);
+  --tag-active-bg: rgba(59,130,246,0.4);
+  --tag-active-text: #fff;
+  --sidebar-hover: rgba(255,255,255,0.04);
+  --btn-icon-bg: transparent;
+  --btn-icon-border: rgba(255,255,255,0.1);
+  --btn-icon-color: rgba(255,255,255,0.7);
+  --btn-icon-hover-bg: transparent;
+  --btn-icon-hover-color: #93c5fd;
+}
+
+/* ======================================== */
+/* body 基本スタイル                          */
+/* ======================================== */
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  height: 100vh;
+  min-height: 100vh;
+  position: relative;
   overflow: hidden;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.4s, color 0.3s;
 }
 
-/* 画面制御 */
+/* Liquid Glass 専用の背景アニメーション */
+body[data-theme="liquid"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg,
+    #050b1f 0%, #0d1b4b 15%, #141b61 30%,
+    #2c0859 45%, #0c366e 60%, #01436e 75%,
+    #141b61 90%, #050b1f 100%);
+  background-size: 300% 300%;
+  animation: liquid 20s ease infinite;
+  z-index: -2;
+}
+
+body[data-theme="liquid"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 30%, rgba(99,102,241,0.25) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 80% 70%, rgba(14,165,233,0.2) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 60% 20%, rgba(139,92,246,0.2) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 50% at 30% 80%, rgba(59,130,246,0.15) 0%, transparent 55%);
+  z-index: -1;
+  animation: orbs 25s ease-in-out infinite alternate;
+}
+
+/* Light/Darkの場合は疑似要素を非表示 */
+body[data-theme="light"]::before,
+body[data-theme="light"]::after,
+body[data-theme="dark"]::before,
+body[data-theme="dark"]::after {
+  display: none;
+}
+
+@keyframes liquid {
+  0%   { background-position: 0% 0%; }
+  33%  { background-position: 100% 50%; }
+  66%  { background-position: 50% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+@keyframes orbs {
+  0%   { opacity: 0.6; transform: scale(1) rotate(0deg); }
+  50%  { opacity: 0.9; transform: scale(1.05) rotate(2deg); }
+  100% { opacity: 0.7; transform: scale(0.97) rotate(-2deg); }
+}
+
+@keyframes chatPop {
+  0% { transform: scale(0.95) translateY(10px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* ======================================== */
+/* Glass UI Classes (4 Levels)              */
+/* ======================================== */
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 2px 0 0 var(--glass-highlight) inset,
+    0 12px 40px 0 rgba(0,0,0,0.12),
+    0 2px 8px 0 rgba(0,0,0,0.08);
+}
+
+/* Liquid Glass ではシャドウを強化 */
+body[data-theme="liquid"] .glass-panel {
+  box-shadow:
+    0 2px 0 0 var(--glass-highlight) inset,
+    0 12px 40px 0 rgba(0,0,0,0.35),
+    0 2px 8px 0 rgba(0,0,0,0.2);
+}
+
+.glass-elevated {
+  background: var(--card-bg);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow-lg);
+}
+
+body[data-theme="liquid"] .glass-elevated {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: none;
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+  transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+
+body[data-theme="liquid"] .glass-elevated:hover {
+  border-color: rgba(147,197,253,0.5);
+  box-shadow:
+    0 0 20px rgba(99,130,246,0.25),
+    0 0 40px rgba(99,130,246,0.1),
+    0 12px 40px rgba(0,0,0,0.3);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  background: rgba(255,255,255,0.04);
+}
+
+.glass-subtle {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+
+body[data-theme="liquid"] .glass-subtle {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow:
+    0 1px 0 0 rgba(255,255,255,0.15) inset,
+    0 4px 16px 0 rgba(0,0,0,0.2);
+}
+
+.glass-primary {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border: 1px solid transparent;
+  box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+}
+
+body[data-theme="liquid"] .glass-primary {
+  background: linear-gradient(135deg, rgba(99,102,241,0.7), rgba(59,130,246,0.7));
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow:
+    0 1px 0 0 rgba(255,255,255,0.35) inset,
+    0 8px 24px 0 rgba(59,130,246,0.4),
+    0 2px 8px 0 rgba(0,0,0,0.3);
+}
+
+/* ======================================== */
+/* レイアウト                                */
+/* ======================================== */
+
 .view {
   display: flex !important;
   width: 100%;
   height: calc(100vh - var(--header-height));
-  /* margin-top: var(--header-height); -- moved to layout/padding logic in components */
   flex-direction: column;
 }
 
@@ -59,207 +281,353 @@ body {
   display: flex !important;
   align-items: center;
   justify-content: center;
-  background: #e2e8f0;
   height: 100vh;
-  /* Full screen for login/menu */
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 0; left: 0;
   z-index: 50;
+  width: 100%;
+  background: transparent;
 }
 
-/* コンテナ */
 .login-box,
 .menu-container {
-  background: white;
   padding: 40px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
   width: 400px;
   text-align: center;
 }
-
 .menu-container {
   max-width: 800px;
   width: 90%;
 }
 
-/* ボタン類 */
+/* ======================================== */
+/* ボタン類                                  */
+/* ======================================== */
+
 .primary-btn {
   background: var(--primary);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
+  color: var(--primary-fg);
+  border: 1px solid transparent;
+  box-shadow: 0 4px 12px rgba(59,130,246,0.25);
+  padding: 10px 24px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+
+body[data-theme="liquid"] .primary-btn {
+  background: linear-gradient(135deg, rgba(99,102,241,0.7), rgba(59,130,246,0.7));
+  backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow:
+    0 1px 0 0 rgba(255,255,255,0.35) inset,
+    0 8px 24px 0 rgba(59,130,246,0.4),
+    0 2px 8px 0 rgba(0,0,0,0.3);
 }
 
 .primary-btn:hover {
-  background: #1d4ed8;
   filter: brightness(1.1);
+  transform: translateY(-2px) scale(1.02);
 }
-
 .primary-btn:active {
-  transform: scale(0.95);
+  transform: translateY(0) scale(0.97);
 }
 
 .secondary-btn {
-  background: #cbd5e1;
-  color: #334155;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
+  background: var(--btn-icon-bg);
+  border: 1px solid var(--btn-icon-border);
+  color: var(--text);
+  padding: 8px 18px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+}
+
+body[data-theme="liquid"] .secondary-btn {
+  backdrop-filter: blur(16px) saturate(140%);
 }
 
 .secondary-btn:hover {
-  background: #e2e8f0;
-  border-color: #94a3b8;
-  color: #000;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.secondary-btn:active {
-  transform: scale(0.95);
+  background: var(--btn-icon-hover-bg);
+  transform: translateY(-2px);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .danger-btn {
-  background: var(--danger);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: var(--danger);
+  padding: 10px 24px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
 }
-
+body[data-theme="liquid"] .danger-btn {
+  background: rgba(239,68,68,0.2);
+  border-color: rgba(239,68,68,0.4);
+  color: #fca5a5;
+  backdrop-filter: blur(12px) saturate(150%);
+}
 .danger-btn:hover {
-  background: #dc2626;
-  filter: brightness(1.1);
+  background: rgba(239,68,68,0.2);
+  transform: translateY(-2px);
 }
 
-.danger-btn:active {
-  transform: scale(0.95);
-}
-
-.header-logout-btn {
-  background: #334155;
-  color: white;
-  border: 1px solid #475569;
-  padding: 5px 10px;
-  border-radius: 4px;
+/* 汎用的な円形アイコンボタン（戻るボタン、ヘッダーボタン等） */
+.icon-btn-refined,
+.dark-toggle-btn,
+.header-action-btn,
+.back-btn-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--btn-icon-bg);
+  color: var(--btn-icon-color);
+  border: 1px solid var(--btn-icon-border);
+  border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
 }
 
-.header-logout-btn:hover {
-  background: #475569;
+body[data-theme="liquid"] .icon-btn-refined,
+body[data-theme="liquid"] .dark-toggle-btn,
+body[data-theme="liquid"] .header-action-btn,
+body[data-theme="liquid"] .back-btn-circle {
+  background: transparent;
+  border-color: rgba(255,255,255,0.08);
 }
 
-.header-logout-btn:active {
-  transform: scale(0.95);
+.icon-btn-refined:hover,
+.dark-toggle-btn:hover,
+.header-action-btn:hover,
+.back-btn-circle:hover {
+  background: var(--btn-icon-hover-bg);
+  color: var(--btn-icon-hover-color);
+  border-color: var(--primary);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* メニューカード */
+body[data-theme="liquid"] .icon-btn-refined:hover,
+body[data-theme="liquid"] .dark-toggle-btn:hover,
+body[data-theme="liquid"] .header-action-btn:hover,
+body[data-theme="liquid"] .back-btn-circle:hover {
+  background: transparent;
+  color: #93c5fd;
+  border-color: rgba(147,197,253,0.6);
+  box-shadow: 0 0 18px rgba(99,130,246,0.3), 0 0 40px rgba(99,130,246,0.1);
+}
+
+/* ログアウトボタン専用（赤色） */
+.logout-btn-red {
+  color: var(--danger) !important;
+}
+
+.logout-btn-red:hover {
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
+}
+
+body[data-theme="liquid"] .logout-btn-red:hover {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.3), 0 0 40px rgba(239, 68, 68, 0.1) !important;
+}
+
+.icon-btn-refined:active,
+.dark-toggle-btn:active,
+.header-action-btn:active,
+.back-btn-circle:active {
+  transform: translateY(0) scale(0.95);
+}
+
+/* ======================================== */
+/* メニューカード                            */
+/* ======================================== */
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 25px;
+  width: 100%;
+}
+
 .menu-card {
-  transition: all 0.2s ease;
-  cursor: pointer;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 20px !important;
+  padding: 40px 30px !important;
+  border-radius: 20px !important;
+  cursor: pointer !important;
+  transition: all 0.4s cubic-bezier(0.16,1,0.3,1) !important;
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  min-height: 200px;
 }
 
 .menu-card:hover {
+  transform: translateY(-8px) scale(1.02) !important;
+}
+body[data-theme="light"] .menu-card:hover {
+  background: rgba(59,130,246,0.06) !important;
   border-color: var(--primary) !important;
-  background: #f8fafc !important;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.12) !important;
+}
+body[data-theme="dark"] .menu-card:hover {
+  background: rgba(59,130,246,0.1) !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4) !important;
+}
+body[data-theme="liquid"] .menu-card:hover {
+  background: rgba(255,255,255,0.03) !important;
+  border-color: rgba(147,197,253,0.55) !important;
+  box-shadow:
+    0 0 25px rgba(99,130,246,0.3),
+    0 0 50px rgba(99,130,246,0.1),
+    0 20px 60px -10px rgba(0,0,0,0.35) !important;
+  backdrop-filter: blur(16px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
 }
 
-.menu-card:active {
-  transform: scale(0.98);
-}
+/* ======================================== */
+/* フォーム入力                              */
+/* ======================================== */
 
-.full-width {
+input, textarea, select {
   width: 100%;
-  margin-top: 10px;
-}
-
-.required {
-  color: var(--danger);
-  font-weight: bold;
-  margin-left: 3px;
-}
-
-input,
-textarea,
-select {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  padding: 10px 14px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  border-radius: 12px;
   box-sizing: border-box;
+  color: var(--input-text);
+  transition: all 0.2s;
+}
+body[data-theme="liquid"] input,
+body[data-theme="liquid"] textarea,
+body[data-theme="liquid"] select {
+  backdrop-filter: blur(16px);
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+input::placeholder, textarea::placeholder {
+  color: var(--muted);
 }
 
-/* ダッシュボード & マスタ */
-.dashboard-container {
-  padding: 40px;
-  height: 100%;
-  overflow-y: auto;
-  box-sizing: border-box;
-  flex: 1;
-}
+/* ======================================== */
+/* タグ                                      */
+/* ======================================== */
 
-/* Tag Cloud */
 .sidebar-tag {
   display: inline-block;
   font-size: 0.8rem;
-  background: #f1f5f9;
-  padding: 3px 8px;
-  border-radius: 12px;
-  margin: 2px;
+  background: var(--btn-icon-bg);
+  padding: 6px 12px;
+  border-radius: 20px;
+  margin: 3px;
   cursor: pointer;
-  color: #475569;
-  transition: 0.2s;
+  color: var(--muted);
+  border: 1px solid var(--btn-icon-border);
+  transition: all 0.2s;
+}
+body[data-theme="liquid"] .sidebar-tag {
+  backdrop-filter: blur(8px);
 }
 
-.sidebar-tag:hover,
+.sidebar-tag:hover {
+  background: var(--btn-icon-hover-bg);
+  color: var(--btn-icon-hover-color);
+  border-color: rgba(147,197,253,0.4);
+}
+
 .sidebar-tag.active {
-  background: var(--primary);
-  color: white;
+  background: var(--tag-active-bg);
+  color: var(--tag-active-text);
+  border-color: var(--tag-active-bg);
+}
+body[data-theme="liquid"] .sidebar-tag.active {
+  box-shadow: 0 0 15px rgba(59,130,246,0.3);
 }
 
-/* Cards */
+/* ======================================== */
+/* ナレッジカード                            */
+/* ======================================== */
+
 .knowledge-card {
-  background: white;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 18px;
+  border-radius: 16px;
+  margin-bottom: 12px;
   cursor: pointer;
-  border-left: 4px solid transparent;
   position: relative;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
 }
 
 .knowledge-card:hover {
-  border-left-color: var(--primary);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: var(--card-shadow-lg);
+}
+body[data-theme="light"] .knowledge-card:hover {
+  border-color: var(--primary);
+  background: rgba(59,130,246,0.04);
+}
+body[data-theme="dark"] .knowledge-card:hover {
+  border-color: #3b82f6;
+  background: rgba(59,130,246,0.08);
+}
+body[data-theme="liquid"] .knowledge-card {
+  background: transparent;
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: none;
+}
+body[data-theme="liquid"] .knowledge-card:hover {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(147,197,253,0.45);
+  box-shadow:
+    0 0 20px rgba(99,130,246,0.25),
+    0 0 40px rgba(99,130,246,0.08),
+    0 8px 30px rgba(0,0,0,0.2);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
 }
 
 .knowledge-card:active {
-  transform: scale(0.98);
+  transform: scale(0.99);
 }
 
 .knowledge-card.unsolved {
-  background-color: var(--unsolved-bg);
-  border-left-color: #fca5a5;
+  border-color: rgba(239,68,68,0.25);
+}
+body[data-theme="liquid"] .knowledge-card.unsolved {
+  background: rgba(239,68,68,0.05);
+}
+.knowledge-card.unsolved:hover {
+  border-color: rgba(239,68,68,0.4);
+}
+body[data-theme="liquid"] .knowledge-card.unsolved:hover {
+  background: rgba(239,68,68,0.1);
 }
 
-/* Status Toggle Buttons (Editor) */
+/* ======================================== */
+/* ステータストグル                          */
+/* ======================================== */
+
 .status-toggle-btn {
   width: 44px;
   height: 44px;
@@ -269,160 +637,87 @@ select {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: #f1f5f9;
-  color: #64748b;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  /* Circle visibility */
+  background: var(--btn-icon-bg);
+  color: var(--muted);
+  border: 1px solid var(--btn-icon-border);
+}
+body[data-theme="liquid"] .status-toggle-btn {
+  backdrop-filter: blur(8px);
 }
 
 .status-toggle-btn:hover {
-  background: #e2e8f0;
-  color: #334155;
+  background: var(--btn-icon-hover-bg);
+  color: var(--btn-icon-hover-color);
 }
-
 .status-toggle-btn.solved.active {
-  background: #16eb8d;
-  color: #000;
+  background: rgba(34,197,94,0.15);
+  color: #22c55e;
+  border-color: rgba(34,197,94,0.4);
+  box-shadow: 0 0 15px rgba(34,197,94,0.15);
 }
-
-.status-toggle-btn.solved:not(.active):hover {
-  background: #16eb8d;
-  color: #000;
-  opacity: 0.7;
-}
-
-.status-toggle-btn.solved.active:hover {
-  background: #00ff7f;
-  box-shadow: 0 0 12px rgba(22, 235, 141, 0.6);
-}
-
 .status-toggle-btn.unsolved.active {
-  background: #8b5cf6;
-  color: white;
+  background: rgba(239,68,68,0.15);
+  color: #ef4444;
+  border-color: rgba(239,68,68,0.4);
+  box-shadow: 0 0 15px rgba(239,68,68,0.15);
 }
 
-.status-toggle-btn.solved.active:hover {
-  background: #00ff7f;
-  box-shadow: 0 0 12px rgba(22, 235, 141, 0.6);
-}
+/* ======================================== */
+/* ユーティリティ                            */
+/* ======================================== */
 
-.status-toggle-btn.unsolved.active {
-  background: #8b5cf6;
-  color: white;
-}
-
-.status-toggle-btn.unsolved:not(.active):hover {
-  background: #8b5cf6;
-  color: white;
-  opacity: 0.7;
-}
-
-.status-toggle-btn.unsolved.active:hover {
-  background: #7c3aed;
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
-}
-
-/* Dash & Admin */
-.admin-list li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 5px 0;
-  border-bottom: 1px solid #eee;
-}
-
-.dash-panel {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-/* Utility */
 .loading-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.8);
+  inset: 0;
+  background: var(--overlay-bg);
+  backdrop-filter: blur(8px);
   z-index: 999;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-/* ダークモード */
-body.dark .knowledge-card {
-  background: var(--card-bg);
-  color: var(--text);
-}
-
-body.dark .knowledge-card.unsolved {
-  background-color: var(--unsolved-bg);
-}
-
-body.dark input,
-body.dark textarea,
-body.dark select {
-  background: var(--input-bg);
-  color: var(--text);
-  border-color: var(--input-border);
-}
-
-body.dark .dash-panel,
-body.dark .admin-item,
-body.dark [style*="background: white"],
-body.dark [style*="background-color: white"],
-body.dark [style*="background:#fff"],
-body.dark [style*="backgroundColor: 'white'"] {
-  background: var(--panel-bg) !important;
-  color: var(--text) !important;
-}
-
-body.dark .secondary-btn {
-  background: #334155;
-  color: #e2e8f0;
-}
-
-body.dark .secondary-btn:hover {
-  background: #475569;
-  color: white;
-}
-
-body.dark .loading-overlay {
-  background: rgba(15, 23, 42, 0.8);
-}
-
-body.dark .center-screen {
-  background: #0f172a;
-}
-
-body.dark .login-box,
-body.dark .menu-container {
-  background: #1e293b;
-  color: var(--text);
-}
-
-body.dark .menu-card:hover {
-  background: #334155 !important;
-}
-
-/* ダークモードトグルボタン */
-.dark-toggle-btn {
-  background: none;
-  border: 1px solid var(--input-border);
-  cursor: pointer;
-  color: var(--text);
-  padding: 5px 8px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  transition: all 0.2s;
-}
-
-.dark-toggle-btn:hover {
-  background: var(--border);
-}
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ======================================== */
+/* Liquid Glass: SVG 屈折レイヤー            */
+/* ======================================== */
+
+/* 屈折対象の親要素 */
+body[data-theme="liquid"] .glass-refract-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+body[data-theme="liquid"] .glass-refract-wrap > .glass-refraction {
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  backdrop-filter: blur(0.5px);
+  -webkit-backdrop-filter: blur(0.5px);
+  filter: url(#liquid-refract);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* スペキュラーハイライト（ガラスの厚み・光沢） */
+body[data-theme="liquid"] .glass-refract-wrap > .glass-specular {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 1;
+  pointer-events: none;
+  border: 1.5px solid rgba(255,255,255,0.18);
+  box-shadow:
+    inset 0 2px 0 0 rgba(255,255,255,0.3),
+    inset 0 -1px 3px 0 rgba(0,0,0,0.1),
+    inset 2px 0 3px 0 rgba(255,255,255,0.06),
+    inset -2px 0 3px 0 rgba(255,255,255,0.06);
+  background: linear-gradient(165deg,
+    rgba(255,255,255,0.12) 0%,
+    rgba(255,255,255,0.02) 30%,
+    transparent 55%,
+    rgba(255,255,255,0.04) 100%);
 }

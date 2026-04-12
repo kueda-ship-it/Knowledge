@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { KnowledgeList } from '../components/KnowledgeList';
 import { Editor } from '../components/Editor';
-import { KnowledgeItem, User, MasterData } from '../types';
+import { AIChatPopover } from '../components/AIChatPopover';
+import { KnowledgeItem, User, MasterData, ChatMessage } from '../types';
 import { apiClient } from '../api/client';
+import { searchKnowledge } from '../utils/searchUtils';
 
 interface KnowledgeProps {
     user: User;
@@ -42,6 +44,10 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
 
     // Editor state
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
+
+    // Chat state
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+    const [isChatSearching, setIsChatSearching] = useState(false);
 
     // Initial load
     useEffect(() => {
@@ -87,6 +93,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
     }, [data, searchKeyword, selectedTags, selectedCategories, filterType, user]);
 
     const refreshData = async (silent = false) => {
+        if (loading || refreshing) return;
         setError(null);
         const hasCache = data.length > 0;
 
@@ -97,38 +104,79 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
             setRefreshing(true);
         }
 
-        // Progressive wake-up messages (no timeout — wait until Supabase responds)
+        // Progressive wake-up messages (even for silent refresh, to show progress if it hangs)
         const timers: ReturnType<typeof setTimeout>[] = [];
-        if (!hasCache) {
-            timers.push(setTimeout(() => setLoadingMsg('接続中... Supabaseが起動中の場合は1分ほどかかります'), 8000));
-            timers.push(setTimeout(() => setLoadingMsg('もう少しお待ちください...'), 25000));
-            timers.push(setTimeout(() => setLoadingMsg('起動完了まで間もなくです...'), 45000));
-        }
-        const clearTimers = () => timers.forEach(clearTimeout);
+        timers.push(setTimeout(() => setLoadingMsg('接続中... Supabaseが起動中の場合は1分ほどかかります'), 8000));
+        timers.push(setTimeout(() => setLoadingMsg('もう少しお待ちください...'), 25000));
+        timers.push(setTimeout(() => setLoadingMsg('起動完了まで間もなくです...'), 45000));
+        
+        const clearTimers = () => {
+            timers.forEach(clearTimeout);
+            setLoadingMsg('');
+        };
+
+        const FETCH_TIMEOUT = 70000; // 70s (Enough for Supabase wake up)
+        const withTimeout = (promise: Promise<any>, ms: number) => 
+            Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
+            ]);
 
         try {
-            const kData = await apiClient.fetchAll();
+            const kData = await withTimeout(apiClient.fetchAll(), FETCH_TIMEOUT);
             clearTimers();
 
             setData(kData);
             localStorage.setItem(CACHE_KEY, JSON.stringify(kData));
-            setLoadingMsg('');
             setLoading(false);
             setRefreshing(false);
 
-            const mData = await apiClient.fetchMasters();
+            const mData = await withTimeout(apiClient.fetchMasters(), 20000); // Masters should be fast once awake
             setMasterData(mData);
             localStorage.setItem(MASTERS_CACHE_KEY, JSON.stringify(mData));
+            
+            // Initial AI message if first time
+            if (chatMessages.length === 0) {
+                setChatMessages([{
+                    id: 'init',
+                    type: 'assistant',
+                    text: `ナレッジベースに ${kData.length} 件のデータがあります。何かお困りのことはありますか？`
+                }]);
+            }
         } catch (e: unknown) {
             clearTimers();
             console.error("Failed to load data", e);
+            const isTimeout = e instanceof Error && e.message === 'TIMEOUT';
             if (!hasCache) {
-                setError('接続できませんでした。Supabaseが起動中の可能性があります。しばらく待ってから再試行してください。');
+                setError(isTimeout 
+                    ? '接続がタイムアウトしました。ネットワーク環境を確認するか、時間をおいて再試行してください。' 
+                    : '接続できませんでした。Supabaseが起動中の可能性があります。しばらく待ってから再試行してください。');
             }
             setLoadingMsg('');
             setLoading(false);
             setRefreshing(false);
         }
+    };
+
+    const handleChatSend = (text: string) => {
+        const userMsg: ChatMessage = { id: `u-${Date.now()}`, type: 'user', text };
+        setChatMessages(prev => [...prev, userMsg]);
+        setIsChatSearching(true);
+
+        setTimeout(() => {
+            const results = searchKnowledge(text, data);
+            const assistantMsg: ChatMessage = {
+                id: `a-${Date.now()}`,
+                type: 'assistant',
+                text: results.length > 0
+                    ? `「${text}」に関連するナレッジが ${results.length} 件見つかりました。`
+                    : `「${text}」に一致するナレッジは見つかりませんでした。`,
+                results: results.length > 0 ? results : undefined,
+                noResults: results.length === 0
+            };
+            setChatMessages(prev => [...prev, assistantMsg]);
+            setIsChatSearching(false);
+        }, 600);
     };
 
     const handleAddItem = () => {
@@ -141,9 +189,19 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
         setView('editor');
     };
 
-    const handleSave = async () => {
-        await refreshData();
-        setView('list');
+    const handleSave = async (updatedItem: KnowledgeItem, shouldClose = true) => {
+        setData(prev => {
+            const index = prev.findIndex(i => i.id === updatedItem.id);
+            if (index === -1) return [updatedItem, ...prev];
+            const next = [...prev];
+            next[index] = updatedItem;
+            return next;
+        });
+        setEditingItem(updatedItem);
+        if (shouldClose) {
+            setView('list');
+            await refreshData(true);
+        }
     };
 
     const handleDelete = async () => {
@@ -152,8 +210,8 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
     };
 
     return (
-        <div className="view active" style={{ display: 'flex' }}>
-            <div className="container" style={{ display: 'flex', width: '100%' }}>
+        <div className="view active" style={{ display: 'flex', height: '100%' }}>
+            <div className="container" style={{ display: 'flex', width: '100%', height: '100%' }}>
                 <Sidebar
                     user={user}
                     onBack={onBack}
@@ -169,7 +227,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                     data={data}
                 />
 
-                <main className="main-content" style={{ flex: 1, backgroundColor: 'var(--bg)', height: 'calc(100vh - 60px)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <main className="main-content" style={{ flex: 1, backgroundColor: 'var(--bg)', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     {view === 'list' ? (
                         <>
                         {error && (
@@ -181,7 +239,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                         {refreshing && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 20px', fontSize: '0.78rem', color: 'var(--muted)' }}>
                                 <div style={{ width: '10px', height: '10px', border: '2px solid var(--border)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                                更新中...
+                                {loadingMsg || '更新中...'}
                             </div>
                         )}
                         <KnowledgeList
@@ -200,6 +258,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                             }}
                             loading={loading}
                             loadingMsg={loadingMsg}
+                            users={masterData.users}
                         />
                         </>
                     ) : (
@@ -218,6 +277,14 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                     )}
                 </main>
             </div>
+
+            {/* 常時右下に表示されるチャットウィジェット */}
+            <AIChatPopover 
+                chatMessages={chatMessages}
+                isChatSearching={isChatSearching}
+                onChatSend={handleChatSend}
+                onChatResultClick={handleEditItem}
+            />
         </div>
     );
 };

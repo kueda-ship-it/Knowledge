@@ -2,7 +2,44 @@ export interface User {
     id: string;        // profiles.id (uuid)
     name: string;      // profiles.full_name
     email?: string;    // profiles.email
+    avatarUrl?: string; // profiles.avatar_url
     role: 'viewer' | 'user' | 'manager' | 'master';  // profiles.knl_role
+}
+
+export interface Reaction {
+    knowledgeId: string;
+    userId: string;
+    type: 'like' | 'wrong';
+    comment?: string; // Added for pointing out mistakes
+    userName?: string;
+}
+
+export interface EditHistory {
+    id: string;
+    knowledgeId: string;
+    changedBy: string;
+    oldContent: string;
+    newContent: string;
+    comment?: string;
+    updatedAt: string;
+}
+
+export interface AppNotification {
+    id: string;
+    recipient_id: string;
+    sender_name: string;
+    type: 'like' | 'wrong' | 'edited';
+    knowledge_id: string;
+    is_read: boolean;
+    created_at: string;
+}
+
+export interface ChatMessage {
+    id: string;
+    type: 'user' | 'assistant';
+    text: string;
+    results?: KnowledgeItem[];
+    noResults?: boolean;
 }
 
 export interface Attachment {
@@ -28,6 +65,10 @@ export interface KnowledgeItem {
     updatedAt: string;
     author: string;
     attachments?: Attachment[];
+    // Extension
+    likeCount?: number;
+    wrongCount?: number;
+    myReaction?: 'like' | 'wrong' | null;
 }
 
 export interface MasterData {

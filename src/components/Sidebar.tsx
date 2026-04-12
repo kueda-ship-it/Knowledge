@@ -1,6 +1,8 @@
-import React from 'react';
-import { ArrowLeft, Plus, Search, Tags } from 'lucide-react';
-import { User, KnowledgeItem } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { Plus, Search, Tags, MessageSquare, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { User, KnowledgeItem, ChatMessage } from '../types';
+import { Button } from './common/Button';
+import { BackButton } from './common/BackButton';
 
 interface SidebarProps {
     user: User;
@@ -26,58 +28,67 @@ export const Sidebar: React.FC<SidebarProps> = ({
     // Generate unique tags
     const allTags = Array.from(new Set(data.flatMap(d => d.tags || [])));
 
+
     return (
-        <aside className="sidebar" style={{
-            width: '280px',
-            backgroundColor: 'var(--card-bg)',
-            borderRight: '1px solid var(--border)',
-            padding: '20px',
+        <aside className="sidebar glass-panel" style={{
+            width: '320px',
+            borderRight: 'none',
+            padding: '16px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '20px',
-            height: 'calc(100vh - 60px)',
-            position: 'sticky',
-            top: '60px'
+            gap: '16px',
+            height: '100%',
+            overflowY: 'auto',
+            borderRadius: 0,
+            borderTop: 'none',
+            borderBottom: 'none',
+            borderLeft: 'none'
         }}>
-            <button onClick={onBack} className="secondary-btn" style={{ gap: '8px' }}>
-                <ArrowLeft size={16} /> メニュー
-            </button>
-
-            {user.role !== 'viewer' && (
-                <button onClick={onAdd} className="primary-btn" style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    padding: '12px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
-                }}>
-                    <Plus size={16} /> 新規作成
-                </button>
-            )}
-
-            <div className="search-box" style={{ position: 'relative' }}>
-                <input
-                    type="text"
-                    placeholder="キーワード検索..."
-                    onChange={(e) => onSearch(e.target.value)}
-                    style={{
-                        width: '100%', padding: '10px 10px 10px 35px',
-                        border: '1px solid var(--input-border)', borderRadius: '8px',
-                        fontSize: '0.9rem', background: 'var(--input-bg)', color: 'var(--text)'
-                    }}
-                />
-                <Search size={16} style={{ position: 'absolute', left: '10px', top: '12px', color: '#94a3b8' }} />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <BackButton onClick={onBack} />
+                {user.role !== 'viewer' && (
+                    <Button 
+                        onClick={onAdd} 
+                        variant="primary" 
+                        icon={<Plus size={16} />} 
+                        style={{ flex: 1, height: '40px' }}
+                    >
+                        新規作成
+                    </Button>
+                )}
             </div>
 
-            <div className="tag-cloud-area" style={{ flex: 1, overflowY: 'auto' }}>
-                <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', color: 'var(--muted)', fontSize: '0.9rem' }}>
-                    <Tags size={16} /> タグ一覧
+            {/* 1. Incident Search */}
+            <div className="sidebar-section">
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--muted)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <Search size={14} /> インシデント検索
                 </h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                <div className="search-box" style={{ position: 'relative' }}>
+                    <input
+                        type="text"
+                        placeholder="キーワード検索..."
+                        onChange={(e) => onSearch(e.target.value)}
+                        className="glass-input"
+                        style={{
+                            width: '100%', padding: '8px 10px 8px 28px',
+                            border: '1px solid var(--glass-border)', borderRadius: '8px',
+                            fontSize: '0.85rem', background: 'var(--input-bg)', color: 'var(--text)'
+                        }}
+                    />
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: '#94a3b8' }} />
+                </div>
+            </div>
+
+            {/* 2. Tags Area */}
+            <div className="sidebar-section" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--muted)', fontSize: '0.8rem' }}>
+                    <Tags size={14} /> タグ
+                </h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', overflowY: 'auto' }}>
                     <span
                         onClick={onClearTags}
-                        style={{
-                            padding: '4px 10px', borderRadius: '15px', fontSize: '0.8rem', cursor: 'pointer',
-                            backgroundColor: selectedTags.length === 0 ? '#3b82f6' : '#f1f5f9',
-                            color: selectedTags.length === 0 ? 'white' : '#475569'
-                        }}
+                        className={`sidebar-tag ${selectedTags.length === 0 ? 'active' : ''}`}
+                        style={{ fontSize: '0.7rem', padding: '2px 8px' }}
                     >
                         全て
                     </span>
@@ -85,17 +96,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <span
                             key={tag}
                             onClick={() => onTagToggle(tag)}
-                            style={{
-                                padding: '4px 10px', borderRadius: '15px', fontSize: '0.8rem', cursor: 'pointer',
-                                backgroundColor: selectedTags.includes(tag) ? '#3b82f6' : '#f1f5f9',
-                                color: selectedTags.includes(tag) ? 'white' : '#475569'
-                            }}
+                            className={`sidebar-tag ${selectedTags.includes(tag) ? 'active' : ''}`}
+                            style={{ fontSize: '0.7rem', padding: '2px 8px' }}
                         >
                             {tag}
                         </span>
                     ))}
                 </div>
             </div>
+
+
+
+            <style>{`
+                .sidebar-section { border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; }
+                .sidebar-section:last-child { border-bottom: none; }
+                .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                .knowledge-card-mini:hover { transform: translateX(3px); border-color: var(--primary); background: rgba(59,130,246,0.05); }
+                @keyframes bounce {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.5); opacity: 0.5; }
+                }
+            `}</style>
         </aside>
     );
 };

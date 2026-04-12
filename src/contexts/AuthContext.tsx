@@ -22,7 +22,7 @@ const AuthContext = createContext<AuthContextType>({
 async function fetchProfile(session: Session): Promise<User | null> {
   const { data } = await supabase
     .from('profiles')
-    .select('id, display_name, knl_role, email')
+    .select('id, display_name, knl_role, email, avatar_url')
     .eq('id', session.user.id)
     .single()
 
@@ -32,6 +32,7 @@ async function fetchProfile(session: Session): Promise<User | null> {
     name: data.display_name ?? session.user.email ?? '不明',
     email: data.email ?? session.user.email,
     role: (data.knl_role as User['role']) ?? 'viewer',
+    avatarUrl: data.avatar_url ?? undefined,
   }
 }
 

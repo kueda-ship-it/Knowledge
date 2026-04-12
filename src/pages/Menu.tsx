@@ -22,7 +22,7 @@ export const Menu: React.FC<MenuProps> = ({ onNavigate, role }) => {
         >
             <div className="glass-refraction" />
             <div className="glass-specular" />
-            <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+            <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px', height: '100%', width: '100%' }}>
                 {icon}
                 <span>{label}</span>
             </div>

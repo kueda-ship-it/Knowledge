@@ -1,0 +1,16 @@
+{
+  "name": "Knowledge DB",
+  "short_name": "Knowledge",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ]
+}

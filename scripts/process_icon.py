@@ -14,7 +14,7 @@ def add_corners(im, rad):
     return im
 
 def process_icon():
-    input_path = "/Users/uedakohei/.gemini/antigravity/brain/5a8a4ada-a248-48bc-bd35-48bb7fbe2560/knowledge_icon_true_obsidian_black_bg_1776063268036.png"
+    input_path = "/Users/uedakohei/.gemini/antigravity/brain/5a8a4ada-a248-48bc-bd35-48bb7fbe2560/knowledge_icon_evolution_network_1776066416258.png"
     output_logo = "public/logo.png"
     output_favicon = "public/favicon.png"
     

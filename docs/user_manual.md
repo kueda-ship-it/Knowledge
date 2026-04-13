@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../public/logo.png" width="120" height="120" />
+</p>
+
 # 取扱説明書 (Knowledge Base User Manual)
 
 ## 1. ログイン

@@ -108,7 +108,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     <div className="header-left">
                         <BackButton onClick={onBack} />
                         <div className="header-titles">
-                            <h1>マスタ管理</h1>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <img src="/logo.png" alt="" className="admin-logo" />
+                                <h1>マスタ管理</h1>
+                            </div>
                             <p>アプリケーションの基本設定と権限制御</p>
                         </div>
                     </div>
@@ -372,6 +375,13 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     font-weight: 800;
                     margin: 0;
                     letter-spacing: -0.02em;
+                }
+
+                .admin-logo {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 10px;
+                    object-fit: cover;
                 }
 
                 .header-titles p {

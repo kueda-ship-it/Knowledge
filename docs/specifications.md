@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../public/logo.png" width="120" height="120" />
+</p>
+
 # システム仕様書 (Knowledge Base System)
 
 ## 1. システム概要

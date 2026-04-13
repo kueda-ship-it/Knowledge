@@ -212,7 +212,72 @@ export const apiClient = {
     },
 
     async updateMasters(data: { incidents: string[]; categories: string[]; users: User[] }): Promise<void> {
-        // ...Existing update logic...
+        console.log("Updating masters with data:", data);
+        
+        // 1. Sync Incidents
+        try {
+            // Get current ones to see if we need to do anything
+            const { data: currentIncidents } = await supabase.from('master_incidents').select('name');
+            const currentNames = (currentIncidents ?? []).map(r => r.name);
+            
+            // Delete all and re-insert is risky but simple for this scale. 
+            // Better: Delete only those NOT in the new list.
+            const { error: delErr } = await supabase.from('master_incidents').delete().filter('name', 'in', `(${currentNames.map(n => `"${n}"`).join(',') || '""'})`);
+            if (delErr) console.warn("Incident delete error (non-fatal if table empty):", delErr);
+            
+            if (data.incidents.length > 0) {
+                const { error: insErr } = await supabase.from('master_incidents').insert(data.incidents.map(name => ({ name })));
+                if (insErr) throw insErr;
+            }
+        } catch (e) {
+            console.error("Failed to sync incidents:", e);
+            throw e;
+        }
+
+        // 2. Sync Categories
+        try {
+            const { data: currentCats } = await supabase.from('master_categories').select('name');
+            const currentCatNames = (currentCats ?? []).map(r => r.name);
+            
+            const { error: delErr } = await supabase.from('master_categories').delete().filter('name', 'in', `(${currentCatNames.map(n => `"${n}"`).join(',') || '""'})`);
+            if (delErr) console.warn("Category delete error:", delErr);
+            
+            if (data.categories.length > 0) {
+                const { error: insErr } = await supabase.from('master_categories').insert(data.categories.map(name => ({ name })));
+                if (insErr) throw insErr;
+            }
+        } catch (e) {
+            console.error("Failed to sync categories:", e);
+            throw e;
+        }
+
+        // 3. Sync Users (Profiles)
+        try {
+            for (const u of data.users) {
+                const isNew = u.id.startsWith('new-');
+                const upsertData: any = {
+                    email: u.email,
+                    display_name: u.name,
+                    knl_role: u.role,
+                    updated_at: new Date().toISOString()
+                };
+                
+                if (isNew) {
+                    upsertData.id = self.crypto.randomUUID();
+                } else {
+                    upsertData.id = u.id;
+                }
+
+                const { error: userErr } = await supabase.from('profiles').upsert(upsertData, { onConflict: 'id' });
+                if (userErr) {
+                    console.error(`Failed to upsert user ${u.name}:`, userErr);
+                    throw userErr;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to sync users:", e);
+            throw e;
+        }
     },
 
     async fetchPropertyNameByMachine(gouki: string): Promise<string | null> {

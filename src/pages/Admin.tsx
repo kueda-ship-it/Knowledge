@@ -13,10 +13,14 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     const isFullAdmin = ['master', 'manager'].includes(user.role);
     const [masterData, setMasterData] = useState<MasterData>({ incidents: [], categories: [], users: [] });
     const [isDirty, setIsDirty] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     // Inputs
     const [newCat, setNewCat] = useState('');
     const [newInc, setNewInc] = useState('');
+    const [newUserName, setNewUserName] = useState('');
+    const [newUserEmail, setNewUserEmail] = useState('');
+    const [newUserRole, setNewUserRole] = useState<User['role']>('user');
 
     useEffect(() => {
         loadMasters();
@@ -34,11 +38,16 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
 
     const handleSave = async () => {
         try {
+            setIsSaving(true);
             await apiClient.updateMasters(masterData);
+            await loadMasters(); // Reload to sync with DB (IDs etc)
             setIsDirty(false);
             alert("設定を保存しました。");
         } catch (e) {
-            alert("保存に失敗しました。");
+            console.error("Save error:", e);
+            alert("保存に失敗しました。詳細についてはコンソールをご確認ください。");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -68,6 +77,24 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
         const newUsers = [...masterData.users];
         (newUsers[index] as any)[field] = val;
         setMasterData(prev => ({ ...prev, users: newUsers }));
+        setIsDirty(true);
+    };
+
+    const handleAddUser = () => {
+        if (!newUserName.trim() || !newUserEmail.trim()) {
+            alert("名前とメールアドレスを入力してください。");
+            return;
+        }
+        const newUser: User = {
+            id: `new-${Date.now()}`,
+            name: newUserName.trim(),
+            email: newUserEmail.trim(),
+            role: newUserRole,
+        };
+        setMasterData(prev => ({ ...prev, users: [newUser, ...prev.users] }));
+        setNewUserName('');
+        setNewUserEmail('');
+        setNewUserRole('user');
         setIsDirty(true);
     };
 
@@ -182,6 +209,36 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                 </div>
                             </div>
 
+                            <div className="add-user-form">
+                                <div className="input-group">
+                                    <input 
+                                        type="text" 
+                                        placeholder="名前" 
+                                        value={newUserName}
+                                        onChange={(e) => setNewUserName(e.target.value)}
+                                    />
+                                    <input 
+                                        type="email" 
+                                        placeholder="メールアドレス" 
+                                        value={newUserEmail}
+                                        onChange={(e) => setNewUserEmail(e.target.value)}
+                                    />
+                                    <select 
+                                        value={newUserRole}
+                                        onChange={(e) => setNewUserRole(e.target.value as User['role'])}
+                                    >
+                                        <option value="viewer">閲覧者 (VIEWER)</option>
+                                        <option value="user">編集者 (USER)</option>
+                                        <option value="manager">管理者 (MANAGER)</option>
+                                        <option value="master">最上位権限 (MASTER)</option>
+                                    </select>
+                                    <button onClick={handleAddUser} className="add-user-btn">
+                                        <Plus size={16} />
+                                        <span>追加</span>
+                                    </button>
+                                </div>
+                            </div>
+
                             <div className="user-table-container scroll-area">
                                 <table className="user-table">
                                     <thead>
@@ -234,15 +291,58 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 </main>
             </div>
 
+            {isSaving && (
+                <div className="loading-overlay">
+                    <div className="spinner"></div>
+                </div>
+            )}
+
             <style>{`
+                .user-management-card {
+                    margin-top: 24px;
+                }
+                .add-user-form {
+                    padding: 16px 20px;
+                    background: rgba(255,255,255,0.03);
+                    border-bottom: 1px solid var(--border);
+                }
+                .add-user-form .input-group {
+                    display: flex;
+                    gap: 12px;
+                }
+                .add-user-form input, .add-user-form select {
+                    flex: 1;
+                    padding: 8px 12px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--input-bg);
+                    color: var(--text);
+                    font-size: 0.9rem;
+                }
+                .add-user-btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 8px 16px;
+                    background: var(--primary);
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    transition: all 0.2s;
+                }
+                .add-user-btn:hover {
+                    opacity: 0.9;
+                    transform: translateY(-1px);
+                }
                 .admin-page-root {
-                    width: 100%;
-                    height: calc(100vh - var(--header-height));
                     background: var(--bg);
                     color: var(--text);
-                    padding-bottom: 60px;
+                    height: calc(100vh - var(--header-height));
                     overflow-y: auto;
                     -webkit-overflow-scrolling: touch;
+                    padding-bottom: 60px;
                 }
 
                 .admin-max-container {
@@ -589,6 +689,16 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
 
                 .pulse {
                     animation: pulse 2s infinite;
+                }
+
+                /* Spinner locally defined as well just in case */
+                .spinner {
+                    width: 40px;
+                    height: 40px;
+                    border: 4px solid rgba(255,255,255,0.1);
+                    border-left-color: var(--primary);
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
                 }
 
                 @media (max-width: 1024px) {

@@ -131,7 +131,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
             setLoading(false);
             setRefreshing(false);
 
-            const mData = await withTimeout(apiClient.fetchMasters(), 20000); // Masters should be fast once awake
+            const mData = await withTimeout(apiClient.fetchMasters(), 60000); // Increased timeout for cold starts
             setMasterData(mData);
             localStorage.setItem(MASTERS_CACHE_KEY, JSON.stringify(mData));
             

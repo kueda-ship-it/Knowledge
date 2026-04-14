@@ -30,6 +30,18 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
     loadingMsg,
     users
 }) => {
+    const getCategoryBadgeClass = (category: string): string => {
+        const name = category.toLowerCase();
+        if (name.includes('dispatcher')) return 'badge-category-dispatcher';
+        if (name.includes('construction')) return 'badge-category-construction';
+        if (name.includes('after') || name.includes('aftertrouble')) return 'badge-category-after';
+        return 'badge-category';
+    };
+
+    const stripCategoryFromTitle = (title: string): string => {
+        return title.replace(/^\[.*?\]\s*/, '').trim();
+    };
+
     const getAuthorAvatar = (name: string) => {
         const u = users.find(user => user.name === name);
         return u?.avatarUrl;
@@ -199,24 +211,31 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         )}
                                         <span style={{ fontWeight: '500' }}>{item.author}</span>
                                     </div>
-                                    <span style={{ opacity: 0.6 }}>|</span>
-                                    <span>{item.machine}</span>
                                 </div>
                             </div>
-                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text)', marginBottom: '8px' }}>
-                                {item.title}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                                {item.machine && (
+                                    <span className="metadata-badge badge-machine">{item.machine}</span>
+                                )}
+                                <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text)' }}>
+                                    {stripCategoryFromTitle(item.title)}
+                                </div>
                             </div>
-                            <div style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: '8px' }}>
-                                {item.category && <span style={{ fontWeight: 'bold' }}>[{item.category}] </span>}
-                                {item.incidents?.join(', ')}
+                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                                {item.category && (
+                                    <span className={`metadata-badge ${getCategoryBadgeClass(item.category)}`}>{item.category}</span>
+                                )}
+                                {item.incidents && item.incidents.length > 0 && (
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>{item.incidents.join(', ')}</span>
+                                )}
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                                 {item.tags?.map((tag, i) => (
                                     <span key={i} style={{ fontSize: '0.8rem', color: '#3b82f6' }}>#{tag}</span>
                                 ))}
                                 {item.attachments && item.attachments.length > 0 && (
-                                    <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                        <Paperclip size={11} /> {item.attachments.length}
+                                    <span className="metadata-badge badge-attachment">
+                                        <Paperclip size={12} /> {item.attachments.length}
                                     </span>
                                 )}
                                 <div style={{ 

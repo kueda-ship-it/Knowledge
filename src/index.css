@@ -723,3 +723,133 @@ body[data-theme="liquid"] .glass-refract-wrap > .glass-specular {
     transparent 55%,
     rgba(255,255,255,0.04) 100%);
 }
+
+/* ======================================== */
+/* メタデータバッジスタイル                       */
+/* ======================================== */
+
+.metadata-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Dispatcher / Machine 用 (バイオレット/サファイア系) */
+.badge-machine {
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+body[data-theme="dark"] .badge-machine,
+body[data-theme="liquid"] .badge-machine {
+  color: #a5b4fc;
+}
+
+body[data-theme="liquid"] .badge-machine {
+  background: rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
+}
+
+/* カテゴリ汎用 */
+.badge-category {
+  background: rgba(100, 116, 139, 0.15);
+  color: #475569;
+  border-color: rgba(100, 116, 139, 0.3);
+}
+body[data-theme="dark"] .badge-category,
+body[data-theme="liquid"] .badge-category {
+  color: #94a3b8;
+}
+
+/* Dispatcher: 紫系 */
+.badge-category-dispatcher {
+  background: rgba(139, 92, 246, 0.15);
+  color: #7c3aed;
+  border-color: rgba(139, 92, 246, 0.3);
+}
+body[data-theme="dark"] .badge-category-dispatcher,
+body[data-theme="liquid"] .badge-category-dispatcher {
+  color: #c4b5fd;
+}
+body[data-theme="liquid"] .badge-category-dispatcher {
+  background: rgba(139, 92, 246, 0.1);
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+}
+.knowledge-card:hover .badge-category-dispatcher {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+}
+
+/* Construction: 青系 */
+.badge-category-construction {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+body[data-theme="dark"] .badge-category-construction,
+body[data-theme="liquid"] .badge-category-construction {
+  color: #93c5fd;
+}
+body[data-theme="liquid"] .badge-category-construction {
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+}
+.knowledge-card:hover .badge-category-construction {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+/* AfterTrouble: オレンジ系 */
+.badge-category-after {
+  background: rgba(249, 115, 22, 0.15);
+  color: #c2410c;
+  border-color: rgba(249, 115, 22, 0.3);
+}
+body[data-theme="dark"] .badge-category-after,
+body[data-theme="liquid"] .badge-category-after {
+  color: #fdba74;
+}
+body[data-theme="liquid"] .badge-category-after {
+  background: rgba(249, 115, 22, 0.1);
+  box-shadow: 0 0 15px rgba(249, 115, 22, 0.2);
+}
+.knowledge-card:hover .badge-category-after {
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+}
+
+/* 添付ファイル用 (サファイアブルー) */
+.badge-attachment {
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+body[data-theme="dark"] .badge-attachment,
+body[data-theme="liquid"] .badge-attachment {
+  color: #93c5fd;
+}
+
+body[data-theme="liquid"] .badge-attachment {
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+}
+
+.knowledge-card:hover .metadata-badge {
+  transform: translateY(-1px);
+}
+
+.knowledge-card:hover .badge-machine {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.25);
+}
+
+.knowledge-card:hover .badge-attachment {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}

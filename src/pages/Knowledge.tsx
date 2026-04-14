@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { KnowledgeList } from '../components/KnowledgeList';
 import { Editor } from '../components/Editor';
 import { AIChatPopover } from '../components/AIChatPopover';
 import { KnowledgeItem, User, MasterData, ChatMessage } from '../types';
-import { apiClient } from '../api/client';
+import { apiClient, toItem } from '../api/client';
+import { supabase } from '../lib/supabase';
 import { searchKnowledge } from '../utils/searchUtils';
 
 interface KnowledgeProps {
@@ -49,12 +50,67 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [isChatSearching, setIsChatSearching] = useState(false);
 
-    // Initial load
+    const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+    // 初回ロード + Supabase Realtimeサブスクリプション
     useEffect(() => {
         refreshData();
-        // Auto-update every 60s silently
-        const timer = setInterval(() => refreshData(true), 60000);
-        return () => clearInterval(timer);
+
+        // Realtimeチャンネル購読
+        const channel = supabase
+            .channel('knowledge-realtime')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'knowledge' },
+                (payload) => {
+                    const newItem = toItem(payload.new as Record<string, unknown>);
+                    setData(prev => {
+                        if (prev.some(i => i.id === newItem.id)) return prev;
+                        const next = [newItem, ...prev];
+                        localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+                        return next;
+                    });
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'knowledge' },
+                (payload) => {
+                    const updated = toItem(payload.new as Record<string, unknown>);
+                    setData(prev => {
+                        const next = prev.map(i => i.id === updated.id ? { ...i, ...updated } : i);
+                        localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+                        return next;
+                    });
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'DELETE', schema: 'public', table: 'knowledge' },
+                (payload) => {
+                    const deletedId = (payload.old as { id: string }).id;
+                    setData(prev => {
+                        const next = prev.filter(i => i.id !== deletedId);
+                        localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+                        return next;
+                    });
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'knowledge_reactions' },
+                () => {
+                    // リアクション変更時は全件再取得（件数の再計算が必要なため）
+                    refreshData(true);
+                }
+            )
+            .subscribe();
+
+        channelRef.current = channel;
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     // Filter effect
@@ -104,19 +160,22 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
             setRefreshing(true);
         }
 
-        // Progressive wake-up messages (even for silent refresh, to show progress if it hangs)
+        // 初回（キャッシュなし）のみウェイクアップメッセージを表示。サイレント更新中は出さない
         const timers: ReturnType<typeof setTimeout>[] = [];
-        timers.push(setTimeout(() => setLoadingMsg('接続中... Supabaseが起動中の場合は1分ほどかかります'), 8000));
-        timers.push(setTimeout(() => setLoadingMsg('もう少しお待ちください...'), 25000));
-        timers.push(setTimeout(() => setLoadingMsg('起動完了まで間もなくです...'), 45000));
-        
+        if (!silent && !hasCache) {
+            timers.push(setTimeout(() => setLoadingMsg('接続中... Supabaseが起動中の場合は1分ほどかかります'), 8000));
+            timers.push(setTimeout(() => setLoadingMsg('もう少しお待ちください...'), 25000));
+            timers.push(setTimeout(() => setLoadingMsg('起動完了まで間もなくです...'), 45000));
+        }
+
         const clearTimers = () => {
             timers.forEach(clearTimeout);
             setLoadingMsg('');
         };
 
-        const FETCH_TIMEOUT = 70000; // 70s (Enough for Supabase wake up)
-        const withTimeout = (promise: Promise<any>, ms: number) => 
+        // サイレント更新は短めのタイムアウト（キャッシュがあるので失敗しても問題なし）
+        const FETCH_TIMEOUT = (!silent && !hasCache) ? 70000 : 15000;
+        const withTimeout = (promise: Promise<any>, ms: number) =>
             Promise.race([
                 promise,
                 new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
@@ -131,10 +190,10 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
             setLoading(false);
             setRefreshing(false);
 
-            const mData = await withTimeout(apiClient.fetchMasters(), 60000); // Increased timeout for cold starts
+            const mData = await withTimeout(apiClient.fetchMasters(), silent ? 10000 : 60000);
             setMasterData(mData);
             localStorage.setItem(MASTERS_CACHE_KEY, JSON.stringify(mData));
-            
+
             // Initial AI message if first time
             if (chatMessages.length === 0) {
                 setChatMessages([{
@@ -145,11 +204,11 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
             }
         } catch (e: unknown) {
             clearTimers();
-            console.error("Failed to load data", e);
+            if (!silent) console.error("Failed to load data", e);
             const isTimeout = e instanceof Error && e.message === 'TIMEOUT';
             if (!hasCache) {
-                setError(isTimeout 
-                    ? '接続がタイムアウトしました。ネットワーク環境を確認するか、時間をおいて再試行してください。' 
+                setError(isTimeout
+                    ? '接続がタイムアウトしました。ネットワーク環境を確認するか、時間をおいて再試行してください。'
                     : '接続できませんでした。Supabaseが起動中の可能性があります。しばらく待ってから再試行してください。');
             }
             setLoadingMsg('');

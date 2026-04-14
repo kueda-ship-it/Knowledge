@@ -3,7 +3,7 @@ import { supabaseEquipment } from '../lib/supabaseEquipment';
 import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification } from '../types';
 
 // DB行 → KnowledgeItem の変換
-function toItem(row: Record<string, unknown>): KnowledgeItem {
+export function toItem(row: Record<string, unknown>): KnowledgeItem {
     return {
         id: row.id as string,
         title: row.title as string,
@@ -27,7 +27,8 @@ export const apiClient = {
         const { data, error } = await supabase
             .from('knowledge')
             .select(`
-                *,
+                id, title, machine, property, req_num, category,
+                incidents, tags, status, updated_at, author, attachments,
                 knowledge_reactions(type, user_id)
             `)
             .order('updated_at', { ascending: false });
@@ -70,7 +71,7 @@ export const apiClient = {
 
     async save(item: KnowledgeItem, oldItem?: KnowledgeItem): Promise<void> {
         // 1. Save knowledge
-        const { error } = await supabase
+        const { data: saved, error } = await supabase
             .from('knowledge')
             .upsert({
                 id: item.id,
@@ -86,9 +87,14 @@ export const apiClient = {
                 updated_at: item.updatedAt,
                 author: item.author,
                 attachments: item.attachments ?? [],
-            });
+            })
+            .select('id');
 
         if (error) throw error;
+        // RLSによるサイレント失敗を検出（エラーなしで書き込まれない場合）
+        if (!saved || saved.length === 0) {
+            throw new Error('Supabaseへの保存が権限により拒否されました（RLSポリシーを確認してください）');
+        }
 
         // 2. Record history if there's a change in content or title
         if (oldItem && (oldItem.content !== item.content || oldItem.title !== item.title || oldItem.status !== item.status)) {

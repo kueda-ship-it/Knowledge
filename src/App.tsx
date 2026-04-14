@@ -39,7 +39,7 @@ function App() {
         localStorage.setItem('theme', theme);
     }, [theme]);
 
-    // 通知の取得
+    // 通知の取得とリアルタイム更新
     useEffect(() => {
         if (!user) return;
         
@@ -53,10 +53,60 @@ function App() {
             }
         };
 
+        const fetchKData = async () => {
+            try {
+                const data = await apiClient.fetchAll();
+                setDashboardData(data);
+            } catch (e) {
+                console.error("Failed to fetch dashboard data:", e);
+            }
+        };
+
         fetchNotes();
-        const interval = setInterval(fetchNotes, 30000); // 30秒ごとに更新
-        return () => clearInterval(interval);
-    }, [user]);
+        if (['dashboard', 'filelist', 'evaluation'].includes(currentView)) {
+            fetchKData();
+        }
+
+        // リアルタイムサブスクリプション
+        const channel = import('./lib/supabase').then(m => {
+            const supabase = m.supabase;
+            return supabase
+                .channel(`global-sync-${user.id}`)
+                // 通知
+                .on(
+                    'postgres_changes',
+                    { 
+                        event: 'INSERT', 
+                        schema: 'public', 
+                        table: 'notifications',
+                        filter: `recipient_id=eq.${user.id}`
+                    },
+                    (payload) => {
+                        const newNote = payload.new as AppNotification;
+                        setNotifications(prev => [newNote, ...prev].slice(0, 20));
+                        setUnreadCount(prev => prev + 1);
+                    }
+                )
+                // ナレッジ更新 (ダッシュボード・ファイル一覧・評価用)
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'knowledge' },
+                    () => {
+                        // ダッシュボード等を表示中の場合はデータを再取得
+                        if (['dashboard', 'filelist', 'evaluation'].includes(currentView)) {
+                            fetchKData();
+                        }
+                    }
+                )
+                .subscribe();
+        });
+
+        return () => {
+            channel.then(c => {
+                import('./lib/supabase').then(m => m.supabase.removeChannel(c));
+            });
+        };
+    }, [user, currentView]);
 
     const prefetchDashboard = async () => {
         setDashboardLoading(true);

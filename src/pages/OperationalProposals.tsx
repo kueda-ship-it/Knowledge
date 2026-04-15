@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, Clock, AlertCircle, User as UserIcon, Calendar, MessageSquare, Tag, ArrowUpDown, Hash, Plus, ArrowLeft } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { OperationalProposal, User } from '../types';
 import { BackButton } from '../components/common/BackButton';
+import { supabase } from '../lib/supabase';
 
 interface ProposalsProps {
     onBack: () => void;
@@ -40,7 +41,45 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
     const masterCategories = ['Engineer（障害）', 'Engineer（施工）', '施工管理', '設置管理'];
     const categories = ['全て', ...masterCategories, 'その他'];
 
-    useEffect(() => { fetchData(); }, []);
+    const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+    useEffect(() => {
+        fetchData();
+
+        const channel = supabase
+            .channel('proposals-realtime')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'operational_proposals' },
+                (payload) => {
+                    const newItem = payload.new as OperationalProposal;
+                    setProposals(prev => prev.some(p => p.id === newItem.id) ? prev : [newItem, ...prev]);
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'operational_proposals' },
+                (payload) => {
+                    const updated = payload.new as OperationalProposal;
+                    setProposals(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p));
+                    setSelectedProposal(prev => prev?.id === updated.id ? { ...prev, ...updated } : prev);
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'DELETE', schema: 'public', table: 'operational_proposals' },
+                (payload) => {
+                    const deletedId = (payload.old as { id: string }).id;
+                    setProposals(prev => prev.filter(p => p.id !== deletedId));
+                    setSelectedProposal(prev => prev?.id === deletedId ? null : prev);
+                }
+            )
+            .subscribe();
+
+        channelRef.current = channel;
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
 
     const fetchData = async () => {
         setLoading(true);

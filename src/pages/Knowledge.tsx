@@ -57,12 +57,14 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
         refreshData();
 
         // Realtimeチャンネル購読
+        console.log('[Realtime] Subscribing to knowledge-realtime...');
         const channel = supabase
             .channel('knowledge-realtime')
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'knowledge' },
                 (payload) => {
+                    console.log('[Realtime] New knowledge:', payload.new.id);
                     const newItem = toItem(payload.new as Record<string, unknown>);
                     setData(prev => {
                         if (prev.some(i => i.id === newItem.id)) return prev;
@@ -76,6 +78,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'knowledge' },
                 (payload) => {
+                    console.log('[Realtime] Updated knowledge:', payload.new.id);
                     const updated = toItem(payload.new as Record<string, unknown>);
                     setData(prev => {
                         const next = prev.map(i => i.id === updated.id ? { ...i, ...updated } : i);
@@ -88,6 +91,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                 'postgres_changes',
                 { event: 'DELETE', schema: 'public', table: 'knowledge' },
                 (payload) => {
+                    console.log('[Realtime] Deleted knowledge:', (payload.old as any).id);
                     const deletedId = (payload.old as { id: string }).id;
                     setData(prev => {
                         const next = prev.filter(i => i.id !== deletedId);
@@ -99,16 +103,25 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'knowledge_reactions' },
-                () => {
+                (payload) => {
+                    console.log('[Realtime] Reaction change:', payload.eventType);
                     // リアクション変更時は全件再取得（件数の再計算が必要なため）
+                    // 将来的には特定IDのみの再取得に最適化可能
                     refreshData(true);
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log('[Realtime] Knowledge channel status:', status);
+                if (status === 'SUBSCRIBED') {
+                    // 購読開始時に一度手動でリフレッシュして最新状態を保証
+                    refreshData(true);
+                }
+            });
 
         channelRef.current = channel;
 
         return () => {
+            console.log('[Realtime] Cleaning up knowledge channel');
             supabase.removeChannel(channel);
         };
     }, []);
@@ -303,6 +316,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                         )}
                         <KnowledgeList
                             data={filteredData}
+                            totalCount={data.length}
                             onReload={refreshData}
                             filterType={filterType}
                             onFilterChange={setFilterType}

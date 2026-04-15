@@ -77,6 +77,22 @@ export interface MasterData {
     users: User[];
 }
 
+export interface OperationalProposal {
+    id: string;
+    title: string;
+    description: string;
+    problem?: string;   // 現状の問題点
+    proposal?: string;  // 改善提案
+    author: string;
+    proposed_at: string;
+    status: '未着手' | '対応中' | '完了' | '保留';
+    priority: '高' | '中' | '低';
+    category?: string;
+    source_no?: string;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface ApiResponse<T> {
     status?: 'success' | 'error';
     message?: string;

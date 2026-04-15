@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { KnowledgeItem } from './types';
 import { Header } from './components/Header';
 import { Login } from './pages/Login';
@@ -8,6 +8,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Admin } from './pages/Admin';
 import { FileList } from './pages/FileList';
 import { Evaluation } from './pages/Evaluation';
+import { OperationalProposals } from './pages/OperationalProposals';
 import { apiClient } from './api/client';
 import { useAuth } from './contexts/AuthContext';
 import { AppNotification } from './types';
@@ -26,6 +27,8 @@ function App() {
     });
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const viewRef = useRef(currentView);
+    useEffect(() => { viewRef.current = currentView; }, [currentView]);
 
     const cycleTheme = () => {
         setTheme(prev => {
@@ -66,13 +69,35 @@ function App() {
         if (['dashboard', 'filelist', 'evaluation'].includes(currentView)) {
             fetchKData();
         }
+    }, [user, currentView]);
 
-        // リアルタイムサブスクリプション
-        const channel = import('./lib/supabase').then(m => {
+    // 2. リアルタイムサブスクリプション (重複防止のため user のみに依存)
+    useEffect(() => {
+        if (!user) return;
+
+        const fetchKData = async () => {
+            try {
+                const data = await apiClient.fetchAll();
+                setDashboardData(data);
+            } catch (e) {
+                console.error("Failed to fetch dashboard data (Realtime):", e);
+            }
+        };
+
+        const channelName = `global-sync-${user.id}`;
+        console.log(`[Realtime] Initializing ${channelName}...`);
+
+        let channel: any;
+        
+        import('./lib/supabase').then(m => {
             const supabase = m.supabase;
-            return supabase
-                .channel(`global-sync-${user.id}`)
-                // 通知
+            
+            // 既存の同じ名前のチャンネルがある場合は削除してから作成する
+            supabase.removeChannel(supabase.channel(channelName));
+
+            channel = supabase.channel(channelName);
+            
+            channel
                 .on(
                     'postgres_changes',
                     { 
@@ -81,32 +106,63 @@ function App() {
                         table: 'notifications',
                         filter: `recipient_id=eq.${user.id}`
                     },
-                    (payload) => {
+                    (payload: any) => {
+                        console.log('[Realtime] New notification received:', payload.new);
                         const newNote = payload.new as AppNotification;
                         setNotifications(prev => [newNote, ...prev].slice(0, 20));
                         setUnreadCount(prev => prev + 1);
                     }
                 )
-                // ナレッジ更新 (ダッシュボード・ファイル一覧・評価用)
                 .on(
                     'postgres_changes',
                     { event: '*', schema: 'public', table: 'knowledge' },
-                    () => {
-                        // ダッシュボード等を表示中の場合はデータを再取得
-                        if (['dashboard', 'filelist', 'evaluation'].includes(currentView)) {
+                    (payload: any) => {
+                        console.log('[Realtime] Knowledge change detected:', payload.eventType);
+                        // viewRef を使って最新のビューを確認
+                        if (['dashboard', 'filelist', 'evaluation'].includes(viewRef.current)) {
                             fetchKData();
                         }
                     }
                 )
-                .subscribe();
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'master_categories' },
+                    (payload: any) => {
+                        console.log('[Realtime] Master categories changed:', payload.eventType);
+                        // 全体的なリフレッシュを促すため、もし今 Knowledge ビューならデータを再取得する
+                        if (viewRef.current === 'knowledge') {
+                            // Knowledge.tsx側でも独自にサブスクリプションを持たせる方が綺麗だが、
+                            // 現状はページのリロードまたは遷移で対応。
+                            // ここで fetchKData を呼んでも Knowledge ページ内の masterData は更新されないため注意。
+                        }
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'master_incidents' },
+                    (payload: any) => {
+                        console.log('[Realtime] Master incidents changed:', payload.eventType);
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'profiles' },
+                    (payload: any) => {
+                        console.log('[Realtime] Profiles (Users) changed:', payload.eventType);
+                    }
+                )
+                .subscribe((status: string) => {
+                    console.log(`[Realtime] Status for ${channelName}:`, status);
+                });
         });
 
         return () => {
-            channel.then(c => {
-                import('./lib/supabase').then(m => m.supabase.removeChannel(c));
-            });
+            if (channel) {
+                console.log(`[Realtime] Cleaning up ${channelName}`);
+                import('./lib/supabase').then(m => m.supabase.removeChannel(channel));
+            }
         };
-    }, [user, currentView]);
+    }, [user]);
 
     const prefetchDashboard = async () => {
         setDashboardLoading(true);
@@ -173,6 +229,10 @@ function App() {
 
                 {currentView === 'evaluation' && (
                     <Evaluation data={dashboardData} onBack={() => navigate('menu')} user={user} />
+                )}
+                
+                {currentView === 'proposals' && (
+                    <OperationalProposals onBack={() => navigate('menu')} user={user} />
                 )}
             </div>
 

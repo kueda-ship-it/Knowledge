@@ -45,16 +45,28 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
     const fetchData = async () => {
         setLoading(true);
         setFetchError(null);
-        try {
-            const [proposalData, master] = await Promise.all([
-                apiClient.fetchProposals(),
-                apiClient.fetchMasters()
+
+        const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
+            Promise.race([
+                promise,
+                new Promise<T>((_, reject) =>
+                    setTimeout(() => reject(new Error('TIMEOUT')), ms)
+                )
             ]);
+
+        try {
+            const [proposalData, master] = await withTimeout(
+                Promise.all([apiClient.fetchProposals(), apiClient.fetchMasters()]),
+                20000
+            );
             setProposals(proposalData || []);
             setUsersMaster(master.users || []);
         } catch (e: any) {
             console.error("[OperationalProposals] Failed to fetch:", e);
-            setFetchError(e?.message || 'データの取得に失敗しました');
+            const isTimeout = e?.message === 'TIMEOUT';
+            setFetchError(isTimeout
+                ? '接続がタイムアウトしました。Supabaseが起動中の可能性があります。しばらく待ってから再試行してください。'
+                : (e?.message || 'データの取得に失敗しました'));
         } finally {
             setLoading(false);
         }

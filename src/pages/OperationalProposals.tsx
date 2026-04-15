@@ -195,8 +195,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
     );
 
     const UserIdentity: React.FC<{ name: string | null | undefined; size?: number }> = ({ name, size = 20 }) => {
-        const safeName = name || '—';
-        const targetUser = name ? usersMaster.find(u => u.name.includes(name) || name.includes(u.name)) : undefined;
+        const targetUser = name ? usersMaster.find(u => u.name === name || u.name.includes(name) || name.includes(u.name)) : undefined;
+        const displayName = targetUser?.name || name || '—';
 
         return (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -204,10 +204,10 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
                     <img src={targetUser.avatarUrl} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--glass-border)' }} />
                 ) : (
                     <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, color: '#fff', fontWeight: 700 }}>
-                        {safeName.charAt(0)}
+                        {displayName.charAt(0)}
                     </div>
                 )}
-                <span style={{ fontSize: '0.85rem' }}>{safeName}</span>
+                <span style={{ fontSize: '0.85rem' }}>{displayName}</span>
             </div>
         );
     };

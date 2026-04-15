@@ -93,27 +93,33 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
                 )
             ]);
 
-        // proposals と masters を独立して取得（片方が失敗しても表示できるよう分離）
-        const [proposalResult, masterResult] = await Promise.allSettled([
-            withTimeout(apiClient.fetchProposals(), 30000),
-            withTimeout(apiClient.fetchMasters(), 30000),
-        ]);
+        const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-        if (proposalResult.status === 'fulfilled') {
-            setProposals(proposalResult.value || []);
-        } else {
-            console.error("[OperationalProposals] fetchProposals failed:", proposalResult.reason);
-            const isTimeout = proposalResult.reason?.message === 'TIMEOUT';
-            setFetchError(isTimeout
-                ? '接続がタイムアウトしました。Supabaseが起動中の場合は1分ほどかかります。しばらく待ってから再試行してください。'
-                : (proposalResult.reason?.message || 'データの取得に失敗しました'));
+        // 最大3回リトライ（15秒 → 20秒 → 30秒）
+        const retryDelays = [15000, 20000, 30000];
+        let lastError: any = null;
+
+        for (let attempt = 0; attempt < retryDelays.length; attempt++) {
+            try {
+                const data = await withTimeout(apiClient.fetchProposals(), retryDelays[attempt]);
+                setProposals(data || []);
+                setFetchError(null);
+                // masters は別途取得（失敗しても致命的でない）
+                apiClient.fetchMasters().then(m => setUsersMaster(m?.users || [])).catch(() => {});
+                setLoading(false);
+                return;
+            } catch (e: any) {
+                lastError = e;
+                console.warn(`[OperationalProposals] attempt ${attempt + 1} failed:`, e?.message);
+                if (attempt < retryDelays.length - 1) {
+                    await sleep(1500);
+                }
+            }
         }
 
-        if (masterResult.status === 'fulfilled') {
-            setUsersMaster(masterResult.value?.users || []);
-        }
-        // masters失敗は無視（起案者名表示に影響するだけなので致命的ではない）
-
+        // 全リトライ失敗
+        console.error("[OperationalProposals] All retries failed:", lastError);
+        setFetchError('接続に失敗しました。Supabaseが起動中の可能性があります。再試行ボタンを押してください。');
         setLoading(false);
     };
 

@@ -28,7 +28,7 @@ export const apiClient = {
             .from('knowledge')
             .select(`
                 id, title, machine, property, req_num, category,
-                incidents, tags, status, updated_at, author, attachments,
+                incidents, tags, content, status, updated_at, author, attachments,
                 knowledge_reactions(type, user_id)
             `)
             .order('updated_at', { ascending: false });
@@ -222,18 +222,19 @@ export const apiClient = {
         
         // 1. Sync Incidents
         try {
-            // Get current ones to see if we need to do anything
             const { data: currentIncidents } = await supabase.from('master_incidents').select('name');
             const currentNames = (currentIncidents ?? []).map(r => r.name);
             
-            // Delete all and re-insert is risky but simple for this scale. 
-            // Better: Delete only those NOT in the new list.
-            const { error: delErr } = await supabase.from('master_incidents').delete().filter('name', 'in', `(${currentNames.map(n => `"${n}"`).join(',') || '""'})`);
-            if (delErr) console.warn("Incident delete error (non-fatal if table empty):", delErr);
-            
-            if (data.incidents.length > 0) {
-                const { error: insErr } = await supabase.from('master_incidents').insert(data.incidents.map(name => ({ name })));
-                if (insErr) throw insErr;
+            // 削除対象: 現在のリストにあるが、新しいデータにはないもの
+            const toDelete = currentNames.filter(n => !data.incidents.includes(n));
+            // 追加対象: 新しいデータにあるが、現在のリストにはないもの
+            const toAdd = data.incidents.filter(n => !currentNames.includes(n));
+
+            if (toDelete.length > 0) {
+                await supabase.from('master_incidents').delete().in('name', toDelete);
+            }
+            if (toAdd.length > 0) {
+                await supabase.from('master_incidents').insert(toAdd.map(name => ({ name })));
             }
         } catch (e) {
             console.error("Failed to sync incidents:", e);
@@ -245,12 +246,14 @@ export const apiClient = {
             const { data: currentCats } = await supabase.from('master_categories').select('name');
             const currentCatNames = (currentCats ?? []).map(r => r.name);
             
-            const { error: delErr } = await supabase.from('master_categories').delete().filter('name', 'in', `(${currentCatNames.map(n => `"${n}"`).join(',') || '""'})`);
-            if (delErr) console.warn("Category delete error:", delErr);
-            
-            if (data.categories.length > 0) {
-                const { error: insErr } = await supabase.from('master_categories').insert(data.categories.map(name => ({ name })));
-                if (insErr) throw insErr;
+            const toDeleteCat = currentCatNames.filter(n => !data.categories.includes(n));
+            const toAddCat = data.categories.filter(n => !currentCatNames.includes(n));
+
+            if (toDeleteCat.length > 0) {
+                await supabase.from('master_categories').delete().in('name', toDeleteCat);
+            }
+            if (toAddCat.length > 0) {
+                await supabase.from('master_categories').insert(toAddCat.map(name => ({ name })));
             }
         } catch (e) {
             console.error("Failed to sync categories:", e);
@@ -269,16 +272,14 @@ export const apiClient = {
                 };
                 
                 if (isNew) {
+                    // ID競合を避けるため、新規ユーザーのみID生成
                     upsertData.id = self.crypto.randomUUID();
                 } else {
                     upsertData.id = u.id;
                 }
 
                 const { error: userErr } = await supabase.from('profiles').upsert(upsertData, { onConflict: 'id' });
-                if (userErr) {
-                    console.error(`Failed to upsert user ${u.name}:`, userErr);
-                    throw userErr;
-                }
+                if (userErr) throw userErr;
             }
         } catch (e) {
             console.error("Failed to sync users:", e);
@@ -306,5 +307,70 @@ export const apiClient = {
             console.error("External DB Error:", e);
             return null;
         }
+    },
+
+    // Operational Proposals (運用提議)
+    async fetchProposals(): Promise<any[]> {
+        let { data, error } = await supabase
+            .from('operational_proposals')
+            .select('*')
+            .order('proposed_at', { ascending: false });
+
+        // proposed_at カラムがない場合は created_at でフォールバック
+        if (error && error.message?.includes('proposed_at')) {
+            console.warn('[fetchProposals] proposed_at column missing, falling back to created_at');
+            const result = await supabase
+                .from('operational_proposals')
+                .select('*')
+                .order('created_at', { ascending: false });
+            data = result.data;
+            error = result.error;
+        }
+
+        if (error) {
+            console.error('[fetchProposals] error:', error.message, error.details, error.hint);
+            throw error;
+        }
+        console.log('[fetchProposals] loaded:', data?.length ?? 0, 'proposals');
+        return data ?? [];
+    },
+
+    async updateProposalStatus(id: string, status: string): Promise<void> {
+        const { error } = await supabase
+            .from('operational_proposals')
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq('id', id);
+        
+        if (error) throw error;
+    },
+
+    async getNextProposalNo(category: string): Promise<string> {
+        const { data, error } = await supabase
+            .from('operational_proposals')
+            .select('source_no')
+            .eq('category', category);
+
+        if (error) throw error;
+
+        const maxNo = (data ?? []).reduce((max, row) => {
+            const n = parseInt(row.source_no || '0', 10);
+            return n > max ? n : max;
+        }, 0);
+
+        return String(maxNo + 1);
+    },
+
+    async createProposal(proposal: Partial<any>): Promise<void> {
+        // source_no が未指定なら種別ごとに自動採番
+        const record = { ...proposal };
+        if (!record.source_no && record.category) {
+            record.source_no = await apiClient.getNextProposalNo(record.category);
+        }
+
+        const { error } = await supabase
+            .from('operational_proposals')
+            .insert(record);
+
+        if (error) throw error;
     }
 };

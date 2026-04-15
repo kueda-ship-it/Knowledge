@@ -404,6 +404,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
                                             display: 'inline-flex', alignItems: 'center', gap: '6px',
                                             padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
                                             background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}`, whiteSpace: 'nowrap',
+                                            boxShadow: `0 0 12px ${catStyle.border}`,
                                         }}>
                                             <Tag size={12} />{getNormalizedCategory(proposal.category)}
                                         </div>
@@ -420,6 +421,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
                                                 background: proposal.status === '完了' ? 'rgba(16,185,129,0.15)' : proposal.status === '対応中' ? 'rgba(245,158,11,0.15)' : proposal.status === '保留' ? 'rgba(148,163,184,0.15)' : 'rgba(239,68,68,0.15)',
                                                 color: proposal.status === '完了' ? '#34d399' : proposal.status === '対応中' ? '#fbbf24' : proposal.status === '保留' ? '#94a3b8' : '#f87171',
                                                 border: '1px solid currentColor',
+                                                boxShadow: proposal.status === '完了' ? '0 0 12px rgba(52,211,153,0.4)' : proposal.status === '対応中' ? '0 0 12px rgba(251,191,36,0.4)' : proposal.status === '保留' ? '0 0 12px rgba(148,163,184,0.3)' : '0 0 12px rgba(248,113,113,0.4)',
                                                 whiteSpace: 'nowrap', flexShrink: 0
                                             }}>
                                                 {getStatusIcon(proposal.status)}{proposal.status}

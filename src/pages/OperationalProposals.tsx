@@ -93,22 +93,28 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
                 )
             ]);
 
-        try {
-            const [proposalData, master] = await withTimeout(
-                Promise.all([apiClient.fetchProposals(), apiClient.fetchMasters()]),
-                20000
-            );
-            setProposals(proposalData || []);
-            setUsersMaster(master.users || []);
-        } catch (e: any) {
-            console.error("[OperationalProposals] Failed to fetch:", e);
-            const isTimeout = e?.message === 'TIMEOUT';
+        // proposals と masters を独立して取得（片方が失敗しても表示できるよう分離）
+        const [proposalResult, masterResult] = await Promise.allSettled([
+            withTimeout(apiClient.fetchProposals(), 30000),
+            withTimeout(apiClient.fetchMasters(), 30000),
+        ]);
+
+        if (proposalResult.status === 'fulfilled') {
+            setProposals(proposalResult.value || []);
+        } else {
+            console.error("[OperationalProposals] fetchProposals failed:", proposalResult.reason);
+            const isTimeout = proposalResult.reason?.message === 'TIMEOUT';
             setFetchError(isTimeout
-                ? '接続がタイムアウトしました。Supabaseが起動中の可能性があります。しばらく待ってから再試行してください。'
-                : (e?.message || 'データの取得に失敗しました'));
-        } finally {
-            setLoading(false);
+                ? '接続がタイムアウトしました。Supabaseが起動中の場合は1分ほどかかります。しばらく待ってから再試行してください。'
+                : (proposalResult.reason?.message || 'データの取得に失敗しました'));
         }
+
+        if (masterResult.status === 'fulfilled') {
+            setUsersMaster(masterResult.value?.users || []);
+        }
+        // masters失敗は無視（起案者名表示に影響するだけなので致命的ではない）
+
+        setLoading(false);
     };
 
     const handleStatusUpdate = async (id: string, newStatus: string) => {

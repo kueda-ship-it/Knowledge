@@ -210,7 +210,16 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
     };
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        // ... (existing logic)
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+        e.target.value = ''; // 同じファイルを再選択できるようリセット
+
+        for (const file of files) {
+            const att = await uploadFile(file);
+            if (att) {
+                setAttachments(prev => [...prev, att]);
+            }
+        }
     };
 
     const handleMachineBlur = async () => {

@@ -86,53 +86,31 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
         return () => { supabase.removeChannel(channel); };
     }, []);
 
-    const fetchData = async () => {
-        setLoading(true);
-        setFetchError(null);
+    const fetchData = async (forceShow = false) => {
+        const hasCache = loadProposalCache().length > 0;
 
-        const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
-            Promise.race([
-                promise,
-                new Promise<T>((_, reject) =>
-                    setTimeout(() => reject(new Error('TIMEOUT')), ms)
-                )
-            ]);
+        // キャッシュあり: スピナーなしでバックグラウンド取得
+        // キャッシュなし: ローディング表示
+        if (!hasCache || forceShow) {
+            setLoading(true);
+            setFetchError(null);
+        }
 
-        const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-
-        // 最大3回リトライ（5秒 → 8秒 → 12秒）キャッシュがあれば短めで十分
-        const hasCache = proposals.length > 0;
-        const retryDelays = hasCache ? [5000, 8000, 12000] : [10000, 15000, 20000];
-        let lastError: any = null;
-
-        for (let attempt = 0; attempt < retryDelays.length; attempt++) {
-            try {
-                const data = await withTimeout(apiClient.fetchProposals(), retryDelays[attempt]);
-                const result = data || [];
-                setProposals(result);
-                localStorage.setItem(PROPOSALS_CACHE_KEY, JSON.stringify(result));
-                setFetchError(null);
-                // masters は別途取得（失敗しても致命的でない）
-                apiClient.fetchMasters().then(m => setUsersMaster(m?.users || [])).catch(() => {});
-                setLoading(false);
-                return;
-            } catch (e: any) {
-                lastError = e;
-                console.warn(`[OperationalProposals] attempt ${attempt + 1} failed:`, e?.message);
-                if (attempt < retryDelays.length - 1) {
-                    await sleep(1500);
-                }
+        try {
+            const data = await apiClient.fetchProposals();
+            const result = data || [];
+            setProposals(result);
+            localStorage.setItem(PROPOSALS_CACHE_KEY, JSON.stringify(result));
+            setFetchError(null);
+            apiClient.fetchMasters().then(m => setUsersMaster(m?.users || [])).catch(() => {});
+        } catch (e: any) {
+            console.warn('[OperationalProposals] fetch failed (using cache):', e?.message);
+            if (!hasCache) {
+                setFetchError('接続に失敗しました。再試行ボタンを押してください。');
             }
+        } finally {
+            setLoading(false);
         }
-
-        // 全リトライ失敗
-        console.error("[OperationalProposals] All retries failed:", lastError);
-        if (proposals.length === 0) {
-            // キャッシュなし → エラー表示
-            setFetchError('接続に失敗しました。Supabaseが起動中の可能性があります。再試行ボタンを押してください。');
-        }
-        // キャッシュあり → エラー非表示のままキャッシュデータを表示
-        setLoading(false);
     };
 
     const handleStatusUpdate = async (id: string, newStatus: string) => {

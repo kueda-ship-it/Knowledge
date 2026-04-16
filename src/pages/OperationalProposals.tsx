@@ -370,10 +370,11 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
                                             boxShadow: isActive ? `0 4px 15px ${c.glow}` : 'none',
                                             fontWeight: isActive ? 700 : 400,
                                         } : {
+                                            // 「全て」— カテゴリ行と同じ白 glow
                                             color: isActive ? '#fff' : 'rgba(255,255,255,0.5)',
-                                            background: isActive ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.05)',
-                                            borderColor: isActive ? 'rgba(99,102,241,0.8)' : 'rgba(255,255,255,0.1)',
-                                            boxShadow: isActive ? '0 4px 15px rgba(99,102,241,0.35)' : 'none',
+                                            background: isActive ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.05)',
+                                            borderColor: isActive ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.1)',
+                                            boxShadow: isActive ? '0 4px 15px rgba(255,255,255,0.25)' : 'none',
                                             fontWeight: isActive ? 700 : 400,
                                         })
                                     }}

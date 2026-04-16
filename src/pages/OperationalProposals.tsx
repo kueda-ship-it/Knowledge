@@ -379,7 +379,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
                             <div style={{ fontWeight: 700, marginBottom: '4px', color: '#f87171' }}>データの取得に失敗しました</div>
                             <div style={{ fontSize: '0.8rem', opacity: 0.85, fontFamily: 'monospace', wordBreak: 'break-all' }}>{fetchError}</div>
                         </div>
-                        <button onClick={fetchData} style={{
+                        <button onClick={() => fetchData()} style={{
                             padding: '8px 18px', borderRadius: '10px', flexShrink: 0,
                             background: 'rgba(239,68,68,0.3)', border: '1px solid rgba(239,68,68,0.6)',
                             color: '#fca5a5', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,

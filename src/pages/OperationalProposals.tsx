@@ -245,28 +245,9 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
         display: 'block',
     };
 
-    // ---- Close button used in modals ----
+    // ---- Close button used in modals (BackButtonと統一) ----
     const ModalCloseButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
-        <button
-            onClick={onClick}
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: 'var(--text)',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                flexShrink: 0,
-            }}
-            title="閉じる"
-        >
-            <ArrowLeft size={18} />
-        </button>
+        <BackButton onClick={onClick} />
     );
 
     const UserIdentity: React.FC<{ name: string | null | undefined; size?: number }> = ({ name, size = 20 }) => {
@@ -353,19 +334,16 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap', alignItems: 'center' }}>
                         {categories.map(cat => {
                             const isActive = activeCategory === cat;
+                            const isAll = cat === '全て';
                             const cs = getCategoryStyles(cat);
+                            const activeStyle = isActive
+                                ? isAll
+                                    ? { background: 'rgba(255,255,255,0.18)', color: '#fff', borderColor: 'rgba(255,255,255,0.7)', boxShadow: '0 4px 15px rgba(255,255,255,0.25)', fontWeight: 700 }
+                                    : { background: cs.bg, color: cs.color, borderColor: cs.border, boxShadow: `0 4px 15px ${cs.border}`, fontWeight: 700 }
+                                : {};
                             return (
                                 <button key={cat} className="badge-tab"
-                                    style={{
-                                        fontSize: '0.75rem', padding: '6px 14px',
-                                        ...(isActive ? {
-                                            background: cs.bg,
-                                            color: cs.color,
-                                            borderColor: cs.border,
-                                            boxShadow: `0 4px 15px ${cs.border}`,
-                                            fontWeight: 700,
-                                        } : {})
-                                    }}
+                                    style={{ fontSize: '0.75rem', padding: '6px 14px', ...activeStyle }}
                                     onClick={() => setActiveCategory(cat)}>{cat}</button>
                             );
                         })}

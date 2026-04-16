@@ -412,8 +412,8 @@ body[data-theme="liquid"] .icon-btn-refined,
 body[data-theme="liquid"] .dark-toggle-btn,
 body[data-theme="liquid"] .header-action-btn,
 body[data-theme="liquid"] .back-btn-circle {
-  background: transparent;
-  border-color: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.2);
 }
 
 .icon-btn-refined:hover,
@@ -431,10 +431,11 @@ body[data-theme="liquid"] .icon-btn-refined:hover,
 body[data-theme="liquid"] .dark-toggle-btn:hover,
 body[data-theme="liquid"] .header-action-btn:hover,
 body[data-theme="liquid"] .back-btn-circle:hover {
-  background: transparent;
+  background: rgba(147,197,253,0.12);
   color: #93c5fd;
-  border-color: rgba(147,197,253,0.6);
-  box-shadow: 0 0 18px rgba(99,130,246,0.3), 0 0 40px rgba(99,130,246,0.1);
+  border-color: rgba(147,197,253,0.7);
+  box-shadow: 0 0 20px rgba(99,130,246,0.5), 0 0 50px rgba(99,130,246,0.2);
+  transform: translateY(-2px) scale(1.08);
 }
 
 /* ログアウトボタン専用（赤色） */

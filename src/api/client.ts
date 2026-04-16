@@ -4,6 +4,10 @@ import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotificati
 
 // DB行 → KnowledgeItem の変換
 export function toItem(row: Record<string, unknown>): KnowledgeItem {
+    const rawContent = (row.content as string) ?? '';
+    const rawPhenomenon = (row.phenomenon as string) ?? '';
+    const rawCountermeasure = (row.countermeasure as string) ?? '';
+
     return {
         id: row.id as string,
         title: row.title as string,
@@ -13,9 +17,9 @@ export function toItem(row: Record<string, unknown>): KnowledgeItem {
         category: row.category as string,
         incidents: (row.incidents as string[]) ?? [],
         tags: (row.tags as string[]) ?? [],
-        content: row.content as string,
-        phenomenon: (row.phenomenon as string) ?? '',
-        countermeasure: (row.countermeasure as string) || (row.content as string) || '',
+        content: rawContent,
+        phenomenon: rawPhenomenon || rawContent, // phenomenonが空ならcontentをセット
+        countermeasure: rawCountermeasure || (rawPhenomenon ? rawContent : ''), // phenomenonがあった上でのcontentなら対処とする(旧形式互換)
         status: row.status as 'solved' | 'unsolved',
         updatedAt: row.updated_at as string,
         author: row.author as string,
@@ -401,5 +405,24 @@ export const apiClient = {
             .insert(record);
 
         if (error) throw error;
+    },
+
+    // Master Data Realtime
+    subscribeMasters(callback: () => void) {
+        const channel = supabase.channel('master-data-sync');
+        
+        channel
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'master_categories' }, callback)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'master_incidents' }, callback)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, callback)
+            .subscribe();
+
+        return channel;
+    },
+
+    unsubscribeMasters(channel: any) {
+        if (channel) {
+            supabase.removeChannel(channel);
+        }
     }
 };

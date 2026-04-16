@@ -124,6 +124,8 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
 
         const phenomenon = formData.phenomenon || '';
         const countermeasure = formData.countermeasure || '';
+        const content = phenomenon && countermeasure ? `${phenomenon}\n\n【対処】\n${countermeasure}` : (phenomenon || countermeasure || formData.content || '');
+
         const payload: KnowledgeItem = {
             id: item?.id || Date.now().toString(),
             machine: formData.machine || '',
@@ -133,7 +135,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             category: formData.category || '',
             incidents: selectedIncidents,
             tags: tags,
-            content: `${phenomenon}\n\n${countermeasure}`,
+            content: content,
             phenomenon,
             countermeasure,
             status: formData.status || 'unsolved',

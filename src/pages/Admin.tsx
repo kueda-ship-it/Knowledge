@@ -9,9 +9,20 @@ interface AdminProps {
     onBack: () => void;
 }
 
+const MASTERS_CACHE_KEY = 'knowledge_masters_v1';
+
+function loadCache<T>(key: string, fallback: T): T {
+    try {
+        const s = localStorage.getItem(key);
+        return s ? (JSON.parse(s) as T) : fallback;
+    } catch { return fallback; }
+}
+
 export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     const isFullAdmin = ['master', 'manager'].includes(user.role);
-    const [masterData, setMasterData] = useState<MasterData>({ incidents: [], categories: [], users: [] });
+    const [masterData, setMasterData] = useState<MasterData>(() =>
+        loadCache<MasterData>(MASTERS_CACHE_KEY, { incidents: [], categories: [], users: [] })
+    );
     const [isDirty, setIsDirty] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -24,12 +35,23 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
 
     useEffect(() => {
         loadMasters();
+
+        // Realtime Subscription
+        const channel = apiClient.subscribeMasters(() => {
+            console.log('[Realtime] Master data change detected. Reloading...');
+            loadMasters(true);
+        });
+
+        return () => {
+            apiClient.unsubscribeMasters(channel);
+        };
     }, []);
 
-    const loadMasters = async () => {
+    const loadMasters = async (silent = false) => {
         try {
             const data = await apiClient.fetchMasters();
             setMasterData(data);
+            localStorage.setItem(MASTERS_CACHE_KEY, JSON.stringify(data));
             setIsDirty(false);
         } catch (e) {
             console.error(e);

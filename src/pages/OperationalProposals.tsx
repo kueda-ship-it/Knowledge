@@ -15,8 +15,13 @@ type SortMode = 'date' | 'number';
 const TODAY = new Date().toISOString().split('T')[0];
 
 export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user }) => {
-    const [proposals, setProposals] = useState<OperationalProposal[]>([]);
-    const [loading, setLoading] = useState(true);
+    const PROPOSALS_CACHE_KEY = 'proposals_data_v1';
+    const loadProposalCache = (): OperationalProposal[] => {
+        try { const s = localStorage.getItem(PROPOSALS_CACHE_KEY); return s ? JSON.parse(s) : []; } catch { return []; }
+    };
+
+    const [proposals, setProposals] = useState<OperationalProposal[]>(() => loadProposalCache());
+    const [loading, setLoading] = useState(() => loadProposalCache().length === 0);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [usersMaster, setUsersMaster] = useState<User[]>([]);
     const [activeCategory, setActiveCategory] = useState<string>('全て');
@@ -95,14 +100,17 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
 
         const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-        // 最大3回リトライ（15秒 → 20秒 → 30秒）
-        const retryDelays = [15000, 20000, 30000];
+        // 最大3回リトライ（5秒 → 8秒 → 12秒）キャッシュがあれば短めで十分
+        const hasCache = proposals.length > 0;
+        const retryDelays = hasCache ? [5000, 8000, 12000] : [10000, 15000, 20000];
         let lastError: any = null;
 
         for (let attempt = 0; attempt < retryDelays.length; attempt++) {
             try {
                 const data = await withTimeout(apiClient.fetchProposals(), retryDelays[attempt]);
-                setProposals(data || []);
+                const result = data || [];
+                setProposals(result);
+                localStorage.setItem(PROPOSALS_CACHE_KEY, JSON.stringify(result));
                 setFetchError(null);
                 // masters は別途取得（失敗しても致命的でない）
                 apiClient.fetchMasters().then(m => setUsersMaster(m?.users || [])).catch(() => {});
@@ -119,7 +127,11 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
 
         // 全リトライ失敗
         console.error("[OperationalProposals] All retries failed:", lastError);
-        setFetchError('接続に失敗しました。Supabaseが起動中の可能性があります。再試行ボタンを押してください。');
+        if (proposals.length === 0) {
+            // キャッシュなし → エラー表示
+            setFetchError('接続に失敗しました。Supabaseが起動中の可能性があります。再試行ボタンを押してください。');
+        }
+        // キャッシュあり → エラー非表示のままキャッシュデータを表示
         setLoading(false);
     };
 
@@ -337,24 +349,59 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
                     <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.12)', marginRight: '4px', flexShrink: 0 }} />
 
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    {/* カテゴリフィルター */}
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap', alignItems: 'center' }}>
-                        {categories.map(cat => (
-                            <button key={cat} className={`badge-tab ${activeCategory === cat ? 'active' : ''}`}
-                                style={{ fontSize: '0.75rem', padding: '6px 14px' }}
-                                onClick={() => setActiveCategory(cat)}>{cat}</button>
-                        ))}
+                        {categories.map(cat => {
+                            const isActive = activeCategory === cat;
+                            const cs = getCategoryStyles(cat);
+                            return (
+                                <button key={cat} className="badge-tab"
+                                    style={{
+                                        fontSize: '0.75rem', padding: '6px 14px',
+                                        ...(isActive ? {
+                                            background: cs.bg,
+                                            color: cs.color,
+                                            borderColor: cs.border,
+                                            boxShadow: `0 4px 15px ${cs.border}`,
+                                            fontWeight: 700,
+                                        } : {})
+                                    }}
+                                    onClick={() => setActiveCategory(cat)}>{cat}</button>
+                            );
+                        })}
                     </div>
+                    {/* ステータスフィルター */}
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap', alignItems: 'center' }}>
-                        {['全て', '未着手', '対応中', '完了', '保留'].map(s => (
-                            <button key={s} className={`badge-tab status-filter ${activeStatus === s ? 'active' : ''}`}
-                                style={{ 
-                                    fontSize: '0.72rem', 
-                                    padding: '4px 12px',
-                                    borderColor: activeStatus === s ? 'currentColor' : 'rgba(255,255,255,0.1)',
-                                    color: s === '未着手' ? '#f87171' : s === '対応中' ? '#fbbf24' : s === '完了' ? '#34d399' : s === '保留' ? '#94a3b8' : 'var(--text-dim)'
-                                }}
-                                onClick={() => setActiveStatus(s)}>{s}</button>
-                        ))}
+                        {(['全て', '未着手', '対応中', '完了', '保留'] as const).map(s => {
+                            const isActive = activeStatus === s;
+                            const sc: Record<string, { color: string; bg: string; glow: string }> = {
+                                '未着手': { color: '#f87171', bg: 'rgba(248,113,113,0.15)', glow: 'rgba(248,113,113,0.35)' },
+                                '対応中': { color: '#fbbf24', bg: 'rgba(251,191,36,0.15)',  glow: 'rgba(251,191,36,0.35)'  },
+                                '完了':   { color: '#34d399', bg: 'rgba(52,211,153,0.15)',  glow: 'rgba(52,211,153,0.35)'  },
+                                '保留':   { color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', glow: 'rgba(148,163,184,0.25)' },
+                            };
+                            const c = sc[s];
+                            return (
+                                <button key={s} className="badge-tab"
+                                    style={{
+                                        fontSize: '0.72rem', padding: '4px 12px',
+                                        ...(c ? {
+                                            color: isActive ? c.color : 'rgba(255,255,255,0.5)',
+                                            borderColor: isActive ? c.color : 'rgba(255,255,255,0.1)',
+                                            background: isActive ? c.bg : 'rgba(255,255,255,0.05)',
+                                            boxShadow: isActive ? `0 4px 15px ${c.glow}` : 'none',
+                                            fontWeight: isActive ? 700 : 400,
+                                        } : {
+                                            color: isActive ? '#fff' : 'rgba(255,255,255,0.5)',
+                                            background: isActive ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.05)',
+                                            borderColor: isActive ? 'rgba(99,102,241,0.8)' : 'rgba(255,255,255,0.1)',
+                                            boxShadow: isActive ? '0 4px 15px rgba(99,102,241,0.35)' : 'none',
+                                            fontWeight: isActive ? 700 : 400,
+                                        })
+                                    }}
+                                    onClick={() => setActiveStatus(s)}>{s}</button>
+                            );
+                        })}
                     </div>
                 </div>
             </div>

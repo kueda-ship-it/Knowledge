@@ -1,6 +1,5 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from './Button';
 
 interface BackButtonProps {
     onClick: () => void;
@@ -9,21 +8,19 @@ interface BackButtonProps {
     className?: string;
 }
 
-export const BackButton: React.FC<BackButtonProps> = ({ 
-    onClick, 
+export const BackButton: React.FC<BackButtonProps> = ({
+    onClick,
     style,
-    className 
+    className
 }) => {
     return (
-        <Button
-            variant="secondary"
+        <button
             title="戻る"
-            icon={<ArrowLeft size={18} />}
             onClick={onClick}
-            className={`back-btn-circle ${className}`}
-            style={{ 
-                ...style 
-            }}
-        />
+            className={`back-btn-circle${className ? ` ${className}` : ''}`}
+            style={{ ...style }}
+        >
+            <ArrowLeft size={18} />
+        </button>
     );
 };

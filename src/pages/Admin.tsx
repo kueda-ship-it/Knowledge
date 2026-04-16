@@ -302,7 +302,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
 
             <style>{`
                 .user-management-card {
-                    margin-top: 24px;
+                    height: 100%;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
                 }
                 .add-user-form {
                     padding: 16px 20px;
@@ -343,17 +346,20 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     background: var(--bg);
                     color: var(--text);
                     height: calc(100vh - var(--header-height));
-                    overflow-y: auto;
-                    -webkit-overflow-scrolling: touch;
-                    padding-bottom: 60px;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
                 }
 
                 .admin-max-container {
                     max-width: 1300px;
+                    width: 100%;
                     margin: 0 auto;
                     display: flex;
                     flex-direction: column;
                     padding: 0 40px;
+                    flex: 1;
+                    overflow: hidden;
                 }
 
                 /* Header */
@@ -361,7 +367,8 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 32px 0;
+                    padding: 20px 0;
+                    flex-shrink: 0;
                 }
 
                 .header-left {
@@ -419,10 +426,11 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 }
 
                 .card-header {
-                    padding: 24px;
+                    padding: 20px 24px;
                     display: flex;
                     align-items: center;
                     gap: 12px;
+                    border-bottom: 1px solid var(--border);
                 }
 
                 .card-header h3 {
@@ -449,13 +457,26 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     display: grid;
                     grid-template-columns: 1fr 1.6fr;
                     gap: 24px;
-                    padding-bottom: 40px;
+                    flex: 1;
+                    overflow: hidden;
+                    padding-bottom: 24px;
+                    align-items: stretch;
                 }
 
                 .master-data-columns {
                     display: flex;
                     flex-direction: column;
                     gap: 24px;
+                    height: 100%;
+                    overflow: hidden;
+                }
+
+                .master-card {
+                    flex: 1;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 0;
                 }
 
                 /* Master Card Items */
@@ -499,6 +520,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
 
                 .item-list {
                     flex: 1;
+                    min-height: 0;
                     padding: 0 12px 24px 24px;
                 }
 
@@ -559,7 +581,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 .user-management-card .header-text p { margin: 0; font-size: 0.8rem; color: var(--muted); }
 
                 .user-table-container {
+                    flex: 1;
+                    overflow-y: auto;
                     padding: 0 24px 24px 24px;
+                    min-height: 0;
                 }
 
                 .user-table {

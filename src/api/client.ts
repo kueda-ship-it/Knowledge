@@ -14,6 +14,8 @@ export function toItem(row: Record<string, unknown>): KnowledgeItem {
         incidents: (row.incidents as string[]) ?? [],
         tags: (row.tags as string[]) ?? [],
         content: row.content as string,
+        phenomenon: (row.phenomenon as string) ?? '',
+        countermeasure: (row.countermeasure as string) || (row.content as string) || '',
         status: row.status as 'solved' | 'unsolved',
         updatedAt: row.updated_at as string,
         author: row.author as string,
@@ -28,7 +30,7 @@ export const apiClient = {
             .from('knowledge')
             .select(`
                 id, title, machine, property, req_num, category,
-                incidents, tags, content, status, updated_at, author, attachments,
+                incidents, tags, status, updated_at, author, attachments,
                 knowledge_reactions(type, user_id)
             `)
             .order('updated_at', { ascending: false });
@@ -47,6 +49,31 @@ export const apiClient = {
             }
             return item;
         });
+    },
+
+    async fetchOne(id: string, currentUserId?: string): Promise<KnowledgeItem | null> {
+        const { data, error } = await supabase
+            .from('knowledge')
+            .select(`
+                id, title, machine, property, req_num, category,
+                incidents, tags, content, phenomenon, countermeasure, status, updated_at, author, attachments,
+                knowledge_reactions(type, user_id)
+            `)
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        if (!data) return null;
+
+        const item = toItem(data);
+        const reactions = (data.knowledge_reactions as any[]) || [];
+        item.likeCount = reactions.filter(r => r.type === 'like').length;
+        item.wrongCount = reactions.filter(r => r.type === 'wrong').length;
+        if (currentUserId) {
+            const my = reactions.find(r => r.user_id === currentUserId);
+            item.myReaction = my ? my.type : null;
+        }
+        return item;
     },
 
     async fetchMasters(): Promise<MasterData> {
@@ -83,6 +110,8 @@ export const apiClient = {
                 incidents: item.incidents,
                 tags: item.tags,
                 content: item.content,
+                phenomenon: item.phenomenon ?? '',
+                countermeasure: item.countermeasure ?? '',
                 status: item.status,
                 updated_at: item.updatedAt,
                 author: item.author,

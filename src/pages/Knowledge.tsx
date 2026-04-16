@@ -100,16 +100,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                     });
                 }
             )
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'knowledge_reactions' },
-                (payload) => {
-                    console.log('[Realtime] Reaction change:', payload.eventType);
-                    // リアクション変更時は全件再取得（件数の再計算が必要なため）
-                    // 将来的には特定IDのみの再取得に最適化可能
-                    refreshData(true);
-                }
-            )
+            // リアクション変更はリストのEgress削減のため購読しない（Editor側の楽観的UIで対応）
             .subscribe((status) => {
                 console.log('[Realtime] Knowledge channel status:', status);
                 if (status === 'SUBSCRIBED') {
@@ -256,9 +247,16 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
         setView('editor');
     };
 
-    const handleEditItem = (item: KnowledgeItem) => {
+    const handleEditItem = async (item: KnowledgeItem) => {
         setEditingItem(item);
         setView('editor');
+        // リスト取得ではテキスト列を省略しているため、編集時に詳細を取得
+        try {
+            const full = await apiClient.fetchOne(item.id, (user as any).id);
+            if (full) setEditingItem(full);
+        } catch (e) {
+            console.warn('[fetchOne] failed, using cached item', e);
+        }
     };
 
     const handleSave = async (updatedItem: KnowledgeItem, shouldClose = true) => {

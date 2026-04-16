@@ -18,6 +18,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
     const [formData, setFormData] = useState<Partial<KnowledgeItem>>({
         title: '', machine: '', property: '', req_num: '',
         category: '', incidents: [], tags: [], content: '',
+        phenomenon: '', countermeasure: '',
         status: 'unsolved'
     });
     const [selectedIncidents, setSelectedIncidents] = useState<string[]>([]);
@@ -34,7 +35,11 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
 
     useEffect(() => {
         if (item) {
-            setFormData(item);
+            setFormData({
+                ...item,
+                phenomenon: item.phenomenon ?? '',
+                countermeasure: item.countermeasure ?? '',
+            });
             setSelectedIncidents(item.incidents || []);
             setTagInput((item.tags || []).join(' #'));
             setAttachments(item.attachments || []);
@@ -44,6 +49,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             setFormData({
                 title: '', machine: '', property: '', req_num: '',
                 category: '', incidents: [], tags: [], content: '',
+                phenomenon: '', countermeasure: '',
                 status: 'unsolved'
             });
             setSelectedIncidents([]);
@@ -98,12 +104,13 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         // Basic validation
         const hasMachine = !!formData.machine;
         const hasProperty = !!formData.property;
-        const hasContent = !!formData.content;
+        const hasPhenomenon = !!formData.phenomenon;
+        const hasCountermeasure = !!formData.countermeasure;
         const hasIncidents = selectedIncidents.length > 0;
         const hasCategory = !!formData.category;
         const hasValidReqNum = isConstruction ? true : /^\d{11}$/.test(formData.req_num || '');
 
-        if (!hasMachine || !hasProperty || (!isConstruction && !formData.req_num) || !hasContent || !hasIncidents || !hasCategory) {
+        if (!hasMachine || !hasProperty || (!isConstruction && !formData.req_num) || !hasPhenomenon || !hasCountermeasure || !hasIncidents || !hasCategory) {
             return alert("必須項目(*)をすべて入力してください");
         }
         
@@ -115,6 +122,8 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         let title = formData.title?.trim();
         if (!title) title = `[${formData.category}] ${selectedIncidents.join(', ')}`;
 
+        const phenomenon = formData.phenomenon || '';
+        const countermeasure = formData.countermeasure || '';
         const payload: KnowledgeItem = {
             id: item?.id || Date.now().toString(),
             machine: formData.machine || '',
@@ -124,7 +133,9 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             category: formData.category || '',
             incidents: selectedIncidents,
             tags: tags,
-            content: formData.content || '',
+            content: `${phenomenon}\n\n${countermeasure}`,
+            phenomenon,
+            countermeasure,
             status: formData.status || 'unsolved',
             updatedAt: new Date().toISOString(),
             author: item?.author || user.name,
@@ -424,9 +435,15 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                     <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="#js #error" style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }} />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                    <label>内容 <span style={{ color: 'red' }}>*</span></label>
-                    <textarea id="content" value={formData.content || ''} onChange={handleChange} style={{ width: '100%', height: '200px', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)', resize: 'vertical' }}></textarea>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                        <label>事象 <span style={{ color: 'red' }}>*</span></label>
+                        <textarea id="phenomenon" value={formData.phenomenon || ''} onChange={handleChange} placeholder="発生した事象・現象を記入してください" style={{ width: '100%', height: '150px', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)', resize: 'vertical' }}></textarea>
+                    </div>
+                    <div>
+                        <label>対処 <span style={{ color: 'red' }}>*</span></label>
+                        <textarea id="countermeasure" value={formData.countermeasure || ''} onChange={handleChange} placeholder="実施した対処・解決策を記入してください" style={{ width: '100%', height: '150px', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)', resize: 'vertical' }}></textarea>
+                    </div>
                 </div>
 
                 {/* Attachments */}

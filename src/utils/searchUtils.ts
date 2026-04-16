@@ -19,7 +19,9 @@ export function searchKnowledge(query: string, data: KnowledgeItem[]): Knowledge
             { text: (item.incidents || []).join(' '), weight: 5 },
             { text: (item.tags || []).join(' '), weight: 3 },
             { text: item.category || '', weight: 3 },
-            { text: item.content || '', weight: 2 },
+            { text: item.phenomenon || '', weight: 2 },
+            { text: item.countermeasure || '', weight: 2 },
+            { text: item.content || '', weight: 1 },
         ];
         keywords.forEach(kw => {
             fields.forEach(({ text, weight }) => {

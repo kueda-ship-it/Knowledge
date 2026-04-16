@@ -61,6 +61,8 @@ export interface KnowledgeItem {
     incidents: string[];
     tags: string[];
     content: string;
+    phenomenon?: string;   // 事象
+    countermeasure?: string; // 対処
     status: 'solved' | 'unsolved';
     updatedAt: string;
     author: string;

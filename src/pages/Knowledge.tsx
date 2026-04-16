@@ -177,59 +177,51 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
             setLoadingMsg('');
         };
 
-        // サイレント更新はタイムアウトなし、初回も大幅に延長（キャッシュがあるので表示はされる）
-        const FETCH_TIMEOUT = (!silent && !hasCache) ? 120000 : 30000;
-        const withTimeout = <T,>(promise: Promise<T>, ms: number) =>
-            Promise.race([
-                promise,
-                new Promise<never>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
-            ]);
+        // 独自タイムアウトを廃止し、ネットワーク・ブラウザの制限に任せる
+        // 低速環境でもエラーで中断させないための処置
 
-        // ナレッジ一覧とマスタ取得を並列化（一方が遅れても片方が表示されるように）
+        // ナレッジ一覧とマスタ取得
         const fetchKnowledge = async () => {
             try {
-                const kData = await withTimeout(apiClient.fetchAll(), FETCH_TIMEOUT);
+                const kData = await apiClient.fetchAll();
                 setData(kData);
                 localStorage.setItem(CACHE_KEY, JSON.stringify(kData));
                 
-                // Initial AI message
                 if (chatMessages.length === 0) {
                     setChatMessages([{
-                        id: 'init',
-                        type: 'assistant',
+                        id: 'init', type: 'assistant',
                         text: `ナレッジベースに ${kData.length} 件のデータがあります。何かお困りのことはありますか？`
                     }]);
                 }
             } catch (e) {
-                if (e instanceof Error && e.message === 'TIMEOUT') throw e;
-                console.error("Knowledge fetch error:", e);
+                console.error("Knowledge load error:", e);
+                // キャッシュがない場合のみエラーを投げる
+                if (!hasCache) throw e;
             }
         };
 
         const fetchMasters = async () => {
             try {
-                const mData = await withTimeout(apiClient.fetchMasters(), silent ? 20000 : 90000);
+                const mData = await apiClient.fetchMasters();
                 setMasterData(mData);
                 localStorage.setItem(MASTERS_CACHE_KEY, JSON.stringify(mData));
             } catch (e) {
-                console.error("Masters fetch error:", e);
-                // マスタ取得失敗は致命的ではないためスルー
+                console.warn("Masters background load delayed or failed:", e);
             }
         };
 
         try {
-            await Promise.all([fetchKnowledge(), fetchMasters()]);
+            // 片方が失敗してももう片方を活かすため並列実行
+            await Promise.allSettled([fetchKnowledge(), fetchMasters()]);
+            
             clearTimers();
             setLoading(false);
             setRefreshing(false);
         } catch (e: unknown) {
             clearTimers();
-            if (!silent) console.error("Failed to load core data", e);
-            const isTimeout = e instanceof Error && e.message === 'TIMEOUT';
+            if (!silent) console.error("Failed to load data", e);
             if (!hasCache) {
-                setError(isTimeout
-                    ? '接続がタイムアウトしました。ネットワーク環境を確認するか、時間をおいて再試行してください。'
-                    : '接続できませんでした。Supabaseが起動中の可能性があります。しばらく待ってから再試行してください。');
+                setError('データの読み込みに失敗しました。ネットワーク環境を確認してください。');
             }
             setLoadingMsg('');
             setLoading(false);

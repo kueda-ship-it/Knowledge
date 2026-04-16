@@ -21,7 +21,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
     };
 
     const [proposals, setProposals] = useState<OperationalProposal[]>(() => loadProposalCache());
-    const [loading, setLoading] = useState(() => loadProposalCache().length === 0);
+    const [loading, setLoading] = useState(false); // 初回からローディングを表示しない（キャッシュ活用）
+    const [refreshing, setRefreshing] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [usersMaster, setUsersMaster] = useState<User[]>([]);
     const [activeCategory, setActiveCategory] = useState<string>('全て');
@@ -86,15 +87,13 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user })
         return () => { supabase.removeChannel(channel); };
     }, []);
 
-    const fetchData = async (forceShow = false) => {
+    const fetchData = async (silent = true) => {
         const hasCache = loadProposalCache().length > 0;
 
-        // キャッシュあり: スピナーなしでバックグラウンド取得
-        // キャッシュなし: ローディング表示
-        if (!hasCache || forceShow) {
+        if (!hasCache && !silent) {
             setLoading(true);
-            setFetchError(null);
         }
+        setFetchError(null);
 
         try {
             const data = await apiClient.fetchProposals();

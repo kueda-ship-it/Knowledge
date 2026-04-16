@@ -45,6 +45,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
 
     // Editor state
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
+    const [loadingDetail, setLoadingDetail] = useState(false);
 
     // Chat state
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -256,14 +257,18 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
     };
 
     const handleEditItem = async (item: KnowledgeItem) => {
-        setEditingItem(item);
+        // 詳細取得完了まではEditorを表示しない（空フィールド防止）
+        setEditingItem(null);
+        setLoadingDetail(true);
         setView('editor');
-        // リスト取得ではテキスト列を省略しているため、編集時に詳細を取得
         try {
             const full = await apiClient.fetchOne(item.id, (user as any).id);
-            if (full) setEditingItem(full);
+            setEditingItem(full || item);
         } catch (e) {
             console.warn('[fetchOne] failed, using cached item', e);
+            setEditingItem(item);
+        } finally {
+            setLoadingDetail(false);
         }
     };
 
@@ -342,16 +347,22 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                         </>
                     ) : (
                         <div style={{ padding: '20px', overflowY: 'auto' }}>
-                            <div style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                                <Editor
-                                    item={editingItem}
-                                    masters={masterData}
-                                    onSave={handleSave}
-                                    onDelete={handleDelete}
-                                    onCancel={() => setView('list')}
-                                    user={user}
-                                />
-                            </div>
+                            {loadingDetail ? (
+                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px' }}>
+                                    <div style={{ width: '32px', height: '32px', border: '3px solid var(--border)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                </div>
+                            ) : (
+                                <div style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                                    <Editor
+                                        item={editingItem}
+                                        masters={masterData}
+                                        onSave={handleSave}
+                                        onDelete={handleDelete}
+                                        onCancel={() => setView('list')}
+                                        user={user}
+                                    />
+                                </div>
+                            )}
                         </div>
                     )}
                 </main>

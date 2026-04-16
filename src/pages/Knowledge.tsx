@@ -177,38 +177,54 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
             setLoadingMsg('');
         };
 
-        // サイレント更新は短めのタイムアウト（キャッシュがあるので失敗しても問題なし）
-        const FETCH_TIMEOUT = (!silent && !hasCache) ? 70000 : 15000;
-        const withTimeout = (promise: Promise<any>, ms: number) =>
+        // サイレント更新はタイムアウトなし、初回も大幅に延長（キャッシュがあるので表示はされる）
+        const FETCH_TIMEOUT = (!silent && !hasCache) ? 120000 : 30000;
+        const withTimeout = <T,>(promise: Promise<T>, ms: number) =>
             Promise.race([
                 promise,
-                new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
+                new Promise<never>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
             ]);
 
-        try {
-            const kData = await withTimeout(apiClient.fetchAll(), FETCH_TIMEOUT);
-            clearTimers();
+        // ナレッジ一覧とマスタ取得を並列化（一方が遅れても片方が表示されるように）
+        const fetchKnowledge = async () => {
+            try {
+                const kData = await withTimeout(apiClient.fetchAll(), FETCH_TIMEOUT);
+                setData(kData);
+                localStorage.setItem(CACHE_KEY, JSON.stringify(kData));
+                
+                // Initial AI message
+                if (chatMessages.length === 0) {
+                    setChatMessages([{
+                        id: 'init',
+                        type: 'assistant',
+                        text: `ナレッジベースに ${kData.length} 件のデータがあります。何かお困りのことはありますか？`
+                    }]);
+                }
+            } catch (e) {
+                if (e instanceof Error && e.message === 'TIMEOUT') throw e;
+                console.error("Knowledge fetch error:", e);
+            }
+        };
 
-            setData(kData);
-            localStorage.setItem(CACHE_KEY, JSON.stringify(kData));
+        const fetchMasters = async () => {
+            try {
+                const mData = await withTimeout(apiClient.fetchMasters(), silent ? 20000 : 90000);
+                setMasterData(mData);
+                localStorage.setItem(MASTERS_CACHE_KEY, JSON.stringify(mData));
+            } catch (e) {
+                console.error("Masters fetch error:", e);
+                // マスタ取得失敗は致命的ではないためスルー
+            }
+        };
+
+        try {
+            await Promise.all([fetchKnowledge(), fetchMasters()]);
+            clearTimers();
             setLoading(false);
             setRefreshing(false);
-
-            const mData = await withTimeout(apiClient.fetchMasters(), silent ? 10000 : 60000);
-            setMasterData(mData);
-            localStorage.setItem(MASTERS_CACHE_KEY, JSON.stringify(mData));
-
-            // Initial AI message if first time
-            if (chatMessages.length === 0) {
-                setChatMessages([{
-                    id: 'init',
-                    type: 'assistant',
-                    text: `ナレッジベースに ${kData.length} 件のデータがあります。何かお困りのことはありますか？`
-                }]);
-            }
         } catch (e: unknown) {
             clearTimers();
-            if (!silent) console.error("Failed to load data", e);
+            if (!silent) console.error("Failed to load core data", e);
             const isTimeout = e instanceof Error && e.message === 'TIMEOUT';
             if (!hasCache) {
                 setError(isTimeout

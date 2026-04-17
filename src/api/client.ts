@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { supabaseEquipment } from '../lib/supabaseEquipment';
-import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification } from '../types';
+import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification, KnowledgeGroup } from '../types';
 
 // DB行 → KnowledgeItem の変換
 export function toItem(row: Record<string, unknown>): KnowledgeItem {
@@ -46,7 +46,9 @@ export const apiClient = {
             const reactions = (row.knowledge_reactions as any[]) || [];
             item.likeCount = reactions.filter(r => r.type === 'like').length;
             item.wrongCount = reactions.filter(r => r.type === 'wrong').length;
-            
+            item.likeUsers = reactions.filter(r => r.type === 'like').map(r => r.user_id);
+            item.wrongUsers = reactions.filter(r => r.type === 'wrong').map(r => r.user_id);
+
             if (currentUserId) {
                 const my = reactions.find(r => r.user_id === currentUserId);
                 item.myReaction = my ? my.type : null;
@@ -73,6 +75,8 @@ export const apiClient = {
         const reactions = (data.knowledge_reactions as any[]) || [];
         item.likeCount = reactions.filter(r => r.type === 'like').length;
         item.wrongCount = reactions.filter(r => r.type === 'wrong').length;
+        item.likeUsers = reactions.filter(r => r.type === 'like').map(r => r.user_id);
+        item.wrongUsers = reactions.filter(r => r.type === 'wrong').map(r => r.user_id);
         if (currentUserId) {
             const my = reactions.find(r => r.user_id === currentUserId);
             item.myReaction = my ? my.type : null;
@@ -424,5 +428,59 @@ export const apiClient = {
         if (channel) {
             supabase.removeChannel(channel);
         }
+    },
+
+    // Knowledge Groups
+    async fetchGroups(): Promise<KnowledgeGroup[]> {
+        const { data, error } = await supabase
+            .from('knowledge_groups')
+            .select('id, name, description, created_at, updated_at, knowledge_group_members(user_id)')
+            .order('name');
+        if (error) throw error;
+        return (data ?? []).map(row => ({
+            id: row.id as string,
+            name: row.name as string,
+            description: (row.description as string) || undefined,
+            createdAt: row.created_at as string,
+            updatedAt: row.updated_at as string,
+            memberIds: ((row.knowledge_group_members as any[]) || []).map(m => m.user_id as string),
+        }));
+    },
+
+    async upsertGroup(group: { id?: string; name: string; description?: string }, creatorId?: string): Promise<KnowledgeGroup> {
+        const payload: any = { name: group.name, description: group.description ?? null, updated_at: new Date().toISOString() };
+        if (group.id) payload.id = group.id;
+        else if (creatorId) payload.created_by = creatorId;
+        const { data, error } = await supabase
+            .from('knowledge_groups')
+            .upsert(payload, { onConflict: 'id' })
+            .select('id, name, description, created_at, updated_at')
+            .single();
+        if (error) throw error;
+        return {
+            id: data.id,
+            name: data.name,
+            description: data.description || undefined,
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+            memberIds: [],
+        };
+    },
+
+    async deleteGroup(id: string): Promise<void> {
+        const { error } = await supabase.from('knowledge_groups').delete().eq('id', id);
+        if (error) throw error;
+    },
+
+    async setGroupMembers(groupId: string, userIds: string[], actorId?: string): Promise<void> {
+        const { error: delErr } = await supabase
+            .from('knowledge_group_members')
+            .delete()
+            .eq('group_id', groupId);
+        if (delErr) throw delErr;
+        if (userIds.length === 0) return;
+        const rows = userIds.map(uid => ({ group_id: groupId, user_id: uid, added_by: actorId ?? null }));
+        const { error: insErr } = await supabase.from('knowledge_group_members').insert(rows);
+        if (insErr) throw insErr;
     }
 };

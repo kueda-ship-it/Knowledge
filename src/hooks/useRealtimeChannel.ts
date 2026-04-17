@@ -57,6 +57,9 @@ export function useRealtimeChannel(
             channelRef.current = null;
         }
 
+        // 無効な設定ではサブスクライブしない（未ログイン時等）
+        if (!channelName || listenersRef.current.length === 0) return;
+
         const channel = supabase.channel(channelName);
 
         for (const listener of listenersRef.current) {

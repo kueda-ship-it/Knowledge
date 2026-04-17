@@ -51,6 +51,13 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
 
     const getInitial = (name: string) => name.charAt(0).toUpperCase();
 
+    const namesOfUserIds = (userIds?: string[]): string => {
+        if (!userIds || userIds.length === 0) return '';
+        return userIds
+            .map(id => users.find(u => u.id === id)?.name || '不明')
+            .join(', ');
+    };
+
     const statusOptions: { value: 'all' | 'unsolved' | 'solved' | 'mine'; label: string }[] = [
         { value: 'all', label: '全て' },
         { value: 'solved', label: '解決済' },
@@ -210,28 +217,34 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     borderRadius: '20px',
                                     border: '1px solid var(--glass-border)'
                                 }}>
-                                    <span style={{ 
-                                        fontSize: '0.85rem', 
-                                        color: (item.likeCount || 0) > 0 ? '#3b82f6' : 'var(--muted)', 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: '5px', 
-                                        fontWeight: 'bold',
-                                        textShadow: (item.likeCount || 0) > 0 ? '0 0 10px rgba(59, 130, 246, 0.5)' : 'none'
-                                    }}>
-                                        <ThumbsUp size={14} fill={(item.likeCount || 0) > 0 ? '#3b82f6' : 'transparent'} /> 
+                                    <span
+                                        title={namesOfUserIds(item.likeUsers) || undefined}
+                                        style={{
+                                            fontSize: '0.85rem',
+                                            color: (item.likeCount || 0) > 0 ? '#3b82f6' : 'var(--muted)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '5px',
+                                            fontWeight: 'bold',
+                                            textShadow: (item.likeCount || 0) > 0 ? '0 0 10px rgba(59, 130, 246, 0.5)' : 'none',
+                                            cursor: (item.likeCount || 0) > 0 ? 'help' : 'default'
+                                        }}>
+                                        <ThumbsUp size={14} fill={(item.likeCount || 0) > 0 ? '#3b82f6' : 'transparent'} />
                                         {item.likeCount || 0}
                                     </span>
-                                    <span style={{ 
-                                        fontSize: '0.85rem', 
-                                        color: (item.wrongCount || 0) > 0 ? '#ef4444' : 'var(--muted)', 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: '5px', 
-                                        fontWeight: 'bold',
-                                        textShadow: (item.wrongCount || 0) > 0 ? '0 0 10px rgba(239, 68, 68, 0.5)' : 'none'
-                                    }}>
-                                        <AlertTriangle size={14} fill={(item.wrongCount || 0) > 0 ? '#ef4444' : 'transparent'} /> 
+                                    <span
+                                        title={namesOfUserIds(item.wrongUsers) || undefined}
+                                        style={{
+                                            fontSize: '0.85rem',
+                                            color: (item.wrongCount || 0) > 0 ? '#ef4444' : 'var(--muted)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '5px',
+                                            fontWeight: 'bold',
+                                            textShadow: (item.wrongCount || 0) > 0 ? '0 0 10px rgba(239, 68, 68, 0.5)' : 'none',
+                                            cursor: (item.wrongCount || 0) > 0 ? 'help' : 'default'
+                                        }}>
+                                        <AlertTriangle size={14} fill={(item.wrongCount || 0) > 0 ? '#ef4444' : 'transparent'} />
                                         {item.wrongCount || 0}
                                     </span>
                                 </div>

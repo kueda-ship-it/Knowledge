@@ -3,6 +3,7 @@ import { MasterData, User } from '../types';
 import { Save, Trash2, Plus, Users, LayoutGrid, ShieldCheck, Mail, Info } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { BackButton } from '../components/common/BackButton';
+import { GroupsManager } from '../components/GroupsManager';
 
 interface AdminProps {
     user: User;
@@ -221,6 +222,11 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                 ))}
                             </div>
                         </section>
+
+                        {/* Notification Groups */}
+                        {isFullAdmin && (
+                            <GroupsManager user={user} users={masterData.users} />
+                        )}
                     </div>
 
                     {/* User Management Section */}

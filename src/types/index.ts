@@ -70,6 +70,8 @@ export interface KnowledgeItem {
     // Extension
     likeCount?: number;
     wrongCount?: number;
+    likeUsers?: string[];
+    wrongUsers?: string[];
     myReaction?: 'like' | 'wrong' | null;
 }
 
@@ -77,6 +79,15 @@ export interface MasterData {
     incidents: string[];
     categories: string[];
     users: User[];
+}
+
+export interface KnowledgeGroup {
+    id: string;
+    name: string;
+    description?: string;
+    memberIds: string[]; // profiles.id
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface OperationalProposal {

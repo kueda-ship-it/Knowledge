@@ -7,9 +7,10 @@ interface EvaluationProps {
     data: KnowledgeItem[];
     onBack: () => void;
     user: AppUser;
+    onItemClick?: (item: KnowledgeItem) => void;
 }
 
-export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user }) => {
+export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onItemClick }) => {
     const [activeTab, setActiveTab] = useState<'ranking' | 'alerts'>('ranking');
 
     // ランキング（いいね数順、最低1件以上）
@@ -107,15 +108,20 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user }) =>
 
                         <div style={{ display: 'grid', gap: '16px' }}>
                             {ranking.length > 0 ? ranking.map((item, index) => (
-                                <div key={item.id} className="knowledge-card" style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '20px',
-                                    padding: '24px',
-                                    background: 'var(--card-bg)',
-                                    position: 'relative',
-                                    overflow: 'hidden'
-                                }}>
+                                <div
+                                    key={item.id}
+                                    className="knowledge-card"
+                                    onClick={() => onItemClick?.(item)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '20px',
+                                        padding: '24px',
+                                        background: 'var(--card-bg)',
+                                        position: 'relative',
+                                        overflow: 'hidden',
+                                        cursor: onItemClick ? 'pointer' : 'default'
+                                    }}>
                                     <div style={{
                                         fontSize: '2rem',
                                         fontWeight: 800,
@@ -186,11 +192,16 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user }) =>
 
                         <div style={{ display: 'grid', gap: '16px' }}>
                             {alerts.length > 0 ? alerts.map((item) => (
-                                <div key={item.id} className="knowledge-card" style={{
-                                    padding: '24px',
-                                    background: 'var(--card-bg)',
-                                    borderLeft: '4px solid #ef4444'
-                                }}>
+                                <div
+                                    key={item.id}
+                                    className="knowledge-card"
+                                    onClick={() => onItemClick?.(item)}
+                                    style={{
+                                        padding: '24px',
+                                        background: 'var(--card-bg)',
+                                        borderLeft: '4px solid #ef4444',
+                                        cursor: onItemClick ? 'pointer' : 'default'
+                                    }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                                         <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{item.title}</h3>
                                         <div style={{ color: '#ef4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>

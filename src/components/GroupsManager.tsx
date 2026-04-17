@@ -10,7 +10,8 @@ interface Props {
 
 export const GroupsManager: React.FC<Props> = ({ user, users }) => {
     const [groups, setGroups] = useState<KnowledgeGroup[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [draft, setDraft] = useState<{ name: string; description: string; memberIds: string[] }>({
         name: '', description: '', memberIds: []
@@ -18,9 +19,19 @@ export const GroupsManager: React.FC<Props> = ({ user, users }) => {
 
     const load = async () => {
         setLoading(true);
-        try { setGroups(await apiClient.fetchGroups()); }
-        catch (e) { console.error(e); }
-        finally { setLoading(false); }
+        setLoadError(null);
+        try {
+            const result = await Promise.race([
+                apiClient.fetchGroups(),
+                new Promise<never>((_, rej) => setTimeout(() => rej(new Error('タイムアウト (10秒)')), 10000)),
+            ]);
+            setGroups(result as KnowledgeGroup[]);
+        } catch (e: any) {
+            console.error('[GroupsManager] load error:', e);
+            setLoadError(e?.message || String(e));
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => { load(); }, []);
@@ -82,9 +93,18 @@ export const GroupsManager: React.FC<Props> = ({ user, users }) => {
                 </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 0' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 20px 20px' }}>
                 {loading && <div style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>読み込み中...</div>}
-                {!loading && groups.length === 0 && editingId !== 'new' && (
+                {!loading && loadError && (
+                    <div style={{
+                        color: '#fca5a5', fontSize: '0.82rem', padding: '10px 12px',
+                        borderRadius: 8, background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)'
+                    }}>
+                        読み込み失敗: {loadError}
+                        <button onClick={load} style={{ marginLeft: 8, padding: '2px 10px', fontSize: '0.78rem', borderRadius: 6, background: 'rgba(255,255,255,0.08)', color: 'inherit', border: '1px solid rgba(255,255,255,0.15)', cursor: 'pointer' }}>再試行</button>
+                    </div>
+                )}
+                {!loading && !loadError && groups.length === 0 && editingId !== 'new' && (
                     <div style={{ color: 'var(--muted)', fontSize: '0.85rem', padding: '8px 0' }}>
                         グループ未作成。「新規」から追加してください。
                     </div>

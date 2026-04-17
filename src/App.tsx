@@ -28,6 +28,7 @@ function App() {
     });
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [pendingEdit, setPendingEdit] = useState<KnowledgeItem | null>(null);
     const viewRef = useRef(currentView);
     useEffect(() => { viewRef.current = currentView; }, [currentView]);
 
@@ -170,7 +171,12 @@ function App() {
                 )}
 
                 {currentView === 'knowledge' && (
-                    <Knowledge user={user} onBack={() => navigate('menu')} />
+                    <Knowledge
+                        user={user}
+                        onBack={() => navigate('menu')}
+                        initialEditItem={pendingEdit}
+                        onInitialEditConsumed={() => setPendingEdit(null)}
+                    />
                 )}
 
                 {currentView === 'dashboard' && (
@@ -186,7 +192,12 @@ function App() {
                 )}
 
                 {currentView === 'evaluation' && (
-                    <Evaluation data={dashboardData} onBack={() => navigate('menu')} user={user} />
+                    <Evaluation
+                        data={dashboardData}
+                        onBack={() => navigate('menu')}
+                        user={user}
+                        onItemClick={(item) => { setPendingEdit(item); navigate('knowledge'); }}
+                    />
                 )}
                 
                 {currentView === 'proposals' && (

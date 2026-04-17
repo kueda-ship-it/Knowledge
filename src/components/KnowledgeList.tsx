@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { KnowledgeItem, User } from '../types';
 import { RotateCcw, Check, Paperclip, ThumbsUp, AlertTriangle } from 'lucide-react';
 
@@ -51,11 +52,85 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
 
     const getInitial = (name: string) => name.charAt(0).toUpperCase();
 
-    const namesOfUserIds = (userIds?: string[]): string => {
-        if (!userIds || userIds.length === 0) return '';
-        return userIds
-            .map(id => users.find(u => u.id === id)?.name || '不明')
-            .join(', ');
+    const [hoveredPill, setHoveredPill] = useState<{ key: string; rect: DOMRect; placement: 'top' | 'bottom' } | null>(null);
+
+    const handlePillEnter = (key: string, el: HTMLElement) => {
+        const rect = el.getBoundingClientRect();
+        const midY = window.innerHeight / 2;
+        // ピルが画面上半分にある → 下に表示、下半分にある → 上に表示
+        const placement: 'top' | 'bottom' = rect.top < midY ? 'bottom' : 'top';
+        setHoveredPill({ key, rect, placement });
+    };
+
+    const renderPopover = (userIds: string[] | undefined, label: string, key: string) => {
+        if (!hoveredPill || hoveredPill.key !== key) return null;
+        if (!userIds || userIds.length === 0) return null;
+        const { rect, placement } = hoveredPill;
+        const positionStyle: React.CSSProperties = placement === 'bottom'
+            ? { top: rect.bottom + 10, right: window.innerWidth - rect.right }
+            : { bottom: window.innerHeight - rect.top + 10, right: window.innerWidth - rect.right };
+        const node = (
+            <div
+                style={{
+                    position: 'fixed',
+                    ...positionStyle,
+                    minWidth: 220,
+                    maxWidth: 320,
+                    padding: '10px 8px 8px',
+                    borderRadius: 14,
+                    zIndex: 99999,
+                    background: 'rgba(24, 28, 40, 0.92)',
+                    backdropFilter: 'blur(28px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    boxShadow: '0 2px 0 0 rgba(255,255,255,0.08) inset, 0 16px 48px 0 rgba(0,0,0,0.45), 0 4px 12px 0 rgba(0,0,0,0.25)',
+                    overflow: 'hidden',
+                    pointerEvents: 'none',
+                }}
+            >
+                <div style={{
+                    padding: '4px 8px 8px',
+                    fontSize: '0.75rem',
+                    color: 'rgba(255,255,255,0.7)',
+                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    marginBottom: 4,
+                }}>{label}・{userIds.length}人</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {userIds.map(uid => {
+                        const u = users.find(x => x.id === uid);
+                        const name = u?.name || '不明';
+                        return (
+                            <div key={uid} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 10,
+                                padding: '6px 8px',
+                                borderRadius: 8,
+                                fontSize: '0.85rem',
+                                color: 'rgba(255,255,255,0.95)',
+                            }}>
+                                {u?.avatarUrl ? (
+                                    <img
+                                        src={u.avatarUrl}
+                                        alt=""
+                                        style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                                    />
+                                ) : (
+                                    <div style={{
+                                        width: 24, height: 24, borderRadius: '50%',
+                                        background: '#64748b', color: 'white',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '0.7rem', fontWeight: 'bold', flexShrink: 0,
+                                    }}>{getInitial(name)}</div>
+                                )}
+                                <span>{name}</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+        return createPortal(node, document.body);
     };
 
     const statusOptions: { value: 'all' | 'unsolved' | 'solved' | 'mine'; label: string }[] = [
@@ -218,8 +293,11 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     border: '1px solid var(--glass-border)'
                                 }}>
                                     <span
-                                        title={namesOfUserIds(item.likeUsers) || undefined}
+                                        onClick={e => e.stopPropagation()}
+                                        onMouseEnter={e => (item.likeCount || 0) > 0 && handlePillEnter(`${item.id}-like`, e.currentTarget)}
+                                        onMouseLeave={() => setHoveredPill(null)}
                                         style={{
+                                            position: 'relative',
                                             fontSize: '0.85rem',
                                             color: (item.likeCount || 0) > 0 ? '#3b82f6' : 'var(--muted)',
                                             display: 'flex',
@@ -231,10 +309,14 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         }}>
                                         <ThumbsUp size={14} fill={(item.likeCount || 0) > 0 ? '#3b82f6' : 'transparent'} />
                                         {item.likeCount || 0}
+                                        {renderPopover(item.likeUsers, '👍 いいね！', `${item.id}-like`)}
                                     </span>
                                     <span
-                                        title={namesOfUserIds(item.wrongUsers) || undefined}
+                                        onClick={e => e.stopPropagation()}
+                                        onMouseEnter={e => (item.wrongCount || 0) > 0 && handlePillEnter(`${item.id}-wrong`, e.currentTarget)}
+                                        onMouseLeave={() => setHoveredPill(null)}
                                         style={{
+                                            position: 'relative',
                                             fontSize: '0.85rem',
                                             color: (item.wrongCount || 0) > 0 ? '#ef4444' : 'var(--muted)',
                                             display: 'flex',
@@ -246,6 +328,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         }}>
                                         <AlertTriangle size={14} fill={(item.wrongCount || 0) > 0 ? '#ef4444' : 'transparent'} />
                                         {item.wrongCount || 0}
+                                        {renderPopover(item.wrongUsers, '⚠ 違うよ！', `${item.id}-wrong`)}
                                     </span>
                                 </div>
                             </div>

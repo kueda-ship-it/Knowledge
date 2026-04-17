@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { MasterData, User } from '../types';
-import { Save, Trash2, Plus, Users, LayoutGrid, ShieldCheck, Mail, Info } from 'lucide-react';
+import { Save, Trash2, Plus, Users, LayoutGrid, ShieldCheck, Mail, Info, ChevronRight } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { BackButton } from '../components/common/BackButton';
 import { GroupsManager } from '../components/GroupsManager';
+import { GlassModal } from '../components/common/GlassModal';
+import { GlassSelect } from '../components/common/GlassSelect';
+
+const ROLE_OPTIONS = [
+    { value: 'viewer', label: '閲覧者 (VIEWER)', color: '#94a3b8' },
+    { value: 'user', label: '編集者 (USER)', color: '#3b82f6' },
+    { value: 'manager', label: '管理者 (MANAGER)', color: '#8b5cf6' },
+    { value: 'master', label: '最上位権限 (MASTER)', color: '#f59e0b' },
+];
 
 interface AdminProps {
     user: User;
@@ -33,6 +42,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     const [newUserName, setNewUserName] = useState('');
     const [newUserEmail, setNewUserEmail] = useState('');
     const [newUserRole, setNewUserRole] = useState<User['role']>('user');
+    const [openModal, setOpenModal] = useState<'categories' | 'incidents' | null>(null);
 
     useEffect(() => {
         loadMasters();
@@ -103,6 +113,20 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
         setIsDirty(true);
     };
 
+    const bulkPromoteViewers = () => {
+        const viewerCount = masterData.users.filter(u => u.role === 'viewer').length;
+        if (viewerCount === 0) {
+            alert('閲覧者は現在いません。');
+            return;
+        }
+        if (!confirm(`閲覧者 ${viewerCount} 人を全員「編集者 (USER)」に変更します。よろしいですか？\n※「変更を保存」を押すまでDBには反映されません。`)) return;
+        setMasterData(prev => ({
+            ...prev,
+            users: prev.users.map(u => u.role === 'viewer' ? { ...u, role: 'user' } : u),
+        }));
+        setIsDirty(true);
+    };
+
     const handleAddUser = () => {
         if (!newUserName.trim() || !newUserEmail.trim()) {
             alert("名前とメールアドレスを入力してください。");
@@ -155,73 +179,27 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 <main className="admin-content-grid">
                     {/* Master Sections Container */}
                     <div className="master-data-columns">
-                        {/* Categories Master */}
+                        {/* Categories Master - Summary card */}
                         {isFullAdmin && (
-                            <section className="glass-card master-card">
-                                <div className="card-header">
-                                    <div className="card-icon cat-icon"><LayoutGrid size={20} /></div>
+                            <button onClick={() => setOpenModal('categories')} className="glass-card master-summary-card">
+                                <div className="summary-card-icon cat-icon"><LayoutGrid size={22} /></div>
+                                <div className="summary-card-text">
                                     <h3>区分マスタ</h3>
+                                    <p>{masterData.categories.length} 件 · クリックで編集</p>
                                 </div>
-                                <div className="quick-add">
-                                    <input 
-                                        value={newCat} 
-                                        onChange={(e) => setNewCat(e.target.value)} 
-                                        placeholder="新しい区分を追加..." 
-                                    />
-                                    <button onClick={() => addSimple('categories', newCat, setNewCat)} className="add-btn">
-                                        <Plus size={18} />
-                                    </button>
-                                </div>
-                                <div className="item-list scroll-area">
-                                    {masterData.categories.map((item, i) => (
-                                        <div key={`cat-${i}`} className="master-item">
-                                            <input
-                                                value={item}
-                                                onChange={(e) => updateSimple('categories', i, e.target.value)}
-                                                autoComplete="off"
-                                                spellCheck={false}
-                                            />
-                                            <button className="delete-item-btn" onClick={() => removeSimple('categories', i)}>
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
+                                <ChevronRight size={20} className="summary-card-chevron" />
+                            </button>
                         )}
 
-                        {/* Incidents Master */}
-                        <section className="glass-card master-card">
-                            <div className="card-header">
-                                <div className="card-icon inc-icon"><Info size={20} /></div>
+                        {/* Incidents Master - Summary card */}
+                        <button onClick={() => setOpenModal('incidents')} className="glass-card master-summary-card">
+                            <div className="summary-card-icon inc-icon"><Info size={22} /></div>
+                            <div className="summary-card-text">
                                 <h3>インシデントマスタ</h3>
+                                <p>{masterData.incidents.length} 件 · クリックで編集</p>
                             </div>
-                            <div className="quick-add">
-                                <input 
-                                    value={newInc} 
-                                    onChange={(e) => setNewInc(e.target.value)} 
-                                    placeholder="新しい内容を追加..." 
-                                />
-                                <button onClick={() => addSimple('incidents', newInc, setNewInc)} className="add-btn">
-                                    <Plus size={18} />
-                                </button>
-                            </div>
-                            <div className="item-list scroll-area">
-                                {masterData.incidents.map((item, i) => (
-                                    <div key={`inc-${i}`} className="master-item">
-                                        <input
-                                            value={item}
-                                            onChange={(e) => updateSimple('incidents', i, e.target.value)}
-                                            autoComplete="off"
-                                            spellCheck={false}
-                                        />
-                                        <button className="delete-item-btn" onClick={() => removeSimple('incidents', i)}>
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
+                            <ChevronRight size={20} className="summary-card-chevron" />
+                        </button>
 
                         {/* Notification Groups */}
                         {isFullAdmin && (
@@ -238,31 +216,48 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                     <h3>ユーザーロール管理</h3>
                                     <p>SSOサインイン済みユーザーのアクセス権限を制御します</p>
                                 </div>
+                                <button
+                                    onClick={bulkPromoteViewers}
+                                    className="secondary-btn"
+                                    style={{
+                                        marginLeft: 'auto',
+                                        padding: '6px 14px',
+                                        fontSize: '0.8rem',
+                                        borderRadius: 10,
+                                        border: '1px solid rgba(59, 130, 246, 0.35)',
+                                        background: 'rgba(59, 130, 246, 0.1)',
+                                        color: '#93c5fd',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                    title="現在 viewer のユーザーをすべて user (編集者) に変更"
+                                >
+                                    閲覧者 → 編集者 一括変更
+                                </button>
                             </div>
 
                             <div className="add-user-form">
                                 <div className="input-group">
-                                    <input 
-                                        type="text" 
-                                        placeholder="名前" 
+                                    <input
+                                        type="text"
+                                        placeholder="名前"
                                         value={newUserName}
                                         onChange={(e) => setNewUserName(e.target.value)}
                                     />
-                                    <input 
-                                        type="email" 
-                                        placeholder="メールアドレス" 
+                                    <input
+                                        type="email"
+                                        placeholder="メールアドレス"
                                         value={newUserEmail}
                                         onChange={(e) => setNewUserEmail(e.target.value)}
                                     />
-                                    <select 
-                                        value={newUserRole}
-                                        onChange={(e) => setNewUserRole(e.target.value as User['role'])}
-                                    >
-                                        <option value="viewer">閲覧者 (VIEWER)</option>
-                                        <option value="user">編集者 (USER)</option>
-                                        <option value="manager">管理者 (MANAGER)</option>
-                                        <option value="master">最上位権限 (MASTER)</option>
-                                    </select>
+                                    <div className="role-select-wrapper" style={{ flex: 1 }}>
+                                        <ShieldCheck size={14} className={`role-icon role-${newUserRole}`} />
+                                        <GlassSelect
+                                            value={newUserRole}
+                                            options={ROLE_OPTIONS}
+                                            onChange={(v) => setNewUserRole(v as User['role'])}
+                                        />
+                                    </div>
                                     <button onClick={handleAddUser} className="add-user-btn">
                                         <Plus size={16} />
                                         <span>追加</span>
@@ -301,15 +296,12 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                                 <td>
                                                     <div className="role-select-wrapper">
                                                         <ShieldCheck size={14} className={`role-icon role-${u.role}`} />
-                                                        <select
+                                                        <GlassSelect
                                                             value={u.role}
-                                                            onChange={(e) => updateUser(i, 'role', e.target.value)}
-                                                        >
-                                                            <option value="viewer">閲覧者 (VIEWER)</option>
-                                                            <option value="user">編集者 (USER)</option>
-                                                            <option value="manager">管理者 (MANAGER)</option>
-                                                            <option value="master">最上位権限 (MASTER)</option>
-                                                        </select>
+                                                            options={ROLE_OPTIONS}
+                                                            onChange={(v) => updateUser(i, 'role', v)}
+                                                            compact
+                                                        />
                                                     </div>
                                                 </td>
                                             </tr>
@@ -327,6 +319,96 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     <div className="spinner"></div>
                 </div>
             )}
+
+            {/* Categories Edit Modal */}
+            <GlassModal
+                open={openModal === 'categories'}
+                title="区分マスタ"
+                icon={<div className="card-icon cat-icon" style={{ width: 32, height: 32 }}><LayoutGrid size={18} /></div>}
+                onClose={() => setOpenModal(null)}
+            >
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                    <input
+                        value={newCat}
+                        onChange={(e) => setNewCat(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') addSimple('categories', newCat, setNewCat); }}
+                        placeholder="新しい区分を追加..."
+                        style={{
+                            flex: 1, padding: '10px 14px', borderRadius: 12,
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            background: 'rgba(255,255,255,0.04)', color: 'var(--text)', fontSize: '0.9rem',
+                        }}
+                    />
+                    <button onClick={() => addSimple('categories', newCat, setNewCat)} className="add-btn">
+                        <Plus size={18} />
+                    </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {masterData.categories.map((item, i) => (
+                        <div key={`cat-m-${i}`} className="master-item">
+                            <input
+                                value={item}
+                                onChange={(e) => updateSimple('categories', i, e.target.value)}
+                                autoComplete="off"
+                                spellCheck={false}
+                            />
+                            <button className="delete-item-btn" onClick={() => removeSimple('categories', i)}>
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
+                    ))}
+                    {masterData.categories.length === 0 && (
+                        <div style={{ color: 'var(--muted)', fontSize: '0.85rem', padding: 16, textAlign: 'center' }}>
+                            未登録です。上部の入力欄から追加してください。
+                        </div>
+                    )}
+                </div>
+            </GlassModal>
+
+            {/* Incidents Edit Modal */}
+            <GlassModal
+                open={openModal === 'incidents'}
+                title="インシデントマスタ"
+                icon={<div className="card-icon inc-icon" style={{ width: 32, height: 32 }}><Info size={18} /></div>}
+                onClose={() => setOpenModal(null)}
+            >
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                    <input
+                        value={newInc}
+                        onChange={(e) => setNewInc(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') addSimple('incidents', newInc, setNewInc); }}
+                        placeholder="新しい内容を追加..."
+                        style={{
+                            flex: 1, padding: '10px 14px', borderRadius: 12,
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            background: 'rgba(255,255,255,0.04)', color: 'var(--text)', fontSize: '0.9rem',
+                        }}
+                    />
+                    <button onClick={() => addSimple('incidents', newInc, setNewInc)} className="add-btn">
+                        <Plus size={18} />
+                    </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {masterData.incidents.map((item, i) => (
+                        <div key={`inc-m-${i}`} className="master-item">
+                            <input
+                                value={item}
+                                onChange={(e) => updateSimple('incidents', i, e.target.value)}
+                                autoComplete="off"
+                                spellCheck={false}
+                            />
+                            <button className="delete-item-btn" onClick={() => removeSimple('incidents', i)}>
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
+                    ))}
+                    {masterData.incidents.length === 0 && (
+                        <div style={{ color: 'var(--muted)', fontSize: '0.85rem', padding: 16, textAlign: 'center' }}>
+                            未登録です。上部の入力欄から追加してください。
+                        </div>
+                    )}
+                </div>
+            </GlassModal>
 
             <style>{`
                 .user-management-card {
@@ -377,10 +459,13 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     overflow: hidden;
                     display: flex;
                     flex-direction: column;
+                    flex: 1;
+                    width: 100%;
+                    min-width: 0;
                 }
 
                 .admin-max-container {
-                    max-width: 1300px;
+                    max-width: 1700px;
                     width: 100%;
                     margin: 0 auto;
                     display: flex;
@@ -506,6 +591,37 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     flex-direction: column;
                     min-height: 0;
                 }
+
+                /* Summary (collapsed) master cards that open a modal */
+                .master-summary-card {
+                    display: flex !important;
+                    flex-direction: row !important;
+                    align-items: center;
+                    gap: 16px;
+                    padding: 20px 22px;
+                    width: 100%;
+                    text-align: left;
+                    cursor: pointer;
+                    color: var(--text);
+                    font-family: inherit;
+                    transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+                }
+                .master-summary-card:hover {
+                    border-color: rgba(59, 130, 246, 0.45);
+                    background: rgba(59, 130, 246, 0.06);
+                    box-shadow: 0 8px 24px -8px rgba(59, 130, 246, 0.25);
+                }
+                .summary-card-icon {
+                    width: 44px; height: 44px;
+                    border-radius: 12px;
+                    display: flex; align-items: center; justify-content: center;
+                    flex-shrink: 0;
+                }
+                .summary-card-text { flex: 1; min-width: 0; }
+                .summary-card-text h3 { margin: 0 0 2px 0; font-size: 1.05rem; font-weight: 700; }
+                .summary-card-text p { margin: 0; font-size: 0.82rem; color: var(--muted); }
+                .summary-card-chevron { color: var(--muted); opacity: 0.6; flex-shrink: 0; transition: transform 0.2s, opacity 0.2s; }
+                .master-summary-card:hover .summary-card-chevron { transform: translateX(3px); opacity: 1; }
 
                 /* Master Card Items */
                 .quick-add {
@@ -679,19 +795,11 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
 
                 .role-select-wrapper:focus-within { border-color: var(--primary); }
 
-                .role-icon { opacity: 0.8; }
+                .role-icon { opacity: 0.8; flex-shrink: 0; }
                 .role-viewer { color: #94a3b8; }
                 .role-user { color: #3b82f6; }
                 .role-manager { color: #8b5cf6; }
                 .role-master { color: #f59e0b; }
-
-                .role-select-wrapper select {
-                    border: none;
-                    background: transparent;
-                    font-size: 0.85rem;
-                    padding: 4px 0;
-                    cursor: pointer;
-                }
 
                 /* Buttons */
                 .glass-icon-btn {

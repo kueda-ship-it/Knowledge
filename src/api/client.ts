@@ -298,25 +298,25 @@ export const apiClient = {
         }
 
         // 3. Sync Users (Profiles)
+        // profiles は FDW foreign table のため ON CONFLICT 非対応。UPDATE/INSERT を分岐。
         try {
             for (const u of data.users) {
                 const isNew = u.id.startsWith('new-');
-                const upsertData: any = {
+                const payload: any = {
                     email: u.email,
                     display_name: u.name,
                     knl_role: u.role,
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
                 };
-                
-                if (isNew) {
-                    // ID競合を避けるため、新規ユーザーのみID生成
-                    upsertData.id = self.crypto.randomUUID();
-                } else {
-                    upsertData.id = u.id;
-                }
 
-                const { error: userErr } = await supabase.from('profiles').upsert(upsertData, { onConflict: 'id' });
-                if (userErr) throw userErr;
+                if (isNew) {
+                    payload.id = self.crypto.randomUUID();
+                    const { error: insErr } = await supabase.from('profiles').insert(payload);
+                    if (insErr) throw insErr;
+                } else {
+                    const { error: updErr } = await supabase.from('profiles').update(payload).eq('id', u.id);
+                    if (updErr) throw updErr;
+                }
             }
         } catch (e) {
             console.error("Failed to sync users:", e);

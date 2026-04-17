@@ -76,9 +76,10 @@ export function useRealtimeChannel(
         }
 
         channel.subscribe((status: string) => {
-            console.log(`[Realtime] ${channelName} status:`, status);
-
             if (status === 'SUBSCRIBED') {
+                if (retryCountRef.current > 0) {
+                    console.log(`[Realtime] ${channelName}: reconnected`);
+                }
                 retryCountRef.current = 0;
                 return;
             }
@@ -86,12 +87,15 @@ export function useRealtimeChannel(
             if ((status === 'TIMED_OUT' || status === 'CHANNEL_ERROR' || status === 'CLOSED') && isMountedRef.current) {
                 const attempt = retryCountRef.current;
                 if (attempt >= maxRetries) {
-                    console.warn(`[Realtime] ${channelName}: max retries (${maxRetries}) reached. Giving up.`);
+                    // 無限リトライは諦める（ノイズ抑止のため1回だけログ）
+                    if (attempt === maxRetries) {
+                        console.warn(`[Realtime] ${channelName}: giving up after ${maxRetries} retries`);
+                        retryCountRef.current += 1;
+                    }
                     return;
                 }
                 retryCountRef.current += 1;
                 const delay = Math.min(baseDelay * 2 ** attempt, 60_000);
-                console.warn(`[Realtime] ${channelName}: ${status}. Retry ${attempt + 1}/${maxRetries} in ${delay}ms`);
                 retryTimerRef.current = setTimeout(subscribe, delay);
             }
         });

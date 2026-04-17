@@ -11,6 +11,8 @@ import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
 interface KnowledgeProps {
     user: User;
     onBack: () => void;
+    initialEditItem?: KnowledgeItem | null;
+    onInitialEditConsumed?: () => void;
 }
 
 const CACHE_KEY = 'knowledge_data_v1';
@@ -23,7 +25,7 @@ function loadCache<T>(key: string, fallback: T): T {
     } catch { return fallback; }
 }
 
-export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
+export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditItem, onInitialEditConsumed }) => {
     const [view, setView] = useState<'list' | 'editor'>('list');
     const [data, setData] = useState<KnowledgeItem[]>(() =>
         loadCache<KnowledgeItem[]>(CACHE_KEY, [])
@@ -247,6 +249,15 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
         }
     };
 
+    // 外部から渡された編集対象があれば自動で編集モードに入る（Evaluation からの遷移など）
+    useEffect(() => {
+        if (initialEditItem) {
+            handleEditItem(initialEditItem);
+            onInitialEditConsumed?.();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialEditItem]);
+
     const handleSave = async (updatedItem: KnowledgeItem, shouldClose = true) => {
         setData(prev => {
             const index = prev.findIndex(i => i.id === updatedItem.id);
@@ -292,12 +303,6 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                             <div style={{ margin: '20px', padding: '16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#dc2626', fontSize: '0.9rem' }}>
                                 <strong>読み込みエラー:</strong> {error}
                                 <button onClick={() => refreshData()} style={{ marginLeft: '12px', padding: '4px 12px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>再試行</button>
-                            </div>
-                        )}
-                        {refreshing && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 20px', fontSize: '0.78rem', color: 'var(--muted)' }}>
-                                <div style={{ width: '10px', height: '10px', border: '2px solid var(--border)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                                {loadingMsg || '更新中...'}
                             </div>
                         )}
                         <KnowledgeList

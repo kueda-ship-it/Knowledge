@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { KnowledgeItem } from './types';
 import { Header } from './components/Header';
 import { Login } from './pages/Login';
@@ -12,6 +12,7 @@ import { OperationalProposals } from './pages/OperationalProposals';
 import { apiClient } from './api/client';
 import { useAuth } from './contexts/AuthContext';
 import { AppNotification } from './types';
+import { useRealtimeChannel } from './hooks/useRealtimeChannel';
 
 type Theme = 'light' | 'dark' | 'liquid';
 const THEME_ORDER: Theme[] = ['light', 'dark', 'liquid'];
@@ -71,98 +72,55 @@ function App() {
         }
     }, [user, currentView]);
 
-    // 2. リアルタイムサブスクリプション (重複防止のため user のみに依存)
-    useEffect(() => {
-        if (!user) return;
+    // 2. リアルタイムサブスクリプション (自動再接続付き)
+    const fetchKDataForRealtime = useCallback(async () => {
+        try {
+            const data = await apiClient.fetchAll();
+            setDashboardData(data);
+        } catch (e) {
+            console.error("Failed to fetch dashboard data (Realtime):", e);
+        }
+    }, []);
 
-        const fetchKData = async () => {
-            try {
-                const data = await apiClient.fetchAll();
-                setDashboardData(data);
-            } catch (e) {
-                console.error("Failed to fetch dashboard data (Realtime):", e);
-            }
-        };
-
-        const channelName = `global-sync-${user.id}`;
-        console.log(`[Realtime] Initializing ${channelName}...`);
-
-        let channel: any;
-        
-        import('./lib/supabase').then(m => {
-            const supabase = m.supabase;
-            
-            // 既存の同じ名前のチャンネルがある場合は削除してから作成する
-            supabase.removeChannel(supabase.channel(channelName));
-
-            channel = supabase.channel(channelName);
-            
-            channel
-                .on(
-                    'postgres_changes',
-                    { 
-                        event: 'INSERT', 
-                        schema: 'public', 
-                        table: 'notifications',
-                        filter: `recipient_id=eq.${user.id}`
-                    },
-                    (payload: any) => {
-                        console.log('[Realtime] New notification received:', payload.new);
-                        const newNote = payload.new as AppNotification;
-                        setNotifications(prev => [newNote, ...prev].slice(0, 20));
-                        setUnreadCount(prev => prev + 1);
+    useRealtimeChannel(
+        user ? `global-sync-${user.id}` : '',
+        user ? [
+            {
+                event: 'INSERT',
+                table: 'notifications',
+                filter: `recipient_id=eq.${user.id}`,
+                callback: (payload: any) => {
+                    const newNote = payload.new as AppNotification;
+                    setNotifications(prev => [newNote, ...prev].slice(0, 20));
+                    setUnreadCount(prev => prev + 1);
+                },
+            },
+            {
+                event: '*',
+                table: 'knowledge',
+                callback: () => {
+                    if (['dashboard', 'filelist', 'evaluation'].includes(viewRef.current)) {
+                        fetchKDataForRealtime();
                     }
-                )
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'knowledge' },
-                    (payload: any) => {
-                        console.log('[Realtime] Knowledge change detected:', payload.eventType);
-                        // viewRef を使って最新のビューを確認
-                        if (['dashboard', 'filelist', 'evaluation'].includes(viewRef.current)) {
-                            fetchKData();
-                        }
-                    }
-                )
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'master_categories' },
-                    (payload: any) => {
-                        console.log('[Realtime] Master categories changed:', payload.eventType);
-                        // 全体的なリフレッシュを促すため、もし今 Knowledge ビューならデータを再取得する
-                        if (viewRef.current === 'knowledge') {
-                            // Knowledge.tsx側でも独自にサブスクリプションを持たせる方が綺麗だが、
-                            // 現状はページのリロードまたは遷移で対応。
-                            // ここで fetchKData を呼んでも Knowledge ページ内の masterData は更新されないため注意。
-                        }
-                    }
-                )
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'master_incidents' },
-                    (payload: any) => {
-                        console.log('[Realtime] Master incidents changed:', payload.eventType);
-                    }
-                )
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'profiles' },
-                    (payload: any) => {
-                        console.log('[Realtime] Profiles (Users) changed:', payload.eventType);
-                    }
-                )
-                .subscribe((status: string) => {
-                    console.log(`[Realtime] Status for ${channelName}:`, status);
-                });
-        });
-
-        return () => {
-            if (channel) {
-                console.log(`[Realtime] Cleaning up ${channelName}`);
-                import('./lib/supabase').then(m => m.supabase.removeChannel(channel));
-            }
-        };
-    }, [user]);
+                },
+            },
+            {
+                event: '*',
+                table: 'master_categories',
+                callback: () => { /* Knowledge.tsx 側で処理 */ },
+            },
+            {
+                event: '*',
+                table: 'master_incidents',
+                callback: () => { /* 必要に応じて処理を追加 */ },
+            },
+            {
+                event: '*',
+                table: 'profiles',
+                callback: () => { /* 必要に応じて処理を追加 */ },
+            },
+        ] : []
+    );
 
     const prefetchDashboard = async () => {
         setDashboardLoading(true);

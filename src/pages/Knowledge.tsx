@@ -5,8 +5,8 @@ import { Editor } from '../components/Editor';
 import { AIChatPopover } from '../components/AIChatPopover';
 import { KnowledgeItem, User, MasterData, ChatMessage } from '../types';
 import { apiClient, toItem } from '../api/client';
-import { supabase } from '../lib/supabase';
 import { searchKnowledge } from '../utils/searchUtils';
+import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
 
 interface KnowledgeProps {
     user: User;
@@ -45,78 +45,56 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
 
     // Editor state
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
-    const [loadingDetail, setLoadingDetail] = useState(false);
 
     // Chat state
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [isChatSearching, setIsChatSearching] = useState(false);
 
-    const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-
-    // 初回ロード + Supabase Realtimeサブスクリプション
+    // 初回ロード
     useEffect(() => {
         refreshData();
-
-        // Realtimeチャンネル購読
-        console.log('[Realtime] Subscribing to knowledge-realtime...');
-        const channel = supabase
-            .channel('knowledge-realtime')
-            .on(
-                'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'knowledge' },
-                (payload) => {
-                    console.log('[Realtime] New knowledge:', payload.new.id);
-                    const newItem = toItem(payload.new as Record<string, unknown>);
-                    setData(prev => {
-                        if (prev.some(i => i.id === newItem.id)) return prev;
-                        const next = [newItem, ...prev];
-                        localStorage.setItem(CACHE_KEY, JSON.stringify(next));
-                        return next;
-                    });
-                }
-            )
-            .on(
-                'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'knowledge' },
-                (payload) => {
-                    console.log('[Realtime] Updated knowledge:', payload.new.id);
-                    const updated = toItem(payload.new as Record<string, unknown>);
-                    setData(prev => {
-                        const next = prev.map(i => i.id === updated.id ? { ...i, ...updated } : i);
-                        localStorage.setItem(CACHE_KEY, JSON.stringify(next));
-                        return next;
-                    });
-                }
-            )
-            .on(
-                'postgres_changes',
-                { event: 'DELETE', schema: 'public', table: 'knowledge' },
-                (payload) => {
-                    console.log('[Realtime] Deleted knowledge:', (payload.old as any).id);
-                    const deletedId = (payload.old as { id: string }).id;
-                    setData(prev => {
-                        const next = prev.filter(i => i.id !== deletedId);
-                        localStorage.setItem(CACHE_KEY, JSON.stringify(next));
-                        return next;
-                    });
-                }
-            )
-            // リアクション変更はリストのEgress削減のため購読しない（Editor側の楽観的UIで対応）
-            .subscribe((status) => {
-                console.log('[Realtime] Knowledge channel status:', status);
-                if (status === 'SUBSCRIBED') {
-                    // 購読開始時に一度手動でリフレッシュして最新状態を保証
-                    refreshData(true);
-                }
-            });
-
-        channelRef.current = channel;
-
-        return () => {
-            console.log('[Realtime] Cleaning up knowledge channel');
-            supabase.removeChannel(channel);
-        };
     }, []);
+
+    // Realtimeチャンネル購読（自動再接続付き）
+    useRealtimeChannel('knowledge-realtime', [
+        {
+            event: 'INSERT',
+            table: 'knowledge',
+            callback: (payload) => {
+                const newItem = toItem(payload.new as Record<string, unknown>);
+                setData(prev => {
+                    if (prev.some(i => i.id === newItem.id)) return prev;
+                    const next = [newItem, ...prev];
+                    localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+                    return next;
+                });
+            },
+        },
+        {
+            event: 'UPDATE',
+            table: 'knowledge',
+            callback: (payload) => {
+                const updated = toItem(payload.new as Record<string, unknown>);
+                setData(prev => {
+                    const next = prev.map(i => i.id === updated.id ? { ...i, ...updated } : i);
+                    localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+                    return next;
+                });
+            },
+        },
+        {
+            event: 'DELETE',
+            table: 'knowledge',
+            callback: (payload) => {
+                const deletedId = (payload.old as { id: string }).id;
+                setData(prev => {
+                    const next = prev.filter(i => i.id !== deletedId);
+                    localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+                    return next;
+                });
+            },
+        },
+    ]);
 
     // Filter effect
     useEffect(() => {
@@ -257,18 +235,15 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
     };
 
     const handleEditItem = async (item: KnowledgeItem) => {
-        // 詳細取得完了まではEditorを表示しない（空フィールド防止）
-        setEditingItem(null);
-        setLoadingDetail(true);
+        // fetchAll で全フィールド取得済みのため、キャッシュを即座に表示
+        setEditingItem(item);
         setView('editor');
+        // バックグラウンドで最新詳細を取得し、取得できたら更新（失敗してもキャッシュ表示のまま）
         try {
             const full = await apiClient.fetchOne(item.id, (user as any).id);
             setEditingItem(full || item);
         } catch (e) {
-            console.warn('[fetchOne] failed, using cached item', e);
-            setEditingItem(item);
-        } finally {
-            setLoadingDetail(false);
+            console.warn('[fetchOne] failed, keeping cached item', e);
         }
     };
 
@@ -347,22 +322,16 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
                         </>
                     ) : (
                         <div style={{ padding: '20px', overflowY: 'auto' }}>
-                            {loadingDetail ? (
-                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px' }}>
-                                    <div style={{ width: '32px', height: '32px', border: '3px solid var(--border)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                                </div>
-                            ) : (
-                                <div style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                                    <Editor
-                                        item={editingItem}
-                                        masters={masterData}
-                                        onSave={handleSave}
-                                        onDelete={handleDelete}
-                                        onCancel={() => setView('list')}
-                                        user={user}
-                                    />
-                                </div>
-                            )}
+                            <div style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                                <Editor
+                                    item={editingItem}
+                                    masters={masterData}
+                                    onSave={handleSave}
+                                    onDelete={handleDelete}
+                                    onCancel={() => setView('list')}
+                                    user={user}
+                                />
+                            </div>
                         </div>
                     )}
                 </main>

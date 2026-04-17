@@ -140,16 +140,23 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             countermeasure,
             status: formData.status || 'unsolved',
             updatedAt: new Date().toISOString(),
-            author: item?.author || user.name,
+            author: user.name, // 最終更新者を常に現在のユーザーにする
             attachments,
         };
 
         setLoading(true);
         try {
-            await apiClient.save(payload, item || undefined); // Pass oldItem for history
+            // 30秒でタイムアウト（ネットワーク不安定時にハング防止）
+            await Promise.race([
+                apiClient.save(payload, item || undefined),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 30000))
+            ]);
             onSave(payload);
-        } catch (e) {
-            alert("保存失敗");
+        } catch (e: any) {
+            const msg = e?.message === 'TIMEOUT'
+                ? '保存がタイムアウトしました。ネットワークを確認して再試行してください。'
+                : `保存失敗: ${e?.message || '不明なエラー'}`;
+            alert(msg);
         } finally {
             setLoading(false);
         }
@@ -530,7 +537,13 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                     )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                {item && (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--muted)', textAlign: 'right', marginTop: '8px' }}>
+                        最終更新: <strong>{item.author}</strong> &nbsp;
+                        {new Date(item.updatedAt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                )}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
                     {canEdit && (
                         <button type="submit" disabled={loading} className="primary-btn" style={{ flex: 1, padding: '12px' }}>
                             {loading ? 'Processing...' : '保存'}

@@ -53,8 +53,8 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
 
     const statusOptions: { value: 'all' | 'unsolved' | 'solved' | 'mine'; label: string }[] = [
         { value: 'all', label: '全て' },
-        { value: 'solved', label: '完了' },
-        { value: 'unsolved', label: '未着手' },
+        { value: 'solved', label: '解決済' },
+        { value: 'unsolved', label: '未解決' },
         { value: 'mine', label: '自分の投稿' },
     ];
 

@@ -34,7 +34,7 @@ export const apiClient = {
             .from('knowledge')
             .select(`
                 id, title, machine, property, req_num, category,
-                incidents, tags, status, updated_at, author, attachments,
+                incidents, tags, content, phenomenon, countermeasure, status, updated_at, author, attachments,
                 knowledge_reactions(type, user_id)
             `)
             .order('updated_at', { ascending: false });

@@ -261,15 +261,20 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack }) => {
         setEditingItem(null);
         setLoadingDetail(true);
         setView('editor');
-        try {
-            const full = await apiClient.fetchOne(item.id, (user as any).id);
-            setEditingItem(full || item);
-        } catch (e) {
-            console.warn('[fetchOne] failed, using cached item', e);
-            setEditingItem(item);
-        } finally {
-            setLoadingDetail(false);
+        let full: KnowledgeItem | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                full = await apiClient.fetchOne(item.id, (user as any).id);
+                break;
+            } catch (e) {
+                console.warn(`[fetchOne] attempt ${attempt + 1} failed`, e);
+                if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            }
         }
+        // fetchOneが全て失敗した場合はfetchAll済みのキャッシュを使う
+        // （fetchAllにphenomenon/countermeasureが含まれるため安全）
+        setEditingItem(full || item);
+        setLoadingDetail(false);
     };
 
     const handleSave = async (updatedItem: KnowledgeItem, shouldClose = true) => {

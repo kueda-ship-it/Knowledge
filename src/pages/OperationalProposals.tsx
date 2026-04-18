@@ -420,6 +420,29 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         }
     };
 
+    // 区分マスタ（公開先グループ）のチップ配色。name から安定的に hue を決めて、
+    // 区分ごとに視覚的に見分けがつくようにする。
+    const groupChipStyle = (name: string, on: boolean): React.CSSProperties => {
+        let h = 0;
+        for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+        const hue = h % 360;
+        if (on) {
+            return {
+                background: `hsla(${hue}, 75%, 55%, 0.28)`,
+                border: `1px solid hsla(${hue}, 80%, 65%, 0.9)`,
+                color: `hsl(${hue}, 90%, 82%)`,
+                fontWeight: 700,
+                boxShadow: `0 0 0 1px hsla(${hue}, 80%, 65%, 0.35) inset`,
+            };
+        }
+        return {
+            background: `hsla(${hue}, 45%, 45%, 0.10)`,
+            border: `1px solid hsla(${hue}, 40%, 55%, 0.35)`,
+            color: `hsl(${hue}, 45%, 78%)`,
+            fontWeight: 500,
+        };
+    };
+
     const getCategoryStyles = (category: string) => {
         const norm = getNormalizedCategory(category);
         switch (norm) {
@@ -955,13 +978,10 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                                             style={{
                                                                                 padding: '6px 12px',
                                                                                 borderRadius: 16,
-                                                                                border: on ? '1px solid rgba(96,165,250,0.7)' : '1px solid rgba(255,255,255,0.12)',
-                                                                                background: on ? 'rgba(96,165,250,0.22)' : 'rgba(255,255,255,0.04)',
-                                                                                color: on ? '#bfdbfe' : 'var(--text)',
                                                                                 fontSize: '0.8rem',
-                                                                                fontWeight: on ? 700 : 500,
                                                                                 cursor: 'pointer',
                                                                                 transition: 'all 0.15s',
+                                                                                ...groupChipStyle(c, on),
                                                                             }}
                                                                         >
                                                                             {on ? '✓ ' : ''}{c}
@@ -1301,13 +1321,10 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                     style={{
                                                         padding: '7px 14px',
                                                         borderRadius: 18,
-                                                        border: on ? '1px solid rgba(99,102,241,0.7)' : '1px solid rgba(255,255,255,0.12)',
-                                                        background: on ? 'rgba(99,102,241,0.22)' : 'rgba(255,255,255,0.04)',
-                                                        color: on ? '#c7d2fe' : 'var(--text)',
                                                         fontSize: '0.82rem',
-                                                        fontWeight: on ? 700 : 500,
                                                         cursor: 'pointer',
                                                         transition: 'all 0.15s',
+                                                        ...groupChipStyle(c, on),
                                                     }}
                                                 >
                                                     {on ? '✓ ' : ''}{c}

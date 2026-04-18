@@ -28,7 +28,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
         const map = new Map<string, User[]>();
         for (const c of categories) map.set(c, []);
         for (const u of users) {
-            for (const c of u.categories) {
+            for (const c of (u.categories ?? [])) {
                 if (map.has(c)) map.get(c)!.push(u);
             }
         }
@@ -36,7 +36,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
     }, [users, categories]);
 
     const unassigned = useMemo(
-        () => users.filter(u => u.categories.length === 0),
+        () => users.filter(u => (u.categories?.length ?? 0) === 0),
         [users],
     );
 
@@ -75,7 +75,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
     const members = activeCategory ? membersByCategory.get(activeCategory) ?? [] : [];
     // 追加候補 = このグループに未所属のユーザー全員 (他グループに所属していても OK)
     const assignableUsers = activeCategory
-        ? users.filter(u => !u.categories.includes(activeCategory))
+        ? users.filter(u => !(u.categories ?? []).includes(activeCategory))
         : [];
 
     return (
@@ -158,9 +158,9 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                                     <div style={{ fontSize: '0.86rem', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
                                     <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{m.email}</div>
                                 </div>
-                                {m.categories.length > 1 && (
+                                {(m.categories?.length ?? 0) > 1 && (
                                     <div style={{ fontSize: '0.7rem', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: 6, marginRight: 4, flexShrink: 0 }}>
-                                        他 {m.categories.length - 1} グループ
+                                        他 {(m.categories?.length ?? 0) - 1} グループ
                                     </div>
                                 )}
                                 <button
@@ -207,9 +207,9 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                                         </div>
                                     )}
                                     <span style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</span>
-                                    {u.categories.length > 0 && (
+                                    {(u.categories?.length ?? 0) > 0 && (
                                         <span style={{ fontSize: '0.7rem', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '1px 7px', borderRadius: 6, flexShrink: 0 }}>
-                                            所属: {u.categories.join(', ')}
+                                            所属: {(u.categories ?? []).join(', ')}
                                         </span>
                                     )}
                                 </div>

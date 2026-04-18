@@ -13,7 +13,7 @@ interface AdminProps {
     onBack: () => void;
 }
 
-const MASTERS_CACHE_KEY = 'knowledge_masters_v1';
+const MASTERS_CACHE_KEY = 'knowledge_masters_v2';
 
 function loadCache<T>(key: string, fallback: T): T {
     try {
@@ -203,7 +203,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                 <div className="summary-card-text">
                                     <h3>グループ設定</h3>
                                     <p>
-                                        {masterData.users.filter(u => u.categories.length > 0).length} / {masterData.users.length} 人 割当済 · クリックで編集
+                                        {masterData.users.filter(u => (u.categories?.length ?? 0) > 0).length} / {masterData.users.length} 人 割当済 · クリックで編集
                                     </p>
                                 </div>
                                 <ChevronRight size={20} className="summary-card-chevron" />

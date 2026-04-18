@@ -14,7 +14,7 @@ interface KnowledgeProps {
 }
 
 const CACHE_KEY = 'knowledge_data_v1';
-const MASTERS_CACHE_KEY = 'knowledge_masters_v1';
+const MASTERS_CACHE_KEY = 'knowledge_masters_v2';
 
 function loadCache<T>(key: string, fallback: T): T {
     try {

@@ -115,7 +115,7 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
                                     cursor: 'pointer',
                                     fontSize: '0.88rem',
                                     color: opt.color || 'rgba(255,255,255,0.95)',
-                                    background: isSel ? 'rgba(59, 130, 246, 0.18)' : 'transparent',
+                                    background: isSel ? 'color-mix(in oklab, var(--primary) 20%, transparent)' : 'transparent',
                                     transition: 'background 0.12s',
                                     fontWeight: isSel ? 600 : 400,
                                 }}

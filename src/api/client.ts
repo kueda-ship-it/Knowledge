@@ -85,11 +85,22 @@ export const apiClient = {
     },
 
     async fetchMasters(): Promise<MasterData> {
-        const [{ data: incidents }, { data: categories }, { data: profiles }] = await Promise.all([
+        // profiles は FDW foreign table で category を持てないため、
+        // category は public.profile_categories (ローカル) を別取得してマージする。
+        const [{ data: incidents }, { data: categories }, { data: profiles }, { data: profCats }] = await Promise.all([
             supabase.from('master_incidents').select('name').order('name'),
             supabase.from('master_categories').select('name').order('name'),
             supabase.from('profiles').select('id, email, display_name, knl_role, avatar_url').order('display_name'),
+            supabase.from('profile_categories').select('user_id, category'),
         ]);
+
+        const catsByUser = new Map<string, string[]>();
+        for (const row of (profCats ?? []) as Array<{ user_id: string; category: string | null }>) {
+            if (!row.category) continue;
+            const arr = catsByUser.get(row.user_id) ?? [];
+            arr.push(row.category);
+            catsByUser.set(row.user_id, arr);
+        }
 
         return {
             incidents: (incidents ?? []).map((r: { name: string }) => r.name),
@@ -100,6 +111,7 @@ export const apiClient = {
                 email: p.email ?? '',
                 avatarUrl: p.avatar_url ?? '',
                 role: (p.knl_role as User['role']) ?? 'viewer',
+                categories: catsByUser.get(p.id) ?? [],
             })),
         };
     },
@@ -317,6 +329,8 @@ export const apiClient = {
                     const { error: updErr } = await supabase.from('profiles').update(payload).eq('id', u.id);
                     if (updErr) throw updErr;
                 }
+
+                // グループ所属は GroupsManager 側で個別に扱うため、ここでは触らない
             }
         } catch (e) {
             console.error("Failed to sync users:", e);
@@ -372,12 +386,101 @@ export const apiClient = {
         return data ?? [];
     },
 
-    async updateProposalStatus(id: string, status: string): Promise<void> {
+    async updateProposalStatus(id: string, status: string, userId?: string): Promise<void> {
+        const patch: Record<string, any> = { status, updated_at: new Date().toISOString() };
+        if (userId) patch.updated_by = userId;
         const { error } = await supabase
             .from('operational_proposals')
-            .update({ status, updated_at: new Date().toISOString() })
+            .update(patch)
             .eq('id', id);
-        
+
+        if (error) throw error;
+    },
+
+    // 指定カテゴリへの所属を追加 (既に所属していれば no-op)
+    async addUserToCategory(userId: string, category: string): Promise<void> {
+        const { data, error } = await supabase
+            .from('profile_categories')
+            .upsert({ user_id: userId, category, updated_at: new Date().toISOString() }, { onConflict: 'user_id,category' })
+            .select('user_id');
+        if (error) throw error;
+        if (!data || data.length === 0) {
+            throw new Error('グループ追加が反映されませんでした（RLS/スキーマキャッシュを確認してください）');
+        }
+    },
+
+    // 指定カテゴリからの所属を外す (その行のみ削除)
+    async removeUserFromCategory(userId: string, category: string): Promise<void> {
+        const { error } = await supabase
+            .from('profile_categories')
+            .delete()
+            .eq('user_id', userId)
+            .eq('category', category);
+        if (error) throw error;
+    },
+
+    // 改善提案 / 決定事項などのフィールド更新 (updated_by / updated_at を同時に書く)
+    async updateProposalContent(
+        id: string,
+        patch: Partial<{ proposal: string; problem: string; decision: string; title: string; priority: string; category: string; visible_groups: string[] | null }>,
+        userId?: string,
+    ): Promise<void> {
+        const payload: Record<string, any> = { ...patch, updated_at: new Date().toISOString() };
+        if (userId) payload.updated_by = userId;
+        const { error } = await supabase
+            .from('operational_proposals')
+            .update(payload)
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
+    // 合議コメント: 一覧取得 (author 名を profiles から結合)
+    async fetchProposalComments(proposalId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('operational_proposal_comments')
+            .select('id, proposal_id, author_id, body, created_at, updated_at')
+            .eq('proposal_id', proposalId)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        const rows = data ?? [];
+        if (rows.length === 0) return [];
+
+        const ids = Array.from(new Set(rows.map(r => r.author_id).filter(Boolean)));
+        const { data: profs } = await supabase
+            .from('profiles')
+            .select('id, display_name')
+            .in('id', ids);
+        const nameById = new Map<string, string>((profs ?? []).map((p: any) => [p.id, p.display_name]));
+
+        return rows.map(r => ({ ...r, author_name: nameById.get(r.author_id) ?? '' }));
+    },
+
+    async createProposalComment(proposalId: string, body: string, userId: string): Promise<void> {
+        const { error } = await supabase
+            .from('operational_proposal_comments')
+            .insert({ proposal_id: proposalId, author_id: userId, body });
+
+        if (error) throw error;
+    },
+
+    async updateProposalComment(commentId: string, body: string): Promise<void> {
+        const { error } = await supabase
+            .from('operational_proposal_comments')
+            .update({ body })
+            .eq('id', commentId);
+
+        if (error) throw error;
+    },
+
+    async deleteProposalComment(commentId: string): Promise<void> {
+        const { error } = await supabase
+            .from('operational_proposal_comments')
+            .delete()
+            .eq('id', commentId);
+
         if (error) throw error;
     },
 
@@ -482,5 +585,51 @@ export const apiClient = {
         const rows = userIds.map(uid => ({ group_id: groupId, user_id: uid, added_by: actorId ?? null }));
         const { error: insErr } = await supabase.from('knowledge_group_members').insert(rows);
         if (insErr) throw insErr;
+    },
+
+    async chatWithGemini(
+        query: string,
+        history: Array<{ role: 'user' | 'assistant'; content: string }>,
+        knowledge: KnowledgeItem[],
+        proposals: any[],
+    ): Promise<{ message: string; knowledgeIds: string[]; proposalIds: string[] }> {
+        const kSlim = knowledge.map(k => ({
+            id: k.id,
+            title: k.title,
+            machine: k.machine,
+            category: k.category,
+            tags: k.tags,
+            incidents: k.incidents,
+            phenomenon: k.phenomenon,
+            countermeasure: k.countermeasure,
+            status: k.status,
+            updatedAt: k.updatedAt,
+        }));
+        const pSlim = proposals.map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            problem: p.problem,
+            proposal: p.proposal,
+            category: p.category,
+            status: p.status,
+            priority: p.priority,
+            proposed_at: p.proposed_at ?? p.created_at,
+        }));
+
+        // 30秒でタイムアウト（ハング防止）
+        const invokeP = supabase.functions.invoke('gemini-chat', {
+            body: { query, history, knowledge: kSlim, proposals: pSlim },
+        });
+        const timeoutP = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 30000)
+        );
+        const { data, error } = await Promise.race([invokeP, timeoutP]) as any;
+        if (error) throw error;
+        const d = (data ?? {}) as any;
+        return {
+            message: String(d.message ?? ''),
+            knowledgeIds: Array.isArray(d.knowledgeIds) ? d.knowledgeIds.map(String) : [],
+            proposalIds: Array.isArray(d.proposalIds) ? d.proposalIds.map(String) : [],
+        };
     }
 };

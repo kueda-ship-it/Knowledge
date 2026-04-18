@@ -54,8 +54,9 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                     borderRadius: '8px',
                     gap: '4px'
                 }}>
-                    <button 
+                    <button
                         onClick={() => setActiveTab('ranking')}
+                        className={`cursor-hint-pill${activeTab === 'ranking' ? ' is-active' : ''}`}
                         style={{
                             padding: '8px 16px',
                             border: 'none',
@@ -64,7 +65,6 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                             color: activeTab === 'ranking' ? 'var(--primary)' : 'var(--text)',
                             cursor: 'pointer',
                             fontWeight: activeTab === 'ranking' ? 600 : 400,
-                            transition: 'all 0.2s',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
@@ -73,8 +73,9 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                     >
                         <Trophy size={16} /> ランキング
                     </button>
-                    <button 
+                    <button
                         onClick={() => setActiveTab('alerts')}
+                        className={`cursor-hint-pill${activeTab === 'alerts' ? ' is-active' : ''}`}
                         style={{
                             padding: '8px 16px',
                             border: 'none',
@@ -83,7 +84,6 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                             color: activeTab === 'alerts' ? '#ef4444' : 'var(--text)',
                             cursor: 'pointer',
                             fontWeight: activeTab === 'alerts' ? 600 : 400,
-                            transition: 'all 0.2s',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
@@ -146,7 +146,7 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                                         </div>
                                     </div>
                                     <div style={{
-                                        background: 'rgba(59, 130, 246, 0.1)',
+                                        background: 'color-mix(in oklab, var(--primary) 12%, transparent)',
                                         color: 'var(--primary)',
                                         padding: '8px 16px',
                                         borderRadius: '20px',

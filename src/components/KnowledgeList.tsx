@@ -116,12 +116,9 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
                                     />
                                 ) : (
-                                    <div style={{
-                                        width: 24, height: 24, borderRadius: '50%',
-                                        background: '#64748b', color: 'white',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: '0.7rem', fontWeight: 'bold', flexShrink: 0,
-                                    }}>{getInitial(name)}</div>
+                                    <div className="user-avatar-fallback" style={{ width: 24, height: 24, fontSize: '0.7rem' }}>
+                                        {getInitial(name)}
+                                    </div>
                                 )}
                                 <span>{name}</span>
                             </div>
@@ -169,15 +166,15 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                     <button
                         key={opt.value}
                         onClick={() => onFilterChange(opt.value)}
+                        className={`cursor-hint-pill${filterType === opt.value ? ' is-active' : ''}`}
                         style={{
                             flexShrink: 0,
                             padding: '5px 14px', borderRadius: '20px', border: '1px solid var(--glass-border)', cursor: 'pointer',
                             fontSize: '0.82rem',
-                            backgroundColor: filterType === opt.value ? 'rgba(59, 130, 246, 0.5)' : 'rgba(255,255,255,0.05)',
+                            backgroundColor: filterType === opt.value ? 'color-mix(in oklab, var(--primary) 55%, transparent)' : 'rgba(255,255,255,0.05)',
                             color: filterType === opt.value ? 'white' : 'rgba(255,255,255,0.6)',
-                            borderColor: filterType === opt.value ? 'rgba(59, 130, 246, 0.8)' : 'rgba(255,255,255,0.15)',
+                            borderColor: filterType === opt.value ? 'color-mix(in oklab, var(--primary) 80%, transparent)' : 'rgba(255,255,255,0.15)',
                             fontWeight: filterType === opt.value ? 'bold' : 'normal',
-                            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                             backdropFilter: 'blur(8px)',
                             display: 'flex', alignItems: 'center', gap: '4px',
                             whiteSpace: 'nowrap'
@@ -195,6 +192,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                     <button
                         key={cat}
                         onClick={() => onCategoryToggle(cat)}
+                        className={`cursor-hint-pill${selectedCategories.includes(cat) ? ' is-active' : ''}`}
                         style={{
                             flexShrink: 0,
                             padding: '5px 14px', borderRadius: '20px', border: '1px solid var(--glass-border)', cursor: 'pointer',
@@ -203,7 +201,6 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                             color: selectedCategories.includes(cat) ? 'white' : 'rgba(255,255,255,0.6)',
                             borderColor: selectedCategories.includes(cat) ? 'rgba(99, 102, 241, 0.8)' : 'rgba(255,255,255,0.15)',
                             fontWeight: selectedCategories.includes(cat) ? 'bold' : 'normal',
-                            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                             backdropFilter: 'blur(8px)',
                             whiteSpace: 'nowrap'
                         }}
@@ -216,7 +213,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {loading ? (
                     <div style={{ textAlign: 'center', marginTop: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                        <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                         <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>{loadingMsg || 'データを読み込み中...'}</span>
                     </div>
                 ) : data.length === 0 ? (
@@ -249,7 +246,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         {getAuthorAvatar(item.author) ? (
                                             <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }} />
                                         ) : (
-                                            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#64748b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 'bold' }}>
+                                            <div className="user-avatar-fallback" style={{ width: '18px', height: '18px', fontSize: '0.6rem' }}>
                                                 {getInitial(item.author)}
                                             </div>
                                         )}
@@ -275,7 +272,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                                 {item.tags?.map((tag, i) => (
-                                    <span key={i} style={{ fontSize: '0.8rem', color: '#3b82f6' }}>#{tag}</span>
+                                    <span key={i} style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>#{tag}</span>
                                 ))}
                                 {item.attachments && item.attachments.length > 0 && (
                                     <span className="metadata-badge badge-attachment">
@@ -299,15 +296,15 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         style={{
                                             position: 'relative',
                                             fontSize: '0.85rem',
-                                            color: (item.likeCount || 0) > 0 ? '#3b82f6' : 'var(--muted)',
+                                            color: (item.likeCount || 0) > 0 ? 'var(--primary)' : 'var(--muted)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: '5px',
                                             fontWeight: 'bold',
-                                            textShadow: (item.likeCount || 0) > 0 ? '0 0 10px rgba(59, 130, 246, 0.5)' : 'none',
-                                            cursor: (item.likeCount || 0) > 0 ? 'help' : 'default'
+                                            textShadow: (item.likeCount || 0) > 0 ? '0 0 10px color-mix(in oklab, var(--primary) 55%, transparent)' : 'none',
+                                            cursor: 'default'
                                         }}>
-                                        <ThumbsUp size={14} fill={(item.likeCount || 0) > 0 ? '#3b82f6' : 'transparent'} />
+                                        <ThumbsUp size={14} fill={(item.likeCount || 0) > 0 ? 'var(--primary)' : 'transparent'} />
                                         {item.likeCount || 0}
                                         {renderPopover(item.likeUsers, '👍 いいね！', `${item.id}-like`)}
                                     </span>
@@ -324,7 +321,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                             gap: '5px',
                                             fontWeight: 'bold',
                                             textShadow: (item.wrongCount || 0) > 0 ? '0 0 10px rgba(239, 68, 68, 0.5)' : 'none',
-                                            cursor: (item.wrongCount || 0) > 0 ? 'help' : 'default'
+                                            cursor: 'default'
                                         }}>
                                         <AlertTriangle size={14} fill={(item.wrongCount || 0) > 0 ? '#ef4444' : 'transparent'} />
                                         {item.wrongCount || 0}

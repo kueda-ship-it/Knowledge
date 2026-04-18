@@ -2,10 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { KnowledgeList } from '../components/KnowledgeList';
 import { Editor } from '../components/Editor';
-import { AIChatPopover } from '../components/AIChatPopover';
-import { KnowledgeItem, User, MasterData, ChatMessage } from '../types';
+import { KnowledgeItem, User, MasterData } from '../types';
 import { apiClient, toItem } from '../api/client';
-import { searchKnowledge } from '../utils/searchUtils';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
 
 interface KnowledgeProps {
@@ -47,10 +45,6 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
 
     // Editor state
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
-
-    // Chat state
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-    const [isChatSearching, setIsChatSearching] = useState(false);
 
     // 初回ロード
     useEffect(() => {
@@ -167,13 +161,6 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                 const kData = await apiClient.fetchAll();
                 setData(kData);
                 localStorage.setItem(CACHE_KEY, JSON.stringify(kData));
-                
-                if (chatMessages.length === 0) {
-                    setChatMessages([{
-                        id: 'init', type: 'assistant',
-                        text: `ナレッジベースに ${kData.length} 件のデータがあります。何かお困りのことはありますか？`
-                    }]);
-                }
             } catch (e) {
                 console.error("Knowledge load error:", e);
                 // キャッシュがない場合のみエラーを投げる
@@ -208,27 +195,6 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
             setLoading(false);
             setRefreshing(false);
         }
-    };
-
-    const handleChatSend = (text: string) => {
-        const userMsg: ChatMessage = { id: `u-${Date.now()}`, type: 'user', text };
-        setChatMessages(prev => [...prev, userMsg]);
-        setIsChatSearching(true);
-
-        setTimeout(() => {
-            const results = searchKnowledge(text, data);
-            const assistantMsg: ChatMessage = {
-                id: `a-${Date.now()}`,
-                type: 'assistant',
-                text: results.length > 0
-                    ? `「${text}」に関連するナレッジが ${results.length} 件見つかりました。`
-                    : `「${text}」に一致するナレッジは見つかりませんでした。`,
-                results: results.length > 0 ? results : undefined,
-                noResults: results.length === 0
-            };
-            setChatMessages(prev => [...prev, assistantMsg]);
-            setIsChatSearching(false);
-        }, 600);
     };
 
     const handleAddItem = () => {
@@ -302,7 +268,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                         {error && (
                             <div style={{ margin: '20px', padding: '16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#dc2626', fontSize: '0.9rem' }}>
                                 <strong>読み込みエラー:</strong> {error}
-                                <button onClick={() => refreshData()} style={{ marginLeft: '12px', padding: '4px 12px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>再試行</button>
+                                <button onClick={() => refreshData()} className="cursor-hint-danger" style={{ marginLeft: '12px', padding: '4px 12px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>再試行</button>
                             </div>
                         )}
                         <KnowledgeList
@@ -326,7 +292,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                         />
                         </>
                     ) : (
-                        <div style={{ padding: '20px', overflowY: 'auto' }}>
+                        <div style={{ padding: 'var(--space-lg)', overflowY: 'auto' }}>
                             <div style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
                                 <Editor
                                     item={editingItem}
@@ -341,14 +307,6 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                     )}
                 </main>
             </div>
-
-            {/* 常時右下に表示されるチャットウィジェット */}
-            <AIChatPopover 
-                chatMessages={chatMessages}
-                isChatSearching={isChatSearching}
-                onChatSend={handleChatSend}
-                onChatResultClick={handleEditItem}
-            />
         </div>
     );
 };

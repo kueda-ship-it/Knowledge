@@ -111,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 .sidebar-section { border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; }
                 .sidebar-section:last-child { border-bottom: none; }
                 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-                .knowledge-card-mini:hover { transform: translateX(3px); border-color: var(--primary); background: rgba(59,130,246,0.05); }
+                .knowledge-card-mini:hover { transform: translateX(3px); border-color: var(--primary); background: color-mix(in oklab, var(--primary) 7%, transparent); }
                 @keyframes bounce {
                     0%, 100% { transform: scale(1); opacity: 1; }
                     50% { transform: scale(1.5); opacity: 0.5; }

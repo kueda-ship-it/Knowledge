@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Mail, Lock, ArrowRight, Loader } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 type Mode = 'select' | 'login' | 'signup';
@@ -68,7 +68,8 @@ export const Login: React.FC = () => {
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                         fontSize: '1.5rem', textShadow: '0 1px 3px rgba(0,0,0,0.2)'
                     }}>
-                        <Box size={28} /> Knowledge DB
+                        <img src="/logo.png" alt="Knowledge DB" style={{ width: 32, height: 32, borderRadius: 7 }} />
+                        Knowledge DB
                     </h1>
 
                     {mode === 'select' && (
@@ -194,7 +195,7 @@ export const Login: React.FC = () => {
                 .microsoft-login-btn:hover {
                     border-color: rgba(147,197,253,0.5);
                     transform: translateY(-2px);
-                    box-shadow: 0 0 20px rgba(99,130,246,0.2), 0 8px 20px -6px rgba(59, 130, 246, 0.3);
+                    box-shadow: 0 0 20px color-mix(in oklab, var(--primary) 25%, transparent), 0 8px 20px -6px color-mix(in oklab, var(--primary) 35%, transparent);
                 }
                 .microsoft-login-btn:active {
                     transform: translateY(0) scale(0.97);
@@ -293,7 +294,7 @@ export const Login: React.FC = () => {
                     padding: 13px;
                     border: none;
                     border-radius: 12px;
-                    background: linear-gradient(135deg, #3b82f6, #6366f1);
+                    background: linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary) 70%, #6366f1));
                     color: white;
                     font-size: 1rem;
                     font-weight: 600;

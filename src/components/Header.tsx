@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, AppNotification } from '../types';
-import { LogOut, Box, Moon, Sun, Bell, AlertTriangle, Edit3, ThumbsUp, Droplet } from 'lucide-react';
+import { LogOut, Moon, Sun, Bell, AlertTriangle, Edit3, ThumbsUp, Droplet } from 'lucide-react';
+import { roleColor } from '../constants/roles';
 
 interface HeaderProps {
     user: User | null;
@@ -35,7 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '10px 20px',
+            padding: 'var(--space-sm) var(--space-lg)',
             position: 'sticky',
             top: 0,
             zIndex: 100,
@@ -45,21 +46,34 @@ export const Header: React.FC<HeaderProps> = ({
             borderLeft: 'none',
             borderRight: 'none'
         }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.2rem', fontWeight: 'bold', color: '#3b82f6' }}>
-                <Box size={24} /> Knowledge DB
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+                <img src="/logo.png" alt="Knowledge DB" style={{ width: 28, height: 28, borderRadius: 6 }} />
+                Knowledge DB
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
                     {user.avatarUrl ? (
                          <img src={user.avatarUrl} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} />
                     ) : (
-                         <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                         <div className="user-avatar-fallback" style={{ width: '28px', height: '28px', fontSize: '0.7rem' }}>
                             {user.name.charAt(0).toUpperCase()}
                          </div>
                     )}
-                    <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>
-                        {user.name} <small style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>({user.role})</small>
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1 }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                            {user.name}
+                        </span>
+                        <small style={{
+                            color: roleColor(user.role),
+                            fontSize: '0.6rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            marginTop: '2px',
+                        }}>
+                            {user.role}
+                        </small>
+                    </div>
                 </div>
                 <div style={{ position: 'relative' }}>
                     <button
@@ -116,14 +130,14 @@ export const Header: React.FC<HeaderProps> = ({
                                             padding: '12px 16px',
                                             borderBottom: '1px solid var(--border)',
                                             cursor: 'pointer',
-                                            background: note.is_read ? 'transparent' : 'rgba(37, 99, 235, 0.05)',
+                                            background: note.is_read ? 'transparent' : 'color-mix(in oklab, var(--primary) 7%, transparent)',
                                             transition: 'background 0.2s',
                                             display: 'flex',
                                             gap: '12px'
                                         }}
                                     >
                                         <div style={{ 
-                                            color: note.type === 'like' ? '#2563eb' : note.type === 'wrong' ? '#ef4444' : '#10b981',
+                                            color: note.type === 'like' ? 'var(--primary)' : note.type === 'wrong' ? '#ef4444' : '#10b981',
                                             marginTop: '2px'
                                         }}>
                                             {note.type === 'like' && <ThumbsUp size={16} />}

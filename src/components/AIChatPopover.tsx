@@ -1,19 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Send, CheckCircle, AlertCircle, X } from 'lucide-react';
-import { ChatMessage, KnowledgeItem } from '../types';
+import { MessageSquare, Send, CheckCircle, AlertCircle, X, ClipboardList } from 'lucide-react';
+import { ChatMessage, KnowledgeItem, ChatProposalRef } from '../types';
 
 interface AIChatPopoverProps {
     chatMessages: ChatMessage[];
     isChatSearching: boolean;
     onChatSend: (text: string) => void;
     onChatResultClick: (item: KnowledgeItem) => void;
+    onProposalClick?: (p: ChatProposalRef) => void;
 }
 
 export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
     chatMessages,
     isChatSearching,
     onChatSend,
-    onChatResultClick
+    onChatResultClick,
+    onProposalClick,
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [chatInput, setChatInput] = useState('');
@@ -38,17 +40,15 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
 
     return (
         <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999 }}>
-            <button 
+            <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="primary-btn"
                 style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: '56px', height: '56px', borderRadius: '50%',
                     padding: 0,
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)',
+                    boxShadow: '0 4px 12px color-mix(in oklab, var(--primary) 45%, transparent)',
                     cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    transform: isOpen ? 'rotate(15deg) scale(0.95)' : 'rotate(0) scale(1)'
                 }}
                 title={isOpen ? "閉じる" : "AIナレッジ検索を開く"}
             >
@@ -96,7 +96,7 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                             <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 <div style={{
                                     alignSelf: msg.type === 'user' ? 'flex-end' : 'flex-start',
-                                    background: msg.type === 'user' ? 'rgba(59, 130, 246, 0.8)' : 'rgba(255,255,255,0.1)',
+                                    background: msg.type === 'user' ? 'color-mix(in oklab, var(--primary) 82%, transparent)' : 'rgba(255,255,255,0.1)',
                                     backdropFilter: 'blur(8px)',
                                     color: 'white',
                                     padding: '10px 14px',
@@ -104,7 +104,7 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                                     fontSize: '0.9rem',
                                     maxWidth: '90%',
                                     border: '1px solid rgba(255,255,255,0.15)',
-                                    boxShadow: msg.type === 'user' ? '0 4px 10px rgba(59,130,246,0.3)' : '0 2px 5px rgba(0,0,0,0.2)'
+                                    boxShadow: msg.type === 'user' ? '0 4px 10px color-mix(in oklab, var(--primary) 32%, transparent)' : '0 2px 5px rgba(0,0,0,0.2)'
                                 }}>
                                     {msg.text}
                                 </div>
@@ -112,7 +112,7 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                                 {msg.results && msg.results.length > 0 && (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
                                         {msg.results.map(item => (
-                                            <div 
+                                            <div
                                                 key={item.id}
                                                 onClick={() => {
                                                     setIsOpen(false);
@@ -137,12 +137,50 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                                         ))}
                                     </div>
                                 )}
+
+                                {msg.proposalResults && msg.proposalResults.length > 0 && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                                        {msg.proposalResults.map(p => {
+                                            const statusColor =
+                                                p.status === '完了' ? '#10b981'
+                                                : p.status === '対応中' ? 'var(--primary)'
+                                                : p.status === '保留' ? '#f59e0b'
+                                                : '#9ca3af';
+                                            return (
+                                                <div
+                                                    key={p.id}
+                                                    onClick={() => {
+                                                        setIsOpen(false);
+                                                        onProposalClick?.(p);
+                                                    }}
+                                                    className="knowledge-card-mini glass-subtle"
+                                                    style={{
+                                                        fontSize: '0.85rem',
+                                                        padding: '10px 12px',
+                                                        borderLeft: `4px solid ${statusColor}`,
+                                                        borderRadius: '8px',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', marginBottom: '4px', color: 'var(--text)' }}>
+                                                        <ClipboardList size={14} color={statusColor} />
+                                                        <span className="truncate">{p.title}</span>
+                                                    </div>
+                                                    <div style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>
+                                                        {[p.category, p.status, p.priority && `優先度:${p.priority}`].filter(Boolean).join(' / ')}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         ))}
                         {isChatSearching && (
                             <div className="glass-subtle" style={{ alignSelf: 'flex-start', display: 'flex', gap: '4px', padding: '10px', borderRadius: '16px' }}>
                                 {[0, 1, 2].map(i => (
-                                    <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3b82f6', animation: `bounce 1s infinite ${i*0.2}s` }} />
+                                    <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)', animation: `bounce 1s infinite ${i*0.2}s` }} />
                                 ))}
                             </div>
                         )}
@@ -156,7 +194,12 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                                 value={chatInput}
                                 onChange={e => setChatInput(e.target.value)}
                                 onKeyDown={e => {
-                                    if (e.key === 'Enter') handleChatSubmit();
+                                    // IME 変換中 (Enterで確定) は送信しない
+                                    if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleChatSubmit();
+                                    }
                                 }}
                                 placeholder="メッセージを入力..."
                                 style={{

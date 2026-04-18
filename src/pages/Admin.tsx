@@ -1,18 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { MasterData, User } from '../types';
-import { Save, Trash2, Plus, Users, LayoutGrid, ShieldCheck, Mail, Info, ChevronRight } from 'lucide-react';
+import { Save, Trash2, Plus, Users, LayoutGrid, ShieldCheck, Mail, Info, ChevronRight, UsersRound } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { BackButton } from '../components/common/BackButton';
 import { GroupsManager } from '../components/GroupsManager';
 import { GlassModal } from '../components/common/GlassModal';
 import { GlassSelect } from '../components/common/GlassSelect';
-
-const ROLE_OPTIONS = [
-    { value: 'viewer', label: '閲覧者 (VIEWER)', color: '#94a3b8' },
-    { value: 'user', label: '編集者 (USER)', color: '#3b82f6' },
-    { value: 'manager', label: '管理者 (MANAGER)', color: '#8b5cf6' },
-    { value: 'master', label: '最上位権限 (MASTER)', color: '#f59e0b' },
-];
+import { ROLE_OPTIONS, ROLE_META } from '../constants/roles';
 
 interface AdminProps {
     user: User;
@@ -42,7 +36,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     const [newUserName, setNewUserName] = useState('');
     const [newUserEmail, setNewUserEmail] = useState('');
     const [newUserRole, setNewUserRole] = useState<User['role']>('user');
-    const [openModal, setOpenModal] = useState<'categories' | 'incidents' | null>(null);
+    const [openModal, setOpenModal] = useState<'categories' | 'incidents' | 'groups' | null>(null);
 
     useEffect(() => {
         loadMasters();
@@ -137,6 +131,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
             name: newUserName.trim(),
             email: newUserEmail.trim(),
             role: newUserRole,
+            categories: [],
         };
         setMasterData(prev => ({ ...prev, users: [newUser, ...prev.users] }));
         setNewUserName('');
@@ -201,9 +196,18 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                             <ChevronRight size={20} className="summary-card-chevron" />
                         </button>
 
-                        {/* Notification Groups */}
+                        {/* Groups (区分マスタ同期) */}
                         {isFullAdmin && (
-                            <GroupsManager user={user} users={masterData.users} />
+                            <button onClick={() => setOpenModal('groups')} className="glass-card master-summary-card">
+                                <div className="summary-card-icon" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1' }}><UsersRound size={22} /></div>
+                                <div className="summary-card-text">
+                                    <h3>グループ設定</h3>
+                                    <p>
+                                        {masterData.users.filter(u => u.categories.length > 0).length} / {masterData.users.length} 人 割当済 · クリックで編集
+                                    </p>
+                                </div>
+                                <ChevronRight size={20} className="summary-card-chevron" />
+                            </button>
                         )}
                     </div>
 
@@ -365,6 +369,27 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 </div>
             </GlassModal>
 
+            {/* Groups Modal (区分マスタ同期) */}
+            <GlassModal
+                open={openModal === 'groups'}
+                title="グループ設定"
+                icon={<div className="card-icon" style={{ width: 32, height: 32, background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1' }}><UsersRound size={18} /></div>}
+                onClose={() => setOpenModal(null)}
+                maxWidth={960}
+            >
+                <div style={{ fontSize: '0.82rem', color: 'var(--muted)', marginBottom: 14, lineHeight: 1.6 }}>
+                    グループは「区分マスタ」と同期しています。メンバーの所属変更のみをここで行います。
+                    <br />
+                    区分そのものの追加・削除は「区分マスタ」から行ってください。
+                </div>
+                <GroupsManager
+                    user={user}
+                    users={masterData.users}
+                    categories={masterData.categories}
+                    onRefreshUsers={async () => { await loadMasters(true); }}
+                />
+            </GlassModal>
+
             {/* Incidents Edit Modal */}
             <GlassModal
                 open={openModal === 'incidents'}
@@ -428,6 +453,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 }
                 .add-user-form input, .add-user-form select {
                     flex: 1;
+                    min-width: 0;
                     padding: 8px 12px;
                     border: 1px solid var(--border);
                     border-radius: 6px;
@@ -464,6 +490,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     min-width: 0;
                 }
 
+                .admin-page-root, .admin-page-root * {
+                    box-sizing: border-box;
+                }
+
                 .admin-max-container {
                     max-width: 1700px;
                     width: 100%;
@@ -473,6 +503,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     padding: 0 40px;
                     flex: 1;
                     overflow: hidden;
+                    min-width: 0;
                 }
 
                 /* Header */
@@ -519,7 +550,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 .dirty-indicator {
                     font-size: 0.75rem;
                     color: var(--primary);
-                    background: rgba(37, 99, 235, 0.1);
+                    background: color-mix(in oklab, var(--primary) 12%, transparent);
                     padding: 4px 12px;
                     border-radius: 20px;
                     font-weight: 600;
@@ -568,12 +599,13 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 /* Grid Layout */
                 .admin-content-grid {
                     display: grid;
-                    grid-template-columns: 1fr 1.6fr;
+                    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
                     gap: 24px;
                     flex: 1;
                     overflow: hidden;
                     padding-bottom: 24px;
                     align-items: stretch;
+                    min-width: 0;
                 }
 
                 .master-data-columns {
@@ -607,9 +639,9 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
                 }
                 .master-summary-card:hover {
-                    border-color: rgba(59, 130, 246, 0.45);
-                    background: rgba(59, 130, 246, 0.06);
-                    box-shadow: 0 8px 24px -8px rgba(59, 130, 246, 0.25);
+                    border-color: color-mix(in oklab, var(--primary) 50%, transparent);
+                    background: color-mix(in oklab, var(--primary) 8%, transparent);
+                    box-shadow: 0 8px 24px -8px color-mix(in oklab, var(--primary) 28%, transparent);
                 }
                 .summary-card-icon {
                     width: 44px; height: 44px;
@@ -641,7 +673,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
 
                 .quick-add input:focus {
                     border-color: var(--primary);
-                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+                    box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 15%, transparent);
                     outline: none;
                 }
 
@@ -769,7 +801,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 }
 
                 .avatar-initials {
-                    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+                    background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 75%, white), var(--primary));
                     color: white;
                     display: flex;
                     align-items: center;
@@ -796,6 +828,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 .role-select-wrapper:focus-within { border-color: var(--primary); }
 
                 .role-icon { opacity: 0.8; flex-shrink: 0; }
+                /* Keep in sync with src/constants/roles.ts (ROLE_META.*.color) */
                 .role-viewer { color: #94a3b8; }
                 .role-user { color: #3b82f6; }
                 .role-manager { color: #8b5cf6; }
@@ -845,7 +878,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 }
 
                 .save-btn:not(:disabled):hover {
-                    box-shadow: 0 10px 20px -10px rgba(37, 99, 235, 0.5);
+                    box-shadow: 0 10px 20px -10px color-mix(in oklab, var(--primary) 55%, transparent);
                     transform: translateY(-2px);
                     filter: brightness(1.1);
                 }
@@ -853,9 +886,9 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 .save-btn:active { transform: scale(0.95); }
 
                 @keyframes pulse {
-                    0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
-                    70% { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
-                    100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+                    0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 45%, transparent); }
+                    70% { box-shadow: 0 0 0 12px color-mix(in oklab, var(--primary) 0%, transparent); }
+                    100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 0%, transparent); }
                 }
 
                 .pulse {
@@ -872,9 +905,14 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     animation: spin 1s linear infinite;
                 }
 
-                @media (max-width: 1024px) {
+                @media (max-width: 1400px) {
                     .admin-content-grid { grid-template-columns: 1fr; }
-                    .admin-max-container { padding: 0 20px; }
+                    .admin-max-container { padding: 0 24px; }
+                }
+                @media (max-width: 1024px) {
+                    .admin-max-container { padding: 0 16px; }
+                    .admin-header { flex-wrap: wrap; gap: 12px; }
+                    .header-actions { margin-left: auto; }
                 }
             `}</style>
         </div>

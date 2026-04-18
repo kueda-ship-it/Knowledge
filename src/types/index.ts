@@ -4,6 +4,7 @@ export interface User {
     email?: string;    // profiles.email
     avatarUrl?: string; // profiles.avatar_url
     role: 'viewer' | 'user' | 'manager' | 'master';  // profiles.knl_role
+    categories: string[]; // 所属グループ名 (profile_categories.category の配列、複数所属可)
 }
 
 export interface Reaction {
@@ -34,11 +35,20 @@ export interface AppNotification {
     created_at: string;
 }
 
+export interface ChatProposalRef {
+    id: string;
+    title: string;
+    status?: string;
+    category?: string;
+    priority?: string;
+}
+
 export interface ChatMessage {
     id: string;
     type: 'user' | 'assistant';
     text: string;
     results?: KnowledgeItem[];
+    proposalResults?: ChatProposalRef[];
     noResults?: boolean;
 }
 
@@ -96,12 +106,25 @@ export interface OperationalProposal {
     description: string;
     problem?: string;   // 現状の問題点
     proposal?: string;  // 改善提案
+    decision?: string;  // 決定事項
     author: string;
     proposed_at: string;
     status: '未着手' | '対応中' | '完了' | '保留';
     priority: '高' | '中' | '低';
     category?: string;
     source_no?: string;
+    updated_by?: string; // profiles.id (最終更新者)
+    visible_groups?: string[] | null; // 公開先グループ (NULL/空 = 全員公開)。decision があれば常に全員公開
+    created_at: string;
+    updated_at: string;
+}
+
+export interface OperationalProposalComment {
+    id: string;
+    proposal_id: string;
+    author_id: string;
+    author_name?: string; // 取得時に profiles から結合して入れる
+    body: string;
     created_at: string;
     updated_at: string;
 }

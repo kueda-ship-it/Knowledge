@@ -5,15 +5,46 @@
 :root {
   --radius: 0.75rem;
   --header-height: 64px;
-  font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
-  line-height: 1.6;
+
+  /* ============================================ */
+  /* Spacing Scale (4pt base)                     */
+  /* 必ずこのトークンを使い、任意の px 値は書かない */
+  /* ============================================ */
+  --space-2xs: 4px;
+  --space-xs:  8px;
+  --space-sm:  12px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+  --space-4xl: 96px;
+
+  /* Latin: Mona Sans (GitHub). Japanese: BIZ UDPGothic (Universal Design). */
+  /* ブラウザは先頭のフォントから順にグリフを引く → 英字は Mona、日本語は BIZ UDP に落ちる */
+  --font-sans:
+    'Mona Sans', 'BIZ UDPGothic',
+    -apple-system, BlinkMacSystemFont,
+    'Hiragino Kaku Gothic ProN', 'Yu Gothic Medium', Meiryo,
+    system-ui, sans-serif;
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono',
+    Menlo, Consolas, 'Liberation Mono', monospace;
+
+  font-family: var(--font-sans);
+  line-height: 1.7;
   font-weight: 400;
+  /* palt: 日本語プロポーショナル詰め (句読点・かっこ間隔の最適化) */
+  font-feature-settings: "palt";
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
 }
 
 /* ---------- Light テーマ（デフォルト） ---------- */
 body[data-theme="light"] {
-  --primary: #2563eb;
+  --primary: oklch(0.62 0.11 195);
   --primary-fg: #ffffff;
   --text: #334155;
   --text-secondary: #64748b;
@@ -34,9 +65,9 @@ body[data-theme="light"] {
   --glass-blur: 20px;
   --glass-highlight: rgba(255,255,255,0.8);
   --overlay-bg: rgba(241,245,249,0.85);
-  --tag-active-bg: #2563eb;
+  --tag-active-bg: oklch(0.62 0.11 195);
   --tag-active-text: #fff;
-  --sidebar-hover: rgba(37,99,235,0.06);
+  --sidebar-hover: color-mix(in oklab, var(--primary) 8%, transparent);
   --btn-icon-bg: rgba(0,0,0,0.04);
   --btn-icon-border: rgba(0,0,0,0.08);
   --btn-icon-color: #64748b;
@@ -46,7 +77,7 @@ body[data-theme="light"] {
 
 /* ---------- Dark テーマ ---------- */
 body[data-theme="dark"] {
-  --primary: #3b82f6;
+  --primary: oklch(0.7 0.12 195);
   --primary-fg: #ffffff;
   --text: #f1f5f9;
   --text-secondary: #94a3b8;
@@ -67,9 +98,9 @@ body[data-theme="dark"] {
   --glass-blur: 20px;
   --glass-highlight: rgba(255,255,255,0.06);
   --overlay-bg: rgba(15,23,42,0.85);
-  --tag-active-bg: #3b82f6;
+  --tag-active-bg: oklch(0.7 0.12 195);
   --tag-active-text: #fff;
-  --sidebar-hover: rgba(59,130,246,0.08);
+  --sidebar-hover: color-mix(in oklab, var(--primary) 10%, transparent);
   --btn-icon-bg: rgba(255,255,255,0.06);
   --btn-icon-border: rgba(255,255,255,0.1);
   --btn-icon-color: #94a3b8;
@@ -78,36 +109,51 @@ body[data-theme="dark"] {
 }
 
 /* ---------- Liquid Glass テーマ ---------- */
+/* 4-layer composition: scene (mesh+orbs) / glass / edge / drop-shadow   */
+/* v0.app glass-refraction 由来の設計トークンを再現                       */
 body[data-theme="liquid"] {
-  --primary: oklch(0.62 0.22 260);
+  /* Accent */
+  --primary: oklch(0.68 0.13 195);
   --primary-fg: #ffffff;
   --text: #ffffff;
-  --text-secondary: rgba(255,255,255,0.5);
-  --danger: oklch(0.65 0.22 25);
-  --bg: #050505;
-  --card-bg: transparent;
-  --card-border: rgba(255,255,255,0.12);
-  --card-shadow: none;
-  --card-shadow-lg: none;
-  --header-bg: rgba(255,255,255,0.03);
-  --input-bg: rgba(255,255,255,0.05);
+  --text-secondary: rgba(255,255,255,0.62);
+  --danger: oklch(0.68 0.2 25);
+
+  /* Deep navy scene */
+  --bg: oklch(0.14 0.02 260);
+
+  /* Glass surface tokens (LG design tokens) */
+  --lg-bg-start: rgba(255,255,255,0.045);
+  --lg-bg-end:   rgba(255,255,255,0.015);
+  --lg-border: rgba(255,255,255,0.09);
+  --lg-highlight: rgba(255,255,255,0.09);
+  --lg-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  --lg-accent-glow: 0 0 60px color-mix(in oklab, var(--primary) 18%, transparent);
+
+  /* 既存 token へのマッピング */
+  --card-bg: linear-gradient(135deg, var(--lg-bg-start), var(--lg-bg-end));
+  --card-border: var(--lg-border);
+  --card-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  --card-shadow-lg: var(--lg-shadow);
+  --header-bg: rgba(255,255,255,0.05);
+  --input-bg: rgba(255,255,255,0.06);
   --input-border: rgba(255,255,255,0.12);
   --input-text: #ffffff;
-  --muted: rgba(255,255,255,0.5);
-  --border: rgba(255,255,255,0.08);
-  --glass-bg: transparent;
-  --glass-border: rgba(255,255,255,0.1);
-  --glass-blur: 24px;
-  --glass-highlight: rgba(255,255,255,0.12);
-  --overlay-bg: rgba(0, 0, 0, 0.85);
-  --tag-active-bg: rgba(59,130,246,0.35);
+  --muted: rgba(255,255,255,0.55);
+  --border: rgba(255,255,255,0.10);
+  --glass-bg: linear-gradient(135deg, var(--lg-bg-start), var(--lg-bg-end));
+  --glass-border: var(--lg-border);
+  --glass-blur: 22px;
+  --glass-highlight: var(--lg-highlight);
+  --overlay-bg: rgba(5,8,15,0.75);
+  --tag-active-bg: rgba(100,150,255,0.35);
   --tag-active-text: #fff;
-  --sidebar-hover: rgba(255,255,255,0.03);
-  --btn-icon-bg: transparent;
-  --btn-icon-border: rgba(255,255,255,0.08);
-  --btn-icon-color: rgba(255,255,255,0.7);
-  --btn-icon-hover-bg: transparent;
-  --btn-icon-hover-color: #93c5fd;
+  --sidebar-hover: rgba(255,255,255,0.06);
+  --btn-icon-bg: rgba(255,255,255,0.06);
+  --btn-icon-border: rgba(255,255,255,0.12);
+  --btn-icon-color: rgba(255,255,255,0.78);
+  --btn-icon-hover-bg: rgba(255,255,255,0.10);
+  --btn-icon-hover-color: #c7dbff;
 }
 
 /* ======================================== */
@@ -124,19 +170,22 @@ body {
   transition: background 0.4s, color 0.3s;
 }
 
-/* Liquid Glass 専用の背景アニメーション */
+/* Liquid Glass 専用の背景: scene 層 (mesh + orbs) */
+/* ブラー対象になる下地。ここが平坦だとガラスが死ぬ。               */
 body[data-theme="liquid"]::before {
   content: "";
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg,
-    #000000 0%, #050505 15%, #0a0a0a 30%,
-    #111111 45%, #080808 60%, #020202 75%,
-    #050505 90%, #000000 100%);
+  background:
+    linear-gradient(135deg,
+      oklch(0.12 0.03 265) 0%,
+      oklch(0.15 0.04 255) 35%,
+      oklch(0.13 0.05 275) 65%,
+      oklch(0.11 0.03 260) 100%);
   background-size: 300% 300%;
-  animation: liquid 20s ease infinite;
+  animation: liquid 22s ease infinite;
   z-index: -2;
 }
 
@@ -147,12 +196,14 @@ body[data-theme="liquid"]::after {
   width: 100%;
   height: 100%;
   background:
-    radial-gradient(ellipse 70% 50% at 20% 30%, rgba(255,255,255,0.05) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 60% at 80% 70%, rgba(147,197,253,0.04) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 60% 20%, rgba(139,92,246,0.06) 0%, transparent 55%),
-    radial-gradient(ellipse 40% 50% at 30% 80%, rgba(59,130,246,0.04) 0%, transparent 55%);
+    radial-gradient(ellipse 55% 45% at 18% 22%, rgba(100,150,255,0.28) 0%, transparent 60%),
+    radial-gradient(ellipse 48% 52% at 82% 72%, rgba(180,140,255,0.22) 0%, transparent 60%),
+    radial-gradient(ellipse 52% 38% at 62% 18%, rgba(140,100,255,0.20) 0%, transparent 55%),
+    radial-gradient(ellipse 42% 48% at 28% 82%, rgba(100,200,255,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 38% 42% at 92% 38%, rgba(120,180,255,0.14) 0%, transparent 55%);
+  filter: blur(40px);
   z-index: -1;
-  animation: orbs 25s ease-in-out infinite alternate;
+  animation: orbs 26s ease-in-out infinite alternate;
 }
 
 /* Light/Darkの場合は疑似要素を非表示 */
@@ -171,9 +222,9 @@ body[data-theme="dark"]::after {
 }
 
 @keyframes orbs {
-  0%   { opacity: 0.6; transform: scale(1) rotate(0deg); }
-  50%  { opacity: 0.9; transform: scale(1.05) rotate(2deg); }
-  100% { opacity: 0.7; transform: scale(0.97) rotate(-2deg); }
+  0%   { opacity: 0.7; transform: scale(1) translate3d(0,0,0) rotate(0deg); }
+  50%  { opacity: 1;   transform: scale(1.08) translate3d(-1%,-1.5%,0) rotate(1.5deg); }
+  100% { opacity: 0.8; transform: scale(0.96) translate3d(1%,1%,0) rotate(-1.5deg); }
 }
 
 @keyframes chatPop {
@@ -205,12 +256,16 @@ body[data-theme="dark"]::after {
   z-index: 0;
 }
 
-/* Liquid Glass ではシャドウを強化 */
+/* Liquid Glass: 4-layer (bg gradient + blur + edge ring + drop) */
 body[data-theme="liquid"] .glass-panel {
+  background: linear-gradient(135deg, var(--lg-bg-start), var(--lg-bg-end));
+  backdrop-filter: blur(22px) saturate(1.8);
+  -webkit-backdrop-filter: blur(22px) saturate(1.8);
+  border: none;
   box-shadow:
-    0 2px 0 0 var(--glass-highlight) inset,
-    0 12px 40px 0 rgba(0,0,0,0.35),
-    0 2px 8px 0 rgba(0,0,0,0.2);
+    var(--lg-shadow),
+    0 0 0 1px var(--lg-border),
+    inset 0 1px 0 var(--lg-highlight);
 }
 
 .glass-elevated {
@@ -222,23 +277,28 @@ body[data-theme="liquid"] .glass-panel {
 }
 
 body[data-theme="liquid"] .glass-elevated {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: none;
-  backdrop-filter: blur(1px);
-  -webkit-backdrop-filter: blur(1px);
-  transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+  background: linear-gradient(135deg, var(--lg-bg-start), var(--lg-bg-end));
+  border: none;
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  box-shadow:
+    var(--lg-shadow),
+    0 0 0 1px var(--lg-border),
+    inset 0 1px 0 var(--lg-highlight);
+  transition: transform 0.35s cubic-bezier(0.16,1,0.3,1),
+              box-shadow 0.35s cubic-bezier(0.16,1,0.3,1),
+              background 0.35s cubic-bezier(0.16,1,0.3,1);
 }
 
 body[data-theme="liquid"] .glass-elevated:hover {
-  border-color: rgba(147,197,253,0.5);
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.075),
+    rgba(255,255,255,0.025));
   box-shadow:
-    0 0 20px rgba(99,130,246,0.25),
-    0 0 40px rgba(99,130,246,0.1),
-    0 12px 40px rgba(0,0,0,0.3);
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  background: rgba(255,255,255,0.04);
+    var(--lg-shadow),
+    var(--lg-accent-glow),
+    0 0 0 1px rgba(255,255,255,0.13),
+    inset 0 1px 0 rgba(255,255,255,0.12);
 }
 
 .glass-subtle {
@@ -250,29 +310,36 @@ body[data-theme="liquid"] .glass-elevated:hover {
 }
 
 body[data-theme="liquid"] .glass-subtle {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.035),
+    rgba(255,255,255,0.01));
+  backdrop-filter: blur(18px) saturate(1.6);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  border: none;
   box-shadow:
-    0 1px 0 0 rgba(255,255,255,0.15) inset,
-    0 4px 16px 0 rgba(0,0,0,0.2);
+    0 4px 16px rgba(0,0,0,0.25),
+    0 0 0 1px var(--lg-border),
+    inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 .glass-primary {
   background: var(--primary);
   color: var(--primary-fg);
   border: 1px solid transparent;
-  box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--primary) 32%, transparent);
 }
 
 body[data-theme="liquid"] .glass-primary {
-  background: linear-gradient(135deg, rgba(99,102,241,0.7), rgba(59,130,246,0.7));
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
-  border: 1px solid rgba(255,255,255,0.3);
+  background: linear-gradient(135deg,
+    color-mix(in oklab, var(--primary) 60%, transparent),
+    color-mix(in oklab, var(--primary) 45%, transparent));
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  border: none;
   box-shadow:
-    0 1px 0 0 rgba(255,255,255,0.35) inset,
-    0 8px 24px 0 rgba(59,130,246,0.4),
-    0 2px 8px 0 rgba(0,0,0,0.3);
+    0 8px 24px color-mix(in oklab, var(--primary) 38%, transparent),
+    0 0 0 1px rgba(255,255,255,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.3);
 }
 
 /* ======================================== */
@@ -318,8 +385,8 @@ body[data-theme="liquid"] .glass-primary {
   background: var(--primary);
   color: var(--primary-fg);
   border: 1px solid transparent;
-  box-shadow: 0 4px 12px rgba(59,130,246,0.25);
-  padding: 10px 24px;
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--primary) 28%, transparent);
+  padding: var(--space-sm) var(--space-lg);
   border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
@@ -327,12 +394,14 @@ body[data-theme="liquid"] .glass-primary {
 }
 
 body[data-theme="liquid"] .primary-btn {
-  background: linear-gradient(135deg, rgba(99,102,241,0.7), rgba(59,130,246,0.7));
+  background: linear-gradient(135deg,
+    color-mix(in oklab, var(--primary) 75%, transparent),
+    color-mix(in oklab, var(--primary) 55%, transparent));
   backdrop-filter: blur(12px) saturate(150%);
   border: 1px solid rgba(255,255,255,0.3);
   box-shadow:
     0 1px 0 0 rgba(255,255,255,0.35) inset,
-    0 8px 24px 0 rgba(59,130,246,0.4),
+    0 8px 24px 0 color-mix(in oklab, var(--primary) 42%, transparent),
     0 2px 8px 0 rgba(0,0,0,0.3);
 }
 
@@ -348,7 +417,7 @@ body[data-theme="liquid"] .primary-btn {
   background: var(--btn-icon-bg);
   border: 1px solid var(--btn-icon-border);
   color: var(--text);
-  padding: 8px 18px;
+  padding: var(--space-xs) var(--space-md);
   border-radius: 12px;
   cursor: pointer;
   display: flex;
@@ -359,7 +428,29 @@ body[data-theme="liquid"] .primary-btn {
 }
 
 body[data-theme="liquid"] .secondary-btn {
-  backdrop-filter: blur(16px) saturate(140%);
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.10),
+    rgba(255,255,255,0.04));
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  border: none;
+  color: rgba(255,255,255,0.88);
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.2),
+    0 0 0 1px rgba(255,255,255,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.14);
+}
+body[data-theme="liquid"] .secondary-btn:hover {
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.16),
+    rgba(255,255,255,0.06));
+  color: #c7dbff;
+  border-color: transparent;
+  box-shadow:
+    0 4px 16px rgba(0,0,0,0.28),
+    0 0 30px rgba(100,150,255,0.18),
+    0 0 0 1px rgba(255,255,255,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.22);
 }
 
 .secondary-btn:hover {
@@ -373,7 +464,7 @@ body[data-theme="liquid"] .secondary-btn {
   background: rgba(239,68,68,0.1);
   border: 1px solid rgba(239,68,68,0.3);
   color: var(--danger);
-  padding: 10px 24px;
+  padding: var(--space-sm) var(--space-lg);
   border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
@@ -412,8 +503,16 @@ body[data-theme="liquid"] .icon-btn-refined,
 body[data-theme="liquid"] .dark-toggle-btn,
 body[data-theme="liquid"] .header-action-btn,
 body[data-theme="liquid"] .back-btn-circle {
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.2);
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.12),
+    rgba(255,255,255,0.04));
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  border: none;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.22),
+    0 0 0 1px rgba(255,255,255,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.16);
 }
 
 .icon-btn-refined:hover,
@@ -431,11 +530,17 @@ body[data-theme="liquid"] .icon-btn-refined:hover,
 body[data-theme="liquid"] .dark-toggle-btn:hover,
 body[data-theme="liquid"] .header-action-btn:hover,
 body[data-theme="liquid"] .back-btn-circle:hover {
-  background: rgba(147,197,253,0.12);
-  color: #93c5fd;
-  border-color: rgba(147,197,253,0.7);
-  box-shadow: 0 0 20px rgba(99,130,246,0.5), 0 0 50px rgba(99,130,246,0.2);
-  transform: translateY(-2px) scale(1.08);
+  background: linear-gradient(135deg,
+    rgba(160,200,255,0.25),
+    rgba(120,150,255,0.10));
+  color: #dbe8ff;
+  border-color: transparent;
+  box-shadow:
+    0 4px 16px rgba(0,0,0,0.3),
+    0 0 30px rgba(120,150,255,0.35),
+    0 0 0 1px rgba(200,220,255,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+  transform: translateY(-2px) scale(1.05);
 }
 
 /* ログアウトボタン専用（赤色） */
@@ -468,7 +573,7 @@ body[data-theme="liquid"] .logout-btn-red:hover {
 .menu-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 25px;
+  gap: var(--space-lg);
   width: 100%;
 }
 
@@ -477,8 +582,8 @@ body[data-theme="liquid"] .logout-btn-red:hover {
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 20px !important;
-  padding: 40px 30px !important;
+  gap: var(--space-md) !important;
+  padding: var(--space-2xl) var(--space-xl) !important;
   border-radius: 20px !important;
   cursor: pointer !important;
   transition: all 0.4s cubic-bezier(0.16,1,0.3,1) !important;
@@ -491,52 +596,94 @@ body[data-theme="liquid"] .logout-btn-red:hover {
   transform: translateY(-8px) scale(1.02) !important;
 }
 body[data-theme="light"] .menu-card:hover {
-  background: rgba(59,130,246,0.06) !important;
+  background: color-mix(in oklab, var(--primary) 8%, transparent) !important;
   border-color: var(--primary) !important;
   box-shadow: 0 20px 40px -10px rgba(0,0,0,0.12) !important;
 }
 body[data-theme="dark"] .menu-card:hover {
-  background: rgba(59,130,246,0.1) !important;
-  border-color: #3b82f6 !important;
+  background: color-mix(in oklab, var(--primary) 12%, transparent) !important;
+  border-color: var(--primary) !important;
   box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4) !important;
 }
 body[data-theme="liquid"] .menu-card:hover {
-  background: rgba(255,255,255,0.03) !important;
-  border-color: rgba(147,197,253,0.55) !important;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.075),
+    rgba(255,255,255,0.022)) !important;
   box-shadow:
-    0 0 25px rgba(99,130,246,0.3),
-    0 0 50px rgba(99,130,246,0.1),
-    0 20px 60px -10px rgba(0,0,0,0.35) !important;
-  backdrop-filter: blur(16px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
+    0 20px 60px -10px rgba(0,0,0,0.4),
+    0 0 60px color-mix(in oklab, var(--primary) 22%, transparent),
+    0 0 0 1px rgba(255,255,255,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.14) !important;
+}
+
+/* Liquid: メニューラベルを落ち着いた色に (白すぎ対策) */
+body[data-theme="liquid"] .menu-card span {
+  opacity: 0.78;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: opacity 0.3s ease;
+}
+body[data-theme="liquid"] .menu-card:hover span {
+  opacity: 1;
+}
+
+/* Liquid: page root 系の不透明塗りつぶしを透明化して scene を見せる */
+body[data-theme="liquid"] .admin-page-root,
+body[data-theme="liquid"] .main-content {
+  background: transparent !important;
+}
+/* Knowledge ページの main-content のインラインスタイル対策 */
+body[data-theme="liquid"] main.main-content[style] {
+  background-color: transparent !important;
 }
 
 /* ======================================== */
 /* フォーム入力                              */
 /* ======================================== */
 
-input, textarea, select {
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+textarea,
+select {
   width: 100%;
-  padding: 10px 14px;
+  padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--input-border);
   background: var(--input-bg);
   border-radius: 12px;
   box-sizing: border-box;
   color: var(--input-text);
-  font-size: 17px; /* ナレッジ入力のテキストサイズ微修正済 (-1px) */
+  font-size: 16px; /* 4pt スケール + iOS の 16px 以下ズーム防止の閾値 */
   transition: all 0.2s;
 }
-body[data-theme="liquid"] input,
+body[data-theme="liquid"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
 body[data-theme="liquid"] textarea,
 body[data-theme="liquid"] select {
-  backdrop-filter: blur(16px);
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.08),
+    rgba(255,255,255,0.03));
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  border: none;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.10),
+    inset 0 1px 0 rgba(255,255,255,0.10);
 }
-input:focus, textarea:focus, select:focus {
+body[data-theme="liquid"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+body[data-theme="liquid"] textarea:focus,
+body[data-theme="liquid"] select:focus {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--primary) 55%, transparent),
+    0 0 18px color-mix(in oklab, var(--primary) 30%, transparent),
+    inset 0 1px 0 rgba(255,255,255,0.15);
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+textarea:focus,
+select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 18%, transparent);
 }
-input::placeholder, textarea::placeholder {
+input:not([type="checkbox"]):not([type="radio"])::placeholder,
+textarea::placeholder {
   color: var(--muted);
 }
 
@@ -548,16 +695,33 @@ input::placeholder, textarea::placeholder {
   display: inline-block;
   font-size: 0.8rem;
   background: var(--btn-icon-bg);
-  padding: 6px 12px;
+  padding: var(--space-2xs) var(--space-sm);
   border-radius: 20px;
-  margin: 3px;
+  margin: var(--space-2xs);
   cursor: pointer;
   color: var(--muted);
   border: 1px solid var(--btn-icon-border);
   transition: all 0.2s;
 }
 body[data-theme="liquid"] .sidebar-tag {
-  backdrop-filter: blur(8px);
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.08),
+    rgba(255,255,255,0.03));
+  backdrop-filter: blur(10px) saturate(1.4);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
+  border: none;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.10),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+body[data-theme="liquid"] .sidebar-tag.active {
+  background: linear-gradient(135deg,
+    color-mix(in oklab, var(--primary) 60%, transparent),
+    color-mix(in oklab, var(--primary) 45%, transparent));
+  box-shadow:
+    0 0 18px color-mix(in oklab, var(--primary) 38%, transparent),
+    0 0 0 1px rgba(255,255,255,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.28);
 }
 
 .sidebar-tag:hover {
@@ -571,18 +735,15 @@ body[data-theme="liquid"] .sidebar-tag {
   color: var(--tag-active-text);
   border-color: var(--tag-active-bg);
 }
-body[data-theme="liquid"] .sidebar-tag.active {
-  box-shadow: 0 0 15px rgba(59,130,246,0.3);
-}
 
 /* ======================================== */
 /* ナレッジカード                            */
 /* ======================================== */
 
 .knowledge-card {
-  padding: 18px;
+  padding: var(--space-md);
   border-radius: 16px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-sm);
   cursor: pointer;
   position: relative;
   transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
@@ -596,26 +757,33 @@ body[data-theme="liquid"] .sidebar-tag.active {
 }
 body[data-theme="light"] .knowledge-card:hover {
   border-color: var(--primary);
-  background: rgba(59,130,246,0.04);
+  background: color-mix(in oklab, var(--primary) 6%, transparent);
 }
 body[data-theme="dark"] .knowledge-card:hover {
-  border-color: #3b82f6;
-  background: rgba(59,130,246,0.08);
+  border-color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
 }
 body[data-theme="liquid"] .knowledge-card {
-  background: transparent;
-  border-color: rgba(255,255,255,0.08);
-  box-shadow: none;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.08),
+    rgba(255,255,255,0.03));
+  border: none;
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  box-shadow:
+    0 4px 16px rgba(0,0,0,0.25),
+    0 0 0 1px var(--lg-border),
+    inset 0 1px 0 rgba(255,255,255,0.12);
 }
 body[data-theme="liquid"] .knowledge-card:hover {
-  background: rgba(255,255,255,0.03);
-  border-color: rgba(147,197,253,0.45);
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.13),
+    rgba(255,255,255,0.05));
   box-shadow:
-    0 0 20px rgba(99,130,246,0.25),
-    0 0 40px rgba(99,130,246,0.08),
-    0 8px 30px rgba(0,0,0,0.2);
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
+    0 8px 32px rgba(0,0,0,0.32),
+    var(--lg-accent-glow),
+    0 0 0 1px rgba(255,255,255,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.18);
 }
 
 .knowledge-card:active {
@@ -626,13 +794,26 @@ body[data-theme="liquid"] .knowledge-card:hover {
   border-color: rgba(239,68,68,0.25);
 }
 body[data-theme="liquid"] .knowledge-card.unsolved {
-  background: rgba(239,68,68,0.05);
+  background: linear-gradient(135deg,
+    rgba(239,68,68,0.14),
+    rgba(239,68,68,0.04));
+  box-shadow:
+    0 4px 16px rgba(0,0,0,0.25),
+    0 0 0 1px rgba(239,68,68,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.1);
 }
 .knowledge-card.unsolved:hover {
   border-color: rgba(239,68,68,0.4);
 }
 body[data-theme="liquid"] .knowledge-card.unsolved:hover {
-  background: rgba(239,68,68,0.1);
+  background: linear-gradient(135deg,
+    rgba(239,68,68,0.2),
+    rgba(239,68,68,0.06));
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.32),
+    0 0 40px rgba(239,68,68,0.18),
+    0 0 0 1px rgba(239,68,68,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.14);
 }
 
 /* ======================================== */
@@ -653,7 +834,16 @@ body[data-theme="liquid"] .knowledge-card.unsolved:hover {
   border: 1px solid var(--btn-icon-border);
 }
 body[data-theme="liquid"] .status-toggle-btn {
-  backdrop-filter: blur(8px);
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.10),
+    rgba(255,255,255,0.04));
+  backdrop-filter: blur(10px) saturate(1.4);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
+  border: none;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.2),
+    0 0 0 1px rgba(255,255,255,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.14);
 }
 
 .status-toggle-btn:hover {
@@ -721,17 +911,17 @@ body[data-theme="liquid"] .glass-refract-wrap > .glass-refraction {
 /* スペキュラーハイライト（ガラスの厚み・光沢） */
 body[data-theme="liquid"] .glass-refract-wrap > .glass-specular {
   z-index: 1;
-  border: 1.5px solid rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.10);
   box-shadow:
-    inset 0 2px 0 0 rgba(255,255,255,0.3),
-    inset 0 -1px 3px 0 rgba(0,0,0,0.1),
-    inset 2px 0 3px 0 rgba(255,255,255,0.06),
-    inset -2px 0 3px 0 rgba(255,255,255,0.06);
+    inset 0 1px 0 0 rgba(255,255,255,0.14),
+    inset 0 -1px 3px 0 rgba(0,0,0,0.12),
+    inset 2px 0 3px 0 rgba(255,255,255,0.03),
+    inset -2px 0 3px 0 rgba(255,255,255,0.03);
   background: linear-gradient(165deg,
-    rgba(255,255,255,0.12) 0%,
-    rgba(255,255,255,0.02) 30%,
+    rgba(255,255,255,0.045) 0%,
+    rgba(255,255,255,0.008) 30%,
     transparent 55%,
-    rgba(255,255,255,0.04) 100%);
+    rgba(255,255,255,0.015) 100%);
 }
 
 /* ======================================== */
@@ -863,3 +1053,132 @@ body[data-theme="liquid"] .badge-attachment {
 .knowledge-card:hover .badge-attachment {
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
 }
+
+/* ==================================================== */
+/* Cursor Affordance ユーティリティ                       */
+/* 「カーソルが合ったこと」が感じ取れる軽い状態変化         */
+/* ==================================================== */
+.cursor-hint {
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+              color 0.18s ease, opacity 0.18s ease, filter 0.18s ease,
+              transform 0.18s ease;
+}
+.cursor-hint:hover { filter: brightness(1.12); opacity: 1; }
+.cursor-hint:active { transform: scale(0.97); }
+
+/* tile: カード / リスト行 用 */
+.cursor-hint-tile {
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+              transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 6px;
+}
+.cursor-hint-tile:hover {
+  transform: translateY(-1px);
+  background: color-mix(in oklab, var(--primary) 8%, transparent);
+}
+body[data-theme="liquid"] .cursor-hint-tile:hover {
+  background: rgba(255,255,255,0.06);
+}
+.cursor-hint-tile:active { transform: translateY(0); }
+
+/* pill: フィルタ / トグル 用 (非アクティブ時にブライトニング) */
+.cursor-hint-pill {
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+              color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.cursor-hint-pill:not(.is-active):hover {
+  background: color-mix(in oklab, var(--primary) 12%, transparent) !important;
+  border-color: color-mix(in oklab, var(--primary) 45%, transparent) !important;
+  color: var(--text) !important;
+}
+body[data-theme="liquid"] .cursor-hint-pill:not(.is-active):hover {
+  background: rgba(255,255,255,0.1) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+  color: rgba(255,255,255,0.92) !important;
+}
+.cursor-hint-pill.is-active:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* danger: 再試行 / 破壊操作 用 */
+.cursor-hint-danger {
+  transition: background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease;
+}
+.cursor-hint-danger:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 4px 14px -4px rgba(220, 38, 38, 0.5);
+  transform: translateY(-1px);
+}
+.cursor-hint-danger:active { transform: translateY(0) scale(0.98); }
+
+/* ==================================================== */
+/* User Avatar Fallback — アバターがない場合のシアングリーン */
+/* サイズ・フォントサイズは呼び出し側で inline 指定              */
+/* ==================================================== */
+.user-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 75%, white), var(--primary));
+  color: #fff;
+  font-weight: 700;
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.15));
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* 既存クラスの hover 補完 */
+.reaction-btn {
+  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, filter 0.18s ease;
+}
+.reaction-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.reaction-btn:active { transform: translateY(0) scale(0.98); }
+
+/* 運用提議カード: ホバーで輪郭が光る（カテゴリ色を採用、未設定時はprimary） */
+.proposal-card:hover {
+  border-color: color-mix(in oklab, var(--card-accent, var(--primary)) 75%, transparent) !important;
+  box-shadow:
+    0 0 12px -2px color-mix(in oklab, var(--card-accent, var(--primary)) 40%, transparent),
+    0 0 24px -8px color-mix(in oklab, var(--card-accent, var(--primary)) 25%, transparent) !important;
+  transform: translateY(-1px);
+}
+.proposal-card:active { transform: translateY(0) scale(0.998); }
+body[data-theme="liquid"] .proposal-card:hover {
+  border-color: color-mix(in oklab, var(--card-accent, var(--primary)) 75%, transparent) !important;
+  box-shadow:
+    0 10px 32px -12px rgba(0,0,0,0.55),
+    0 0 14px -2px color-mix(in oklab, var(--card-accent, var(--primary)) 40%, transparent),
+    0 0 24px -8px color-mix(in oklab, var(--card-accent, var(--primary)) 25%, transparent) !important;
+}
+
+/* ステータス更新ボタン: 非アクティブ時はステータスカラーでカーソル位置を示す */
+.status-option-btn:not(.is-active):hover {
+  transform: translateY(-1px);
+}
+.status-option-btn.status-未着手:not(.is-active):hover {
+  background: rgba(248,113,113,0.14) !important;
+  border-color: rgba(248,113,113,0.65) !important;
+  color: #f87171 !important;
+  box-shadow: 0 0 0 1px rgba(248,113,113,0.45), 0 8px 22px -10px rgba(248,113,113,0.55) !important;
+}
+.status-option-btn.status-対応中:not(.is-active):hover {
+  background: rgba(251,191,36,0.14) !important;
+  border-color: rgba(251,191,36,0.65) !important;
+  color: #fbbf24 !important;
+  box-shadow: 0 0 0 1px rgba(251,191,36,0.45), 0 8px 22px -10px rgba(251,191,36,0.55) !important;
+}
+.status-option-btn.status-完了:not(.is-active):hover {
+  background: rgba(52,211,153,0.14) !important;
+  border-color: rgba(52,211,153,0.65) !important;
+  color: #34d399 !important;
+  box-shadow: 0 0 0 1px rgba(52,211,153,0.45), 0 8px 22px -10px rgba(52,211,153,0.55) !important;
+}
+.status-option-btn.status-保留:not(.is-active):hover {
+  background: rgba(148,163,184,0.14) !important;
+  border-color: rgba(148,163,184,0.6) !important;
+  color: #cbd5e1 !important;
+  box-shadow: 0 0 0 1px rgba(148,163,184,0.35), 0 8px 22px -10px rgba(148,163,184,0.4) !important;
+}
+.status-option-btn.is-active:hover { filter: brightness(1.08); transform: translateY(-1px); }

@@ -435,7 +435,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                 {/* 2. Unit info */}
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <div style={{ flex: 1 }}>
-                        <label>号機 <span style={{ color: 'red' }}>*</span> {fetchingProperty && <span style={{ fontSize: '0.7rem', color: '#3b82f6' }}>取得中...</span>}</label>
+                        <label>号機 <span style={{ color: 'red' }}>*</span> {fetchingProperty && <span style={{ fontSize: '0.7rem', color: 'var(--primary)' }}>取得中...</span>}</label>
                         <input id="machine" type="text" value={formData.machine || ''} onChange={handleChange} onBlur={handleMachineBlur} placeholder="例: E1" style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }} />
                     </div>
                     <div style={{ flex: 1 }}>
@@ -504,9 +504,9 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                                     border: '1px solid var(--border)', borderRadius: '6px',
                                     fontSize: '0.85rem',
                                 }}>
-                                    {att.type.startsWith('image/') ? <Image size={14} color="#3b82f6" /> : <FileText size={14} color="#64748b" />}
+                                    {att.type.startsWith('image/') ? <Image size={14} color="var(--primary)" /> : <FileText size={14} color="#64748b" />}
                                     <a href={att.url} target="_blank" rel="noopener noreferrer"
-                                        style={{ flex: 1, color: '#3b82f6', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        style={{ flex: 1, color: 'var(--primary)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {att.name}
                                     </a>
                                     <ExternalLink size={12} color="#94a3b8" />

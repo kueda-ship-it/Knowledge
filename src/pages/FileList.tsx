@@ -75,9 +75,9 @@ export const FileList: React.FC<FileListProps> = ({ data, onBack }) => {
                             style={{
                                 padding: '6px 14px', borderRadius: '20px', border: '1px solid var(--border)', cursor: 'pointer',
                                 fontSize: '0.85rem',
-                                background: typeFilter === t ? '#3b82f6' : 'var(--card-bg)',
+                                background: typeFilter === t ? 'var(--primary)' : 'var(--card-bg)',
                                 color: typeFilter === t ? 'white' : 'var(--muted)',
-                                borderColor: typeFilter === t ? '#3b82f6' : 'var(--border)',
+                                borderColor: typeFilter === t ? 'var(--primary)' : 'var(--border)',
                             }}
                         >
                             {t === 'all' ? '全て' : t === 'image' ? '画像' : 'その他'}
@@ -103,7 +103,7 @@ export const FileList: React.FC<FileListProps> = ({ data, onBack }) => {
                             }}
                         >
                             {attachment.type.startsWith('image/')
-                                ? <Image size={18} color="#3b82f6" style={{ flexShrink: 0 }} />
+                                ? <Image size={18} color="var(--primary)" style={{ flexShrink: 0 }} />
                                 : <FileText size={18} color="#64748b" style={{ flexShrink: 0 }} />
                             }
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -111,7 +111,7 @@ export const FileList: React.FC<FileListProps> = ({ data, onBack }) => {
                                     href={attachment.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    style={{ color: '#3b82f6', textDecoration: 'none', fontSize: '0.95rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                    style={{ color: 'var(--primary)', textDecoration: 'none', fontSize: '0.95rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                                 >
                                     {attachment.name}
                                 </a>

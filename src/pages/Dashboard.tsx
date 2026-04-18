@@ -139,7 +139,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                         textAlign: 'center', pointerEvents: 'none'
                     }}>
                         <div style={{ fontSize: '0.7rem', color: 'var(--muted)', fontWeight: 'bold' }}>合計</div>
-                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#3b82f6', lineHeight: 1 }}>{total}</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>{total}</div>
                     </div>
                 </div>
 
@@ -148,8 +148,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                         <div key={s.key}
                             onClick={() => onSelect?.(s.key)}
                             title={`${s.key}: ${s.val}件`}
-                            className="chart-legend-item"
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', cursor: onSelect ? 'pointer' : 'default', padding: '4px', borderRadius: '4px', transition: 'background 0.2s' }}>
+                            className={onSelect ? 'chart-legend-item cursor-hint-tile' : 'chart-legend-item'}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', cursor: onSelect ? 'pointer' : 'default', padding: '4px', borderRadius: '4px' }}>
                             <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: s.color }}></div>
                             <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.key}</span>
                             <span style={{ fontWeight: 'bold', minWidth: '35px', textAlign: 'right' }}>{Math.round((s.val / total) * 100)}%</span>
@@ -166,7 +166,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
         if (sorted.length === 0) return <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>データなし</div>;
 
         return sorted.slice(0, 10).map(([key, val]) => (
-            <div key={key} style={{ marginBottom: '12px', cursor: onSelect ? 'pointer' : 'default' }} onClick={() => onSelect?.(key)}>
+            <div key={key}
+                className={onSelect ? 'cursor-hint-tile' : undefined}
+                style={{ marginBottom: '12px', padding: '4px 6px', cursor: onSelect ? 'pointer' : 'default' }}
+                onClick={() => onSelect?.(key)}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
                     <span style={{ fontWeight: '500', color: 'var(--text)' }}>{key}</span>
                     <span style={{ color: 'var(--muted)' }}>{val}件</span>
@@ -201,11 +204,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                         <div style={{ display: 'flex', background: 'var(--border)', padding: '4px', borderRadius: '8px' }}>
                             {(['all', 'year', 'month', 'week', 'day'] as TimeRange[]).map((r) => (
                                 <button key={r} onClick={() => setTimeRange(r)}
+                                    className={`cursor-hint-pill${timeRange === r ? ' is-active' : ''}`}
                                     style={{
                                         padding: '6px 12px', border: 'none', borderRadius: '6px', cursor: 'pointer',
                                         fontSize: '0.85rem', fontWeight: '500',
                                         background: timeRange === r ? 'var(--card-bg)' : 'transparent',
-                                        color: timeRange === r ? '#3b82f6' : 'var(--muted)',
+                                        color: timeRange === r ? 'var(--primary)' : 'var(--muted)',
                                         boxShadow: timeRange === r ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
                                     }}
                                 >
@@ -215,12 +219,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                         </div>
                         <div style={{ display: 'flex', gap: '5px' }}>
                             <button onClick={() => setChartType('bar')} className="secondary-btn" style={{
-                                padding: '8px', background: chartType === 'bar' ? '#3b82f6' : 'var(--card-bg)', color: chartType === 'bar' ? 'white' : 'var(--muted)'
+                                padding: '8px', background: chartType === 'bar' ? 'var(--primary)' : 'var(--card-bg)', color: chartType === 'bar' ? 'white' : 'var(--muted)'
                             }}>
                                 <BarChart3 size={18} />
                             </button>
                             <button onClick={() => setChartType('pie')} className="secondary-btn" style={{
-                                padding: '8px', background: chartType === 'pie' ? '#3b82f6' : 'var(--card-bg)', color: chartType === 'pie' ? 'white' : 'var(--muted)'
+                                padding: '8px', background: chartType === 'pie' ? 'var(--primary)' : 'var(--card-bg)', color: chartType === 'pie' ? 'white' : 'var(--muted)'
                             }}>
                                 <PieChartIcon size={18} />
                             </button>
@@ -232,12 +236,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center', padding: '10px', background: 'var(--bg)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
                         <span style={{ fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 'bold' }}>絞り込み中:</span>
                         {activeFilters.map(f => (
-                            <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#3b82f6', color: 'white', borderRadius: '20px', fontSize: '0.8rem' }}>
+                            <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: 'var(--primary)', color: 'white', borderRadius: '20px', fontSize: '0.8rem' }}>
                                 <span>{f.label}: {f.value}</span>
                                 <XCircle size={14} style={{ cursor: 'pointer' }} onClick={f.clear} />
                             </div>
                         ))}
                         <button onClick={() => { setSelMachine(null); setSelIncident(null); setSelTag(null); setSelCategory(null); }}
+                            className="cursor-hint"
                             style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>
                             全てクリア
                         </button>

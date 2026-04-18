@@ -56,6 +56,7 @@ async function fetchProfile(session: Session): Promise<User | null> {
       email: inserted.email ?? session.user.email,
       role: (inserted.knl_role as User['role']) ?? 'viewer',
       avatarUrl: inserted.avatar_url ?? undefined,
+      categories: [],
     }
   }
 
@@ -65,6 +66,7 @@ async function fetchProfile(session: Session): Promise<User | null> {
     email: data.email ?? session.user.email,
     role: (data.knl_role as User['role']) ?? 'viewer',
     avatarUrl: data.avatar_url ?? undefined,
+    categories: [],
   }
 }
 

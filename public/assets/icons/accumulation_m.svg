@@ -1,0 +1,16 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="120" fill="#1e293b"/>
+  <!-- Isometric Grid (Diamond) -->
+  <g transform="translate(256, 256) scale(1, 0.6) rotate(45)">
+    <rect x="-150" y="-150" width="300" height="300" fill="none" stroke="#60a5fa" stroke-width="4" opacity="0.2"/>
+    <line x1="-150" y1="-50" x2="150" y2="-50" stroke="#60a5fa" stroke-width="2" opacity="0.1"/>
+    <line x1="-150" y1="50" x2="150" y2="50" stroke="#60a5fa" stroke-width="2" opacity="0.1"/>
+    <line x1="-50" y1="-150" x2="-50" y2="150" stroke="#60a5fa" stroke-width="2" opacity="0.1"/>
+    <line x1="50" y1="-150" x2="50" y2="150" stroke="#60a5fa" stroke-width="2" opacity="0.1"/>
+    
+    <!-- Accumulation Blocks -->
+    <rect x="-50" y="-50" width="100" height="100" fill="#2563eb" opacity="0.8"/>
+    <rect x="50" y="50" width="100" height="100" fill="#60a5fa" opacity="0.4"/>
+    <rect x="-150" y="-150" width="100" height="100" fill="#60a5fa" opacity="0.4"/>
+  </g>
+</svg>

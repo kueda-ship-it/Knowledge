@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knowledge System - Icon Showcase</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --dark-bg: #1e293b;
+      --primary: #2563eb;
+      --secondary: #60a5fa;
+      --text: #334155;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      padding: 40px;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 1000px;
+    }
+    h1 { font-weight: 300; letter-spacing: 1px; color: var(--dark-bg); margin-bottom: 40px; }
+    
+    .section-title { font-size: 1.2rem; font-weight: 600; margin: 40px 0 20px; border-left: 4px solid var(--primary); padding-left: 10px; }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+    }
+    
+    .icon-box {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+    .icon-box:hover {
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.1);
+      transform: translateY(-5px);
+    }
+    
+    .icon-img {
+      width: 100px;
+      height: 100px;
+      border-radius: 24px;
+      overflow: hidden;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .icon-img img { width: 100%; height: 100%; }
+    
+    .label { font-size: 14px; font-weight: bold; color: var(--dark-bg); }
+    .desc { font-size: 12px; opacity: 0.7; margin-top: 5px; text-align: center; }
+    
+    /* Dark Mode Review */
+    .dark-preview {
+      background: var(--dark-bg);
+      color: white;
+      padding: 60px;
+      border-radius: 30px;
+      margin-top: 60px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .dark-preview h2 { font-weight: 300; margin-bottom: 40px; text-align: center; color: var(--secondary); }
+    .dark-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 30px;
+      justify-items: center;
+    }
+    .small-icon { width: 80px; height: 80px; border-radius: 18px; overflow: hidden; }
+    .small-icon img { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>KNOWLEDGE ICON DESIGN</h1>
+    
+    <div style="background: rgba(37, 99, 235, 0.05); padding: 40px; border-radius: 32px; border: 2px dashed var(--primary); margin-bottom: 60px;">
+      <div class="section-title" style="margin-top: 0;">FINAL RECOMMENDATION: Stacked Crystal Grid</div>
+      <div style="display: flex; align-items: center; gap: 40px; flex-wrap: wrap;">
+        <div class="icon-img" style="width: 200px; height: 200px; border-radius: 48px;"><img src="assets/icons/stacked_m.svg" alt="Final Logo"></div>
+        <div style="flex: 1; min-width: 300px;">
+          <h3 style="color: var(--primary); margin: 0 0 10px;">「知の集積」：5層の積層構造</h3>
+          <p style="font-size: 0.95rem; line-height: 1.6; opacity: 0.8;">案Mを5層にわたって高密度に積層。一つ一つの格子（知の断片）が重なり合い、一冊の「知恵の本（Volume of Knowledge）」のような重厚なボリュームを構成する様子を表現しました。厚みを持たせることで、長年の経験が蓄積されたシステムの信頼性を象徴しています。</p>
+          <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <span style="background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold;">BEST CHOICE</span>
+            <span style="background: #f0f9ff; color: #0891b2; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold;">5-LAYER VOLUME</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="section-title">初期デザイン案一覧</div>
+    <div class="grid">
+      <div class="icon-box">
+        <div class="icon-img"><img src="assets/icons/icon_a.svg" alt="A"></div>
+        <div class="label">A: Connected Mind</div>
+        <div class="desc">知識の共有ネットワーク</div>
+      </div>
+      <div class="icon-box">
+        <div class="icon-img"><img src="assets/icons/icon_b.svg" alt="B"></div>
+        <div class="label">B: Wisdom Spark</div>
+        <div class="desc">洞察と解決の電球</div>
+      </div>
+      <div class="icon-box">
+        <div class="icon-img"><img src="assets/icons/icon_c.svg" alt="C"></div>
+        <div class="label">C: Knowledge Stack</div>
+        <div class="desc">情報の蓄積と明快さ</div>
+      </div>
+      <div class="icon-box">
+        <div class="icon-img"><img src="assets/icons/icon_d.svg" alt="D"></div>
+        <div class="label">D: Discovery Lens</div>
+        <div class="desc">精密な検索と発見</div>
+      </div>
+      <div class="icon-box">
+        <div class="icon-img"><img src="assets/icons/icon_e.svg" alt="E"></div>
+        <div class="label">E: Feedback Loop</div>
+        <div class="desc">継続的な情報の洗練</div>
+      </div>
+    </div>
+    
+    <div class="section-title">ACCUMULATION SERIES (GEOMETRIC) - 知識の蓄積テーマ</div>
+    <div class="grid">
+      <div class="icon-box">
+        <div class="icon-img"><img src="assets/icons/accumulation_i.svg" alt="I"></div>
+        <div class="label">I: Geometric Strata</div>
+        <div class="desc">精密なレイヤーによる蓄積の厚み</div>
+      </div>
+      <div class="icon-box">
+        <div class="icon-img"><img src="assets/icons/accumulation_k.svg" alt="K"></div>
+        <div class="label">K: Isometric Honeycomb</div>
+        <div class="desc">空間を効率的に埋める情報セル</div>
+      </div>
+      <div class="icon-box">
+        <div class="icon-img"><img src="assets/icons/accumulation_l.svg" alt="L"></div>
+        <div class="label">L: Square Stack</div>
+        <div class="desc">強固な基盤を作る垂直の積み上げ</div>
+      </div>
+      <div class="icon-box">
+        <div class="icon-img"><img src="assets/icons/accumulation_m.svg" alt="M"></div>
+        <div class="label">M: Diamond Grid</div>
+        <div class="desc">構造化されたネットワーク資産</div>
+      </div>
+      <div class="icon-box">
+        <div class="icon-img"><img src="assets/icons/accumulation_n.svg" alt="N"></div>
+        <div class="label">N: Geometric Core</div>
+        <div class="desc">情報の抽出とコアへの集約</div>
+      </div>
+    </div>
+
+    <div class="dark-preview">
+      <h2>Dark Layout Integration</h2>
+      <div class="dark-grid">
+        <div class="small-icon"><img src="assets/icons/icon_a.svg" alt="A"></div>
+        <div class="small-icon"><img src="assets/icons/icon_b.svg" alt="B"></div>
+        <div class="small-icon"><img src="assets/icons/icon_c.svg" alt="C"></div>
+        <div class="small-icon"><img src="assets/icons/icon_d.svg" alt="D"></div>
+        <div class="small-icon"><img src="assets/icons/icon_e.svg" alt="E"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

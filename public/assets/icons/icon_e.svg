@@ -1,0 +1,12 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="120" fill="#1e293b"/>
+  <!-- Circular Arrows -->
+  <path d="M150 256 A106 106 0 1 1 362 256" stroke="#60a5fa" stroke-width="20" fill="none" stroke-linecap="round"/>
+  <path d="M362 256 A106 106 0 1 1 150 256" stroke="#2563eb" stroke-width="20" fill="none" stroke-linecap="round"/>
+  
+  <path d="M120 220 L150 270 L180 220 Z" fill="#60a5fa"/>
+  <path d="M332 292 L362 242 L392 292 Z" fill="#2563eb"/>
+  
+  <!-- Content Center -->
+  <circle cx="256" cy="256" r="40" fill="white" opacity="0.8"/>
+</svg>

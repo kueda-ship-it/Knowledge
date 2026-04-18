@@ -1,0 +1,55 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <rect width="512" height="512" rx="140" fill="#0f172a"/>
+  
+  <!-- Knowledge Volume (5 Layers, clearly separated) -->
+  <g transform="translate(256, 256) scale(1, 0.6) rotate(45)">
+    <!-- Layer 1 (Bottom-most) -->
+    <g transform="translate(80, 80)">
+      <rect x="-110" y="-110" width="220" height="220" fill="none" stroke="#60a5fa" stroke-width="2" opacity="0.1"/>
+    </g>
+    <!-- Layer 2 -->
+    <g transform="translate(40, 40)">
+      <rect x="-110" y="-110" width="220" height="220" fill="none" stroke="#60a5fa" stroke-width="2.5" opacity="0.2"/>
+    </g>
+    <!-- Layer 3 -->
+    <g transform="translate(0, 0)">
+      <rect x="-110" y="-110" width="220" height="220" fill="none" stroke="#2dd4bf" stroke-width="3" opacity="0.3"/>
+    </g>
+    <!-- Layer 4 -->
+    <g transform="translate(-40, -40)">
+      <rect x="-110" y="-110" width="220" height="220" fill="none" stroke="#2dd4bf" stroke-width="4" opacity="0.4"/>
+    </g>
+    <!-- Layer 5 (Top-most) -->
+    <g transform="translate(-80, -80)">
+      <rect x="-110" y="-110" width="220" height="220" fill="none" stroke="#2563eb" stroke-width="6" filter="url(#glow)"/>
+      
+      <!-- Content Grid (M style) -->
+      <rect x="-40" y="-40" width="80" height="80" fill="#2563eb" opacity="0.9"/>
+      <rect x="30" y="30" width="40" height="40" fill="#60a5fa" opacity="0.5"/>
+      <rect x="-70" y="-70" width="40" height="40" fill="#60a5fa" opacity="0.5"/>
+      
+      <!-- Focal Point (Pulsing Spark) -->
+      <circle cx="0" cy="0" r="10" fill="white">
+        <animate attributeName="opacity" values="1;0.2;1" dur="2.5s" repeatCount="indefinite" />
+        <animate attributeName="r" values="8;12;8" dur="2.5s" repeatCount="indefinite" />
+      </circle>
+    </g>
+    
+    <!-- Vertical Edge Connectors (Subtle alignment marks) -->
+    <!-- Top-Left Corner -->
+    <line x1="-30" y1="-30" x2="-190" y2="-190" stroke="white" stroke-width="2" opacity="0.1"/>
+    <!-- Bottom-Right Corner -->
+    <line x1="190" y1="190" x2="30" y2="30" stroke="white" stroke-width="2" opacity="0.1"/>
+    <!-- Top-Right Corner -->
+    <line x1="190" y1="-30" x2="30" y2="-190" stroke="white" stroke-width="2" opacity="0.1"/>
+    <!-- Bottom-Left Corner -->
+    <line x1="-30" y1="190" x2="-190" y2="30" stroke="white" stroke-width="2" opacity="0.1"/>
+  </g>
+</svg>

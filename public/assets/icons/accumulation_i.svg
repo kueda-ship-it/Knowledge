@@ -1,0 +1,12 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="120" fill="#1e293b"/>
+  <!-- Layers of Knowledge -->
+  <rect x="100" y="340" width="312" height="40" rx="4" fill="#2563eb"/>
+  <rect x="100" y="280" width="312" height="40" rx="4" fill="#2563eb" opacity="0.8"/>
+  <rect x="100" y="220" width="312" height="40" rx="4" fill="#2563eb" opacity="0.6"/>
+  <rect x="100" y="160" width="312" height="40" rx="4" fill="#60a5fa" opacity="0.4"/>
+  <!-- Accent highlight -->
+  <rect x="360" y="160" width="52" height="40" rx="4" fill="#60a5fa">
+    <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite" />
+  </rect>
+</svg>

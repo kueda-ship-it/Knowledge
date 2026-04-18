@@ -1,0 +1,13 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="120" fill="#1e293b"/>
+  <!-- Discovery Grid -->
+  <path d="M120 120 L392 120 M120 216 L392 216 M120 312 L392 312 M120 408 L392 408" stroke="#60a5fa" stroke-width="2" opacity="0.2"/>
+  <path d="M120 120 L120 408 M216 120 L216 408 M312 120 L312 408 M392 120 L392 408" stroke="#60a5fa" stroke-width="2" opacity="0.2"/>
+  
+  <!-- Lens -->
+  <circle cx="256" cy="256" r="120" stroke="#2563eb" stroke-width="20" fill="none"/>
+  <rect x="340" y="340" width="80" height="20" rx="10" transform="rotate(45 340 340)" fill="#2563eb"/>
+  
+  <!-- Content Insight -->
+  <rect x="216" y="216" width="80" height="80" rx="10" fill="#60a5fa"/>
+</svg>

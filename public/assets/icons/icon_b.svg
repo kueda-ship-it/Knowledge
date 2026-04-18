@@ -1,0 +1,9 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="120" fill="#1e293b"/>
+  <!-- Bulb Outline -->
+  <path d="M256 120 A100 100 0 1 0 256 320 L256 380 L320 380 L256 320 Z" fill="none" stroke="#60a5fa" stroke-width="20" stroke-linecap="round"/>
+  <!-- Checkmark Filament -->
+  <path d="M210 230 L250 270 L310 190" stroke="#2563eb" stroke-width="30" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Base -->
+  <rect x="220" y="380" width="72" height="20" rx="5" fill="#60a5fa" opacity="0.6"/>
+</svg>

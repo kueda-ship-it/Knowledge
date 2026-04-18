@@ -1,0 +1,16 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="120" fill="#1e293b"/>
+  <!-- Hexagonal Grid -->
+  <g transform="translate(256, 256)">
+    <!-- Center Hex -->
+    <path d="M0 -100 L86.6 -50 L86.6 50 L0 100 L-86.6 50 L-86.6 -50 Z" fill="#2563eb" opacity="0.8"/>
+    <!-- Top Left -->
+    <path d="M-86.6 -150 L0 -100 L0 0 L-86.6 -50 Z" fill="#60a5fa" opacity="0.4"/>
+    <!-- Top Right -->
+    <path d="M0 -100 L86.6 -150 L86.6 -50 L0 0 Z" fill="#60a5fa" opacity="0.6"/>
+    <!-- Bottom -->
+    <path d="M0 0 L86.6 50 L0 100 L-86.6 50 Z" fill="#2563eb" opacity="0.3"/>
+    <!-- Highlight Block -->
+    <path d="M-20 -20 L20 -20 L20 20 L-20 20 Z" fill="white" opacity="0.9" transform="translate(0, 50)"/>
+  </g>
+</svg>

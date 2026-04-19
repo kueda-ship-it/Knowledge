@@ -277,7 +277,8 @@ export const apiClient = {
         
         // 1. Sync Incidents
         try {
-            const { data: currentIncidents } = await supabase.from('master_incidents').select('name');
+            const { data: currentIncidents, error: curIncErr } = await supabase.from('master_incidents').select('name');
+            if (curIncErr) throw curIncErr;
             const currentNames = (currentIncidents ?? []).map(r => r.name);
             
             // 削除対象: 現在のリストにあるが、新しいデータにはないもの
@@ -298,7 +299,8 @@ export const apiClient = {
 
         // 2. Sync Categories
         try {
-            const { data: currentCats } = await supabase.from('master_categories').select('name');
+            const { data: currentCats, error: curCatErr } = await supabase.from('master_categories').select('name');
+            if (curCatErr) throw curCatErr;
             const currentCatNames = (currentCats ?? []).map(r => r.name);
             
             const toDeleteCat = currentCatNames.filter(n => !data.categories.includes(n));
@@ -528,6 +530,7 @@ export const apiClient = {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'master_categories' }, callback)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'master_incidents' }, callback)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, callback)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profile_categories' }, callback)
             .subscribe();
 
         return channel;

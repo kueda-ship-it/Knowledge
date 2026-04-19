@@ -5,6 +5,7 @@ import { Editor } from '../components/Editor';
 import { KnowledgeItem, User, MasterData } from '../types';
 import { apiClient, toItem } from '../api/client';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
+import { loadCache, saveCache } from '../utils/cache';
 
 interface KnowledgeProps {
     user: User;
@@ -15,13 +16,6 @@ interface KnowledgeProps {
 
 const CACHE_KEY = 'knowledge_data_v1';
 const MASTERS_CACHE_KEY = 'knowledge_masters_v2';
-
-function loadCache<T>(key: string, fallback: T): T {
-    try {
-        const s = localStorage.getItem(key);
-        return s ? (JSON.parse(s) as T) : fallback;
-    } catch { return fallback; }
-}
 
 export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditItem, onInitialEditConsumed }) => {
     const [view, setView] = useState<'list' | 'editor'>('list');
@@ -61,7 +55,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                 setData(prev => {
                     if (prev.some(i => i.id === newItem.id)) return prev;
                     const next = [newItem, ...prev];
-                    localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+                    saveCache(CACHE_KEY, next);
                     return next;
                 });
             },
@@ -73,7 +67,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                 const updated = toItem(payload.new as Record<string, unknown>);
                 setData(prev => {
                     const next = prev.map(i => i.id === updated.id ? { ...i, ...updated } : i);
-                    localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+                    saveCache(CACHE_KEY, next);
                     return next;
                 });
             },
@@ -85,7 +79,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                 const deletedId = (payload.old as { id: string }).id;
                 setData(prev => {
                     const next = prev.filter(i => i.id !== deletedId);
-                    localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+                    saveCache(CACHE_KEY, next);
                     return next;
                 });
             },
@@ -160,7 +154,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
             try {
                 const kData = await apiClient.fetchAll();
                 setData(kData);
-                localStorage.setItem(CACHE_KEY, JSON.stringify(kData));
+                saveCache(CACHE_KEY, kData);
             } catch (e) {
                 console.error("Knowledge load error:", e);
                 // キャッシュがない場合のみエラーを投げる
@@ -172,7 +166,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
             try {
                 const mData = await apiClient.fetchMasters();
                 setMasterData(mData);
-                localStorage.setItem(MASTERS_CACHE_KEY, JSON.stringify(mData));
+                saveCache(MASTERS_CACHE_KEY, mData);
             } catch (e) {
                 console.warn("Masters background load delayed or failed:", e);
             }

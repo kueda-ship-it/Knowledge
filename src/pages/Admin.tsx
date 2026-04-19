@@ -7,6 +7,7 @@ import { GroupsManager } from '../components/GroupsManager';
 import { GlassModal } from '../components/common/GlassModal';
 import { GlassSelect } from '../components/common/GlassSelect';
 import { ROLE_OPTIONS, ROLE_META } from '../constants/roles';
+import { loadCache, saveCache } from '../utils/cache';
 
 interface AdminProps {
     user: User;
@@ -14,29 +15,6 @@ interface AdminProps {
 }
 
 const MASTERS_CACHE_KEY = 'knowledge_masters_v2';
-const MASTERS_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-
-function loadCache<T>(key: string, fallback: T): T {
-    try {
-        const s = localStorage.getItem(key);
-        if (!s) return fallback;
-        const parsed = JSON.parse(s);
-        // 新形式: { ts, data }
-        if (parsed && typeof parsed === 'object' && 'ts' in parsed && 'data' in parsed) {
-            const age = Date.now() - (parsed.ts as number);
-            if (age < 0 || age > MASTERS_CACHE_TTL_MS) return fallback;
-            return parsed.data as T;
-        }
-        // 旧形式互換: そのままデータが入っていたら返す（次回書き込み時に新形式へ移行）
-        return parsed as T;
-    } catch { return fallback; }
-}
-
-function saveCache<T>(key: string, data: T): void {
-    try {
-        localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
-    } catch { /* quota 等は無視 */ }
-}
 
 export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     const isFullAdmin = ['master', 'manager'].includes(user.role);

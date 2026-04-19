@@ -14,12 +14,28 @@ interface AdminProps {
 }
 
 const MASTERS_CACHE_KEY = 'knowledge_masters_v2';
+const MASTERS_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 function loadCache<T>(key: string, fallback: T): T {
     try {
         const s = localStorage.getItem(key);
-        return s ? (JSON.parse(s) as T) : fallback;
+        if (!s) return fallback;
+        const parsed = JSON.parse(s);
+        // 新形式: { ts, data }
+        if (parsed && typeof parsed === 'object' && 'ts' in parsed && 'data' in parsed) {
+            const age = Date.now() - (parsed.ts as number);
+            if (age < 0 || age > MASTERS_CACHE_TTL_MS) return fallback;
+            return parsed.data as T;
+        }
+        // 旧形式互換: そのままデータが入っていたら返す（次回書き込み時に新形式へ移行）
+        return parsed as T;
     } catch { return fallback; }
+}
+
+function saveCache<T>(key: string, data: T): void {
+    try {
+        localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+    } catch { /* quota 等は無視 */ }
 }
 
 export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
@@ -37,6 +53,8 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     const [newUserEmail, setNewUserEmail] = useState('');
     const [newUserRole, setNewUserRole] = useState<User['role']>('user');
     const [openModal, setOpenModal] = useState<'categories' | 'incidents' | 'groups' | null>(null);
+    const [userFilter, setUserFilter] = useState('');
+    const [roleFilter, setRoleFilter] = useState<'all' | User['role']>('all');
 
     useEffect(() => {
         loadMasters();
@@ -70,7 +88,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     console.warn('[loadMasters] 縮退レスポンスを検知したため既存データを保持します');
                     return prev;
                 }
-                localStorage.setItem(MASTERS_CACHE_KEY, JSON.stringify(data));
+                saveCache(MASTERS_CACHE_KEY, data);
                 return data;
             });
             setIsDirty(false);
@@ -285,6 +303,36 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                 </div>
                             </div>
 
+                            <div className="user-filter-bar">
+                                <input
+                                    type="text"
+                                    placeholder="名前・メールで絞り込み..."
+                                    value={userFilter}
+                                    onChange={(e) => setUserFilter(e.target.value)}
+                                    className="user-filter-input"
+                                />
+                                <div className="role-select-wrapper" style={{ minWidth: 180 }}>
+                                    <ShieldCheck size={14} className={`role-icon ${roleFilter === 'all' ? '' : `role-${roleFilter}`}`} />
+                                    <GlassSelect
+                                        value={roleFilter}
+                                        options={[{ value: 'all', label: 'すべての権限', color: '#94a3b8' }, ...ROLE_OPTIONS]}
+                                        onChange={(v) => setRoleFilter(v as 'all' | User['role'])}
+                                        compact
+                                    />
+                                </div>
+                                <span className="user-filter-count">
+                                    {(() => {
+                                        const q = userFilter.trim().toLowerCase();
+                                        const matched = masterData.users.filter(u => {
+                                            if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+                                            if (!q) return true;
+                                            return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+                                        }).length;
+                                        return `${matched} / ${masterData.users.length}`;
+                                    })()}
+                                </span>
+                            </div>
+
                             <div className="user-table-container scroll-area">
                                 <table className="user-table">
                                     <thead>
@@ -295,7 +343,16 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {masterData.users.map((u, i) => (
+                                        {(() => {
+                                            const q = userFilter.trim().toLowerCase();
+                                            return masterData.users
+                                                .map((u, origIdx) => ({ u, origIdx }))
+                                                .filter(({ u }) => {
+                                                    if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+                                                    if (!q) return true;
+                                                    return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+                                                });
+                                        })().map(({ u, origIdx: i }) => (
                                             <tr key={u.id}>
                                                 <td>
                                                     <div className="user-info-cell">
@@ -462,6 +519,34 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     padding: 16px 20px;
                     background: rgba(255,255,255,0.03);
                     border-bottom: 1px solid var(--border);
+                }
+                .user-filter-bar {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 12px 20px;
+                    border-bottom: 1px solid var(--border);
+                }
+                .user-filter-input {
+                    flex: 1;
+                    min-width: 0;
+                    padding: 8px 12px;
+                    border: 1px solid var(--border);
+                    border-radius: 8px;
+                    background: var(--input-bg);
+                    color: var(--text);
+                    font-size: 0.88rem;
+                }
+                .user-filter-input:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                    box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 15%, transparent);
+                }
+                .user-filter-count {
+                    font-size: 0.78rem;
+                    color: var(--muted);
+                    white-space: nowrap;
+                    font-variant-numeric: tabular-nums;
                 }
                 .add-user-form .input-group {
                     display: flex;

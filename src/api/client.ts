@@ -184,11 +184,13 @@ export const apiClient = {
 
         if (existing) {
             // Delete
-            await supabase.from('knowledge_reactions').delete().eq('id', existing.id);
+            const { error: delErr } = await supabase.from('knowledge_reactions').delete().eq('id', existing.id);
+            if (delErr) throw delErr;
         } else {
             // Remove other types of reactions from this user for this item first (exclusive choice)
-            await supabase.from('knowledge_reactions').delete().eq('knowledge_id', knowledgeId).eq('user_id', userId);
-            
+            const { error: clearErr } = await supabase.from('knowledge_reactions').delete().eq('knowledge_id', knowledgeId).eq('user_id', userId);
+            if (clearErr) throw clearErr;
+
             // Insert
             const { error } = await supabase.from('knowledge_reactions').insert({
                 knowledge_id: knowledgeId,
@@ -197,14 +199,14 @@ export const apiClient = {
                 comment: comment
             });
             if (error) throw error;
-            
+
             // Notify author if someone else reacted
-            const { data: knl } = await supabase.from('knowledge').select('author').eq('id', knowledgeId).single();
-            if (knl && knl.author) {
+            const { data: knl } = await supabase.from('knowledge').select('author').eq('id', knowledgeId).maybeSingle();
+            if (knl?.author) {
                 const { data: authorProf } = await supabase.from('profiles').select('id').eq('display_name', knl.author).maybeSingle();
-                if (authorProf && authorProf.id !== userId) {
+                if (authorProf?.id && authorProf.id !== userId) {
                     // Fetch sender name
-                    const { data: me } = await supabase.from('profiles').select('display_name').eq('id', userId).single();
+                    const { data: me } = await supabase.from('profiles').select('display_name').eq('id', userId).maybeSingle();
                     await this.createNotification(authorProf.id, me?.display_name || 'Someone', type, knowledgeId);
                 }
             }

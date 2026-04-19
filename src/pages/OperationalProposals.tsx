@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { OperationalProposal, OperationalProposalComment, User } from '../types';
 import { BackButton } from '../components/common/BackButton';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
+import { loadCache, saveCache } from '../utils/cache';
 
 interface ProposalsProps {
     onBack: () => void;
@@ -47,12 +48,8 @@ const resolveProfileByName = (users: User[], raw: string): User | undefined => {
 export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, initialProposalId, onInitialProposalConsumed }) => {
     const PROPOSALS_CACHE_KEY = 'proposals_data_v1';
     const USERS_CACHE_KEY = 'knl_users_master_v1';
-    const loadProposalCache = (): OperationalProposal[] => {
-        try { const s = localStorage.getItem(PROPOSALS_CACHE_KEY); return s ? JSON.parse(s) : []; } catch { return []; }
-    };
-    const loadUsersCache = (): User[] => {
-        try { const s = localStorage.getItem(USERS_CACHE_KEY); return s ? JSON.parse(s) : []; } catch { return []; }
-    };
+    const loadProposalCache = (): OperationalProposal[] => loadCache<OperationalProposal[]>(PROPOSALS_CACHE_KEY, []);
+    const loadUsersCache = (): User[] => loadCache<User[]>(USERS_CACHE_KEY, []);
 
     const [proposals, setProposals] = useState<OperationalProposal[]>(() => loadProposalCache());
     const [loading, setLoading] = useState(false); // 初回からローディングを表示しない（キャッシュ活用）
@@ -119,7 +116,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                 const users = m?.users || [];
                 setUsersMaster(users);
                 setGroupCategories(m?.categories || []);
-                try { localStorage.setItem(USERS_CACHE_KEY, JSON.stringify(users)); } catch {}
+                saveCache(USERS_CACHE_KEY, users);
             })
             .catch(e => console.warn('[OperationalProposals] fetchMasters failed:', e?.message));
         return () => { cancelled = true; };
@@ -166,7 +163,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             const data = await apiClient.fetchProposals();
             const result = data || [];
             setProposals(result);
-            localStorage.setItem(PROPOSALS_CACHE_KEY, JSON.stringify(result));
+            saveCache(PROPOSALS_CACHE_KEY, result);
             setFetchError(null);
         } catch (e: any) {
             console.warn('[OperationalProposals] fetch failed (using cache):', e?.message);

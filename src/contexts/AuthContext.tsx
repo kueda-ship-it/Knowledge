@@ -81,13 +81,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (mounted) setIsLoading(false)
     }, 5000)
 
+    // 旧 localStorage 保管の token を sessionStorage に一度だけ移行（XSS 持ち出し対策）
+    const legacyToken = localStorage.getItem('microsoft_graph_token')
+    if (legacyToken) {
+      if (!sessionStorage.getItem('microsoft_graph_token')) {
+        sessionStorage.setItem('microsoft_graph_token', legacyToken)
+      }
+      localStorage.removeItem('microsoft_graph_token')
+    }
+
     const init = async () => {
       try {
         const { data } = await supabase.auth.getSession()
         if (!mounted) return
         setSession(data.session)
         if (data.session?.provider_token) {
-          localStorage.setItem('microsoft_graph_token', data.session.provider_token)
+          sessionStorage.setItem('microsoft_graph_token', data.session.provider_token)
         }
         if (data.session) {
           const profile = await fetchProfile(data.session).catch((e) => {
@@ -110,12 +119,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session)
       if (session) {
         if (session.provider_token) {
-          localStorage.setItem('microsoft_graph_token', session.provider_token)
+          sessionStorage.setItem('microsoft_graph_token', session.provider_token)
         }
         const profile = await fetchProfile(session).catch(() => null)
         setUser(profile)
       } else {
-        localStorage.removeItem('microsoft_graph_token')
+        sessionStorage.removeItem('microsoft_graph_token')
+        localStorage.removeItem('microsoft_graph_token') // 旧保管先の掃除
         setUser(null)
       }
     })

@@ -153,13 +153,14 @@ export const apiClient = {
 
         // 2. Record history if there's a change in content or title
         if (oldItem && (oldItem.content !== item.content || oldItem.title !== item.title || oldItem.status !== item.status)) {
-            await supabase.from('knowledge_history').insert({
+            const { error: histErr } = await supabase.from('knowledge_history').insert({
                 knowledge_id: item.id,
                 changed_by: item.author,
                 old_content: oldItem.content,
                 new_content: item.content,
                 comment: oldItem.status !== item.status ? `Status changed to ${item.status}` : 'Content updated'
             });
+            if (histErr) console.warn('[save] 履歴記録に失敗:', histErr.message);
             
             // 3. Notify author if someone else edited
             if (oldItem.author !== item.author) {
@@ -253,16 +254,18 @@ export const apiClient = {
     },
 
     async markNotificationAsRead(id: string): Promise<void> {
-        await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+        const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+        if (error) throw error;
     },
 
     async createNotification(recipientId: string, senderName: string, type: string, knowledgeId: string): Promise<void> {
-        await supabase.from('notifications').insert({
+        const { error } = await supabase.from('notifications').insert({
             recipient_id: recipientId,
             sender_name: senderName,
             type: type,
             knowledge_id: knowledgeId
         });
+        if (error) throw error;
     },
 
     async delete(id: string): Promise<void> {
@@ -289,10 +292,12 @@ export const apiClient = {
             const toAdd = data.incidents.filter(n => !currentNames.includes(n));
 
             if (toDelete.length > 0) {
-                await supabase.from('master_incidents').delete().in('name', toDelete);
+                const { error } = await supabase.from('master_incidents').delete().in('name', toDelete);
+                if (error) throw error;
             }
             if (toAdd.length > 0) {
-                await supabase.from('master_incidents').insert(toAdd.map(name => ({ name })));
+                const { error } = await supabase.from('master_incidents').insert(toAdd.map(name => ({ name })));
+                if (error) throw error;
             }
         } catch (e) {
             console.error("Failed to sync incidents:", e);
@@ -309,10 +314,12 @@ export const apiClient = {
             const toAddCat = data.categories.filter(n => !currentCatNames.includes(n));
 
             if (toDeleteCat.length > 0) {
-                await supabase.from('master_categories').delete().in('name', toDeleteCat);
+                const { error } = await supabase.from('master_categories').delete().in('name', toDeleteCat);
+                if (error) throw error;
             }
             if (toAddCat.length > 0) {
-                await supabase.from('master_categories').insert(toAddCat.map(name => ({ name })));
+                const { error } = await supabase.from('master_categories').insert(toAddCat.map(name => ({ name })));
+                if (error) throw error;
             }
         } catch (e) {
             console.error("Failed to sync categories:", e);

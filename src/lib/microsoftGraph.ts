@@ -2,7 +2,7 @@ import { Client, AuthenticationProvider } from "@microsoft/microsoft-graph-clien
 
 class SupabaseTokenAuthProvider implements AuthenticationProvider {
     public async getAccessToken(): Promise<string> {
-        const token = localStorage.getItem('microsoft_graph_token');
+        const token = sessionStorage.getItem('microsoft_graph_token');
         if (!token) {
             throw new Error("LoginRequired");
         }
@@ -16,7 +16,7 @@ export const getGraphClient = async () => {
 };
 
 export const getToken = async (): Promise<string | null> => {
-    return localStorage.getItem('microsoft_graph_token');
+    return sessionStorage.getItem('microsoft_graph_token');
 };
 
 // 後方互換性のため（呼び出されても何もしない）

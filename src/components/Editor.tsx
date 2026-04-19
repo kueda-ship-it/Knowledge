@@ -376,18 +376,18 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {/* 1. Incident Category & Details (Moved to top) */}
-                <div style={{ display: 'flex', gap: '10px', padding: '15px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', gap: '14px', padding: '18px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label>インシデント区分 <span style={{ color: 'red' }}>*</span></label>
-                        <select id="category" value={formData.category || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }}>
+                        <select id="category" value={formData.category || ''} onChange={handleChange} style={{ width: '100%', padding: '12px 14px', border: '1px solid var(--input-border)', borderRadius: '8px', background: 'var(--input-bg)', color: 'var(--text)', fontSize: '0.95rem', lineHeight: 1.4 }}>
                             <option value="">選択してください</option>
                             {masters.categories.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                     </div>
-                    <div style={{ flex: 2 }}>
+                    <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label>インシデント詳細 (選択追加) <span style={{ color: 'red' }}>*</span></label>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                            <select onChange={handleIncidentAdd} style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <select onChange={handleIncidentAdd} style={{ width: '100%', padding: '12px 14px', border: '1px solid var(--input-border)', borderRadius: '8px', background: 'var(--input-bg)', color: 'var(--text)', fontSize: '0.95rem', lineHeight: 1.4 }}>
                                 <option value="">選択してください</option>
                                 {masters.incidents.map(i => <option key={i} value={i}>{i}</option>)}
                             </select>

@@ -29,9 +29,9 @@ body { margin: 0; font-family: sans-serif; background: var(--bg); color: var(--t
 .admin-card { border-color: #fca5a5; }
 
 /* ボタン類 */
-.primary-btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
-.secondary-btn { background: #cbd5e1; color: #334155; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-.danger-btn { background: var(--danger); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+.primary-btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.02em; }
+.secondary-btn { background: #cbd5e1; color: #334155; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+.danger-btn { background: var(--danger); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.02em; }
 .full-width { width: 100%; margin-top: 10px; }
 .required { color: var(--danger); font-weight: bold; margin-left: 3px; }
 input, textarea, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }

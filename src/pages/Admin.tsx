@@ -55,8 +55,24 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     const loadMasters = async (silent = false) => {
         try {
             const data = await apiClient.fetchMasters();
-            setMasterData(data);
-            localStorage.setItem(MASTERS_CACHE_KEY, JSON.stringify(data));
+            // Guard: 直前まで非空だったのに全カテゴリが空で返ってきた場合は、
+            // JWT 期限切れや一時的な RLS 拒否とみなしキャッシュを上書きしない。
+            setMasterData(prev => {
+                const prevHadData =
+                    (prev.users?.length ?? 0) > 0 ||
+                    (prev.categories?.length ?? 0) > 0 ||
+                    (prev.incidents?.length ?? 0) > 0;
+                const allEmpty =
+                    (data.users?.length ?? 0) === 0 &&
+                    (data.categories?.length ?? 0) === 0 &&
+                    (data.incidents?.length ?? 0) === 0;
+                if (prevHadData && allEmpty) {
+                    console.warn('[loadMasters] 縮退レスポンスを検知したため既存データを保持します');
+                    return prev;
+                }
+                localStorage.setItem(MASTERS_CACHE_KEY, JSON.stringify(data));
+                return data;
+            });
             setIsDirty(false);
         } catch (e) {
             console.error(e);

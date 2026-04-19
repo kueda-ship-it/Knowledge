@@ -87,12 +87,18 @@ export const apiClient = {
     async fetchMasters(): Promise<MasterData> {
         // profiles は FDW foreign table で category を持てないため、
         // category は public.profile_categories (ローカル) を別取得してマージする。
-        const [{ data: incidents }, { data: categories }, { data: profiles }, { data: profCats }] = await Promise.all([
+        const [incRes, catRes, profRes, profCatRes] = await Promise.all([
             supabase.from('master_incidents').select('name').order('name'),
             supabase.from('master_categories').select('name').order('name'),
             supabase.from('profiles').select('id, email, display_name, knl_role, avatar_url').order('display_name'),
             supabase.from('profile_categories').select('user_id, category'),
         ]);
+        const firstErr = incRes.error || catRes.error || profRes.error || profCatRes.error;
+        if (firstErr) throw firstErr;
+        const incidents = incRes.data;
+        const categories = catRes.data;
+        const profiles = profRes.data;
+        const profCats = profCatRes.data;
 
         const catsByUser = new Map<string, string[]>();
         for (const row of (profCats ?? []) as Array<{ user_id: string; category: string | null }>) {

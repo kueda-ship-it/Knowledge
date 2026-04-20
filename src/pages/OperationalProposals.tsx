@@ -1364,8 +1364,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                     color: rgba(255,255,255,0.6); font-size: 0.825rem; cursor: pointer;
                     transition: all 0.3s cubic-bezier(0.16,1,0.3,1); backdrop-filter: blur(8px); white-space: nowrap;
                 }
-                .badge-tab:not(.is-active):hover { background: rgba(255,255,255,0.14) !important; border-color: rgba(255,255,255,0.35) !important; color: #fff !important; transform: translateY(-1px); }
-                .badge-tab.is-active:hover { filter: brightness(1.12); transform: translateY(-1px); }
+                .badge-tab:not(.is-active):hover { background: rgba(255,255,255,0.1) !important; border-color: rgba(147,197,253,0.35) !important; color: #fff !important; }
+                .badge-tab.is-active:hover { filter: brightness(1.12); }
                 .badge-tab.active { background: rgba(99,102,241,0.5); color: #fff; border-color: rgba(99,102,241,0.8); font-weight: 700; box-shadow: 0 4px 15px rgba(99,102,241,0.3); }
                 .proposal-card:hover { transform: translateX(8px); }
                 .decided-card:hover { background: rgba(52,211,153,0.1) !important; border-color: rgba(52,211,153,0.45) !important; transform: translateX(-2px); }

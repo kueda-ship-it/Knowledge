@@ -80,14 +80,24 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
                 <ChevronDown size={14} style={{ opacity: 0.6, transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none', flexShrink: 0 }} />
             </button>
 
-            {open && rect && createPortal(
+            {open && rect && (() => {
+                // ボタンが画面下半分にあれば上に出す、上半分にあれば下に出す
+                const vh = window.innerHeight;
+                const placeAbove = rect.top + rect.height / 2 > vh / 2;
+                // 推定ポップアップ高さ: option数 × ~40px + padding
+                const estHeight = Math.min(options.length * 40 + 12, 320);
+                const positionStyle: React.CSSProperties = placeAbove
+                    ? { bottom: vh - rect.top + 6, left: rect.left }
+                    : { top: rect.bottom + 6, left: rect.left };
+                return createPortal(
                 <div
                     ref={popupRef}
                     style={{
                         position: 'fixed',
-                        top: rect.bottom + 6,
-                        left: rect.left,
+                        ...positionStyle,
                         width: Math.max(rect.width, 200),
+                        maxHeight: estHeight,
+                        overflowY: 'auto',
                         zIndex: 99999,
                         padding: 6,
                         borderRadius: 14,
@@ -96,7 +106,9 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
                         WebkitBackdropFilter: 'blur(28px) saturate(180%)',
                         border: '1px solid rgba(255, 255, 255, 0.12)',
                         boxShadow: '0 2px 0 0 rgba(255,255,255,0.06) inset, 0 16px 48px 0 rgba(0,0,0,0.45), 0 4px 12px 0 rgba(0,0,0,0.25)',
-                        animation: 'glass-select-fade 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+                        animation: placeAbove
+                            ? 'glass-select-fade-up 0.15s cubic-bezier(0.16, 1, 0.3, 1)'
+                            : 'glass-select-fade 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
                     }}
                 >
                     {options.map(opt => {
@@ -129,11 +141,16 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
                     })}
                 </div>,
                 document.body
-            )}
+            );
+            })()}
 
             <style>{`
                 @keyframes glass-select-fade {
                     from { opacity: 0; transform: translateY(-4px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes glass-select-fade-up {
+                    from { opacity: 0; transform: translateY(4px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
             `}</style>

@@ -138,10 +138,15 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
             alert("名前とメールアドレスを入力してください。");
             return;
         }
+        const email = newUserEmail.trim().toLowerCase();
+        if (masterData.users.some(u => (u.email ?? '').toLowerCase() === email)) {
+            alert("このメールアドレスは既に登録されています。");
+            return;
+        }
         const newUser: User = {
             id: `new-${Date.now()}`,
             name: newUserName.trim(),
-            email: newUserEmail.trim(),
+            email,
             role: newUserRole,
             categories: [],
         };
@@ -339,7 +344,44 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                                         ) : (
                                                             <div className="avatar-initials">{getInitial(u.name)}</div>
                                                         )}
-                                                        <span className="user-name">{u.name}</span>
+                                                        <input
+                                                            type="text"
+                                                            className="user-name user-name-input"
+                                                            value={u.name}
+                                                            onChange={(e) => updateUser(i, 'name', e.target.value)}
+                                                            placeholder="表示名"
+                                                            title="クリックで表示名を編集"
+                                                            style={{
+                                                                background: 'transparent',
+                                                                border: '1px solid transparent',
+                                                                color: 'inherit',
+                                                                font: 'inherit',
+                                                                padding: '4px 8px',
+                                                                borderRadius: 8,
+                                                                outline: 'none',
+                                                                minWidth: 0,
+                                                                width: '100%',
+                                                                transition: 'border-color 0.15s, background 0.15s',
+                                                            }}
+                                                            onFocus={(e) => {
+                                                                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                                                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                                                            }}
+                                                            onBlur={(e) => {
+                                                                e.currentTarget.style.borderColor = 'transparent';
+                                                                e.currentTarget.style.background = 'transparent';
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                if (document.activeElement !== e.currentTarget) {
+                                                                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+                                                                }
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                if (document.activeElement !== e.currentTarget) {
+                                                                    e.currentTarget.style.borderColor = 'transparent';
+                                                                }
+                                                            }}
+                                                        />
                                                     </div>
                                                 </td>
                                                 <td>

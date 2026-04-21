@@ -24,48 +24,86 @@ const AuthContext = createContext<AuthContextType>({
 })
 
 async function fetchProfile(session: Session): Promise<User | null> {
+  const sessionEmail = (session.user.email ?? '').toLowerCase()
+
   const { data, error } = await supabase
     .from('profiles')
     .select('id, display_name, knl_role, email, avatar_url')
     .eq('id', session.user.id)
-    .single()
+    .maybeSingle()
 
-  if (!data || error) {
-    console.log('[Auth] Profile not found, creating new profile for:', session.user.email)
-
-    const { data: inserted, error: insertError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: session.user.id,
-        email: session.user.email,
-        display_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '新規ユーザー',
-        avatar_url: session.user.user_metadata?.avatar_url || null,
-        knl_role: 'viewer'
-      })
-      .select()
-      .single()
-
-    if (insertError) {
-      console.error('[Auth] Initial registration failed:', insertError)
-      return null
-    }
-
+  if (data && !error) {
     return {
-      id: inserted.id,
-      name: inserted.display_name ?? session.user.email ?? '不明',
-      email: inserted.email ?? session.user.email,
-      role: (inserted.knl_role as User['role']) ?? 'viewer',
-      avatarUrl: inserted.avatar_url ?? undefined,
+      id: data.id,
+      name: data.display_name ?? session.user.email ?? '不明',
+      email: data.email ?? session.user.email,
+      role: (data.knl_role as User['role']) ?? 'viewer',
+      avatarUrl: data.avatar_url ?? undefined,
       categories: [],
     }
   }
 
+  // id 一致なし → email でadmin事前登録行を探して claim する（id を差し替え）
+  if (sessionEmail) {
+    const { data: byEmail } = await supabase
+      .from('profiles')
+      .select('id, display_name, knl_role, email, avatar_url')
+      .ilike('email', sessionEmail)
+      .maybeSingle()
+
+    if (byEmail) {
+      console.log('[Auth] Claiming pre-seeded profile by email:', sessionEmail)
+      const { data: claimed, error: claimErr } = await supabase
+        .from('profiles')
+        .update({
+          id: session.user.id,
+          display_name: byEmail.display_name || session.user.user_metadata?.full_name || sessionEmail.split('@')[0],
+          avatar_url: byEmail.avatar_url ?? session.user.user_metadata?.avatar_url ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', byEmail.id)
+        .select()
+        .single()
+
+      if (!claimErr && claimed) {
+        return {
+          id: claimed.id,
+          name: claimed.display_name ?? session.user.email ?? '不明',
+          email: claimed.email ?? session.user.email,
+          role: (claimed.knl_role as User['role']) ?? 'viewer',
+          avatarUrl: claimed.avatar_url ?? undefined,
+          categories: [],
+        }
+      }
+      console.error('[Auth] Claim by email failed, falling back to insert:', claimErr)
+    }
+  }
+
+  console.log('[Auth] Profile not found, creating new profile for:', session.user.email)
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('profiles')
+    .insert({
+      id: session.user.id,
+      email: sessionEmail || session.user.email,
+      display_name: session.user.user_metadata?.full_name || sessionEmail.split('@')[0] || '新規ユーザー',
+      avatar_url: session.user.user_metadata?.avatar_url || null,
+      knl_role: 'viewer'
+    })
+    .select()
+    .single()
+
+  if (insertError) {
+    console.error('[Auth] Initial registration failed:', insertError)
+    return null
+  }
+
   return {
-    id: data.id,
-    name: data.display_name ?? session.user.email ?? '不明',
-    email: data.email ?? session.user.email,
-    role: (data.knl_role as User['role']) ?? 'viewer',
-    avatarUrl: data.avatar_url ?? undefined,
+    id: inserted.id,
+    name: inserted.display_name ?? session.user.email ?? '不明',
+    email: inserted.email ?? session.user.email,
+    role: (inserted.knl_role as User['role']) ?? 'viewer',
+    avatarUrl: inserted.avatar_url ?? undefined,
     categories: [],
   }
 }

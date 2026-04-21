@@ -389,17 +389,35 @@ export const apiClient = {
         try {
             for (const u of data.users) {
                 const isNew = u.id.startsWith('new-');
+                const normalizedEmail = (u.email ?? '').trim().toLowerCase();
                 const payload: any = {
-                    email: u.email,
+                    email: normalizedEmail,
                     display_name: u.name,
                     knl_role: u.role,
                     updated_at: new Date().toISOString(),
                 };
 
                 if (isNew) {
-                    payload.id = self.crypto.randomUUID();
-                    const { error: insErr } = await supabase.from('profiles').insert(payload);
-                    if (insErr) throw insErr;
+                    // 既に同じメールの事前登録行があるなら UPDATE（claim 前提）、無ければ INSERT
+                    const { data: existing } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .ilike('email', normalizedEmail)
+                        .maybeSingle();
+
+                    if (existing) {
+                        const { error: updErr } = await supabase
+                            .from('profiles')
+                            .update(payload)
+                            .eq('id', existing.id);
+                        if (updErr) throw updErr;
+                    } else {
+                        const cryptoObj: Crypto | undefined = (globalThis as any).crypto ?? (self as any).crypto;
+                        if (!cryptoObj?.randomUUID) throw new Error('crypto.randomUUID unavailable');
+                        payload.id = cryptoObj.randomUUID();
+                        const { error: insErr } = await supabase.from('profiles').insert(payload);
+                        if (insErr) throw insErr;
+                    }
                 } else {
                     const { error: updErr } = await supabase.from('profiles').update(payload).eq('id', u.id);
                     if (updErr) throw updErr;

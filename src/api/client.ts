@@ -151,25 +151,36 @@ export const apiClient = {
             throw new Error('Supabaseへの保存が権限により拒否されました（RLSポリシーを確認してください）');
         }
 
-        // 2. Record history if there's a change in content or title
+        // 2. 付随処理 (履歴・通知) はメインの保存完了後に fire-and-forget で実行。
+        //    profiles は FDW foreign table で 1 クエリ 1秒以上かかる / 接続不安定時はハングするため、
+        //    ここで await すると保存がタイムアウトする。保存は既に成功しているので背景処理に回す。
         if (oldItem && (oldItem.content !== item.content || oldItem.title !== item.title || oldItem.status !== item.status)) {
-            const { error: histErr } = await supabase.from('knowledge_history').insert({
-                knowledge_id: item.id,
-                changed_by: item.author,
-                old_content: oldItem.content,
-                new_content: item.content,
-                comment: oldItem.status !== item.status ? `Status changed to ${item.status}` : 'Content updated'
-            });
-            if (histErr) console.warn('[save] 履歴記録に失敗:', histErr.message);
-            
-            // 3. Notify author if someone else edited
-            if (oldItem.author !== item.author) {
-                // Find author profile to get ID
-                const { data: authorProf } = await supabase.from('profiles').select('id').eq('display_name', oldItem.author).maybeSingle();
-                if (authorProf) {
-                    await this.createNotification(authorProf.id, item.author, 'edited', item.id);
+            const authorChanged = oldItem.author !== item.author;
+            const self = this;
+            (async () => {
+                try {
+                    const { error: histErr } = await supabase.from('knowledge_history').insert({
+                        knowledge_id: item.id,
+                        changed_by: item.author,
+                        old_content: oldItem.content,
+                        new_content: item.content,
+                        comment: oldItem.status !== item.status ? `Status changed to ${item.status}` : 'Content updated'
+                    });
+                    if (histErr) console.warn('[save/bg] 履歴記録に失敗:', histErr.message);
+
+                    if (authorChanged) {
+                        // FDW profiles は遅いので 3秒でタイムアウト
+                        const lookupP = supabase.from('profiles').select('id').eq('display_name', oldItem.author).maybeSingle();
+                        const timeoutP = new Promise<{ data: null }>(resolve => setTimeout(() => resolve({ data: null }), 3000));
+                        const { data: authorProf } = await Promise.race([lookupP, timeoutP]) as any;
+                        if (authorProf?.id) {
+                            await self.createNotification(authorProf.id, item.author, 'edited', item.id);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[save/bg] 付随処理エラー (保存自体は成功済み):', e);
                 }
-            }
+            })();
         }
     },
 

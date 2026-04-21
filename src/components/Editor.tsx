@@ -4,6 +4,7 @@ import { Trash2, X, RotateCcw, Check, Paperclip, ExternalLink, FileText, Image, 
 import { apiClient } from '../api/client';
 import { useOneDriveUpload } from '../hooks/useOneDriveUpload';
 import { EditHistory } from '../types';
+import { GlassSelect } from './common/GlassSelect';
 
 interface EditorProps {
     item: KnowledgeItem | null;
@@ -379,18 +380,33 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                 <div style={{ display: 'flex', gap: '14px', padding: '18px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid var(--border)' }}>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label>インシデント区分 <span style={{ color: 'red' }}>*</span></label>
-                        <select id="category" value={formData.category || ''} onChange={handleChange} style={{ width: '100%', padding: '12px 14px', border: '1px solid var(--input-border)', borderRadius: '8px', background: 'var(--input-bg)', color: 'var(--text)', fontSize: '0.95rem', lineHeight: 1.4 }}>
-                            <option value="">選択してください</option>
-                            {masters.categories.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                        <div style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--input-border)', borderRadius: '8px', background: 'var(--input-bg)' }}>
+                            <GlassSelect
+                                value={formData.category || ''}
+                                options={[{ value: '', label: '選択してください' }, ...masters.categories.map(c => ({ value: c, label: c }))]}
+                                onChange={(v) => setFormData(prev => ({ ...prev, category: v }))}
+                            />
+                        </div>
                     </div>
                     <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label>インシデント詳細 (選択追加) <span style={{ color: 'red' }}>*</span></label>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <select onChange={handleIncidentAdd} style={{ width: '100%', padding: '12px 14px', border: '1px solid var(--input-border)', borderRadius: '8px', background: 'var(--input-bg)', color: 'var(--text)', fontSize: '0.95rem', lineHeight: 1.4 }}>
-                                <option value="">選択してください</option>
-                                {masters.incidents.map(i => <option key={i} value={i}>{i}</option>)}
-                            </select>
+                            <div style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--input-border)', borderRadius: '8px', background: 'var(--input-bg)' }}>
+                                <GlassSelect
+                                    value=""
+                                    options={[
+                                        { value: '', label: '選択してください' },
+                                        ...masters.incidents
+                                            .filter(i => !selectedIncidents.includes(i))
+                                            .map(i => ({ value: i, label: i })),
+                                    ]}
+                                    onChange={(v) => {
+                                        if (v && !selectedIncidents.includes(v)) {
+                                            setSelectedIncidents([...selectedIncidents, v]);
+                                        }
+                                    }}
+                                />
+                            </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                                 {selectedIncidents.map(inc => (
                                     <div key={inc} style={{ background: 'var(--border)', color: 'var(--text)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>

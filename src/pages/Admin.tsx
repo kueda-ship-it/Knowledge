@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { MasterData, User } from '../types';
 import { Save, Trash2, Plus, Users, LayoutGrid, ShieldCheck, Mail, Info, ChevronRight, UsersRound } from 'lucide-react';
 import { apiClient } from '../api/client';
@@ -15,6 +15,63 @@ interface AdminProps {
 }
 
 const MASTERS_CACHE_KEY = 'knowledge_masters_v2';
+
+const getInitial = (name: string) => (name || '?').charAt(0).toUpperCase();
+
+interface UserRowProps {
+    user: User;
+    index: number;
+    onChangeName: (index: number, val: string) => void;
+    onChangeRole: (index: number, val: string) => void;
+}
+
+const UserRow = React.memo(function UserRow({ user: u, index: i, onChangeName, onChangeRole }: UserRowProps) {
+    const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        onChangeName(i, e.target.value);
+    }, [i, onChangeName]);
+    const handleRoleChange = useCallback((v: string) => {
+        onChangeRole(i, v);
+    }, [i, onChangeRole]);
+
+    return (
+        <tr>
+            <td>
+                <div className="user-info-cell">
+                    {u.avatarUrl ? (
+                        <img src={u.avatarUrl} alt="" className="avatar-img" />
+                    ) : (
+                        <div className="avatar-initials">{getInitial(u.name)}</div>
+                    )}
+                    <input
+                        type="text"
+                        className="user-name user-name-input"
+                        value={u.name}
+                        onChange={handleNameChange}
+                        placeholder="表示名"
+                        title="クリックで表示名を編集"
+                    />
+                </div>
+            </td>
+            <td>
+                <div className="email-cell">
+                    <Mail size={12} className="muted-icon" />
+                    <span>{u.email || '未設定'}</span>
+                </div>
+            </td>
+            <td>
+                <div className="role-select-wrapper">
+                    <ShieldCheck size={14} className={`role-icon role-${u.role}`} />
+                    <GlassSelect
+                        value={u.role}
+                        options={ROLE_OPTIONS}
+                        onChange={handleRoleChange}
+                        compact
+                    />
+                </div>
+            </td>
+        </tr>
+    );
+});
 
 export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     const isFullAdmin = ['master', 'manager'].includes(user.role);
@@ -112,12 +169,33 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
         setIsDirty(true);
     };
 
-    const updateUser = (index: number, field: keyof User, val: string) => {
-        const newUsers = [...masterData.users];
-        (newUsers[index] as any)[field] = val;
-        setMasterData(prev => ({ ...prev, users: newUsers }));
+    const updateUser = useCallback((index: number, field: keyof User, val: string) => {
+        setMasterData(prev => {
+            const newUsers = [...prev.users];
+            (newUsers[index] as any)[field] = val;
+            return { ...prev, users: newUsers };
+        });
         setIsDirty(true);
-    };
+    }, []);
+
+    const handleUserNameChange = useCallback((index: number, val: string) => {
+        updateUser(index, 'name', val);
+    }, [updateUser]);
+
+    const handleUserRoleChange = useCallback((index: number, val: string) => {
+        updateUser(index, 'role', val);
+    }, [updateUser]);
+
+    const filteredUsersWithIndex = useMemo(() => {
+        const q = userFilter.trim().toLowerCase();
+        return masterData.users
+            .map((u, origIdx) => ({ u, origIdx }))
+            .filter(({ u }) => {
+                if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+                if (!q) return true;
+                return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+            });
+    }, [masterData.users, userFilter, roleFilter]);
 
     const bulkPromoteViewers = () => {
         const viewerCount = masterData.users.filter(u => u.role === 'viewer').length;
@@ -157,7 +235,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
         setIsDirty(true);
     };
 
-    const getInitial = (name: string) => name.charAt(0).toUpperCase();
 
     return (
         <div className="admin-page-root">
@@ -304,15 +381,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                     />
                                 </div>
                                 <span className="user-filter-count">
-                                    {(() => {
-                                        const q = userFilter.trim().toLowerCase();
-                                        const matched = masterData.users.filter(u => {
-                                            if (roleFilter !== 'all' && u.role !== roleFilter) return false;
-                                            if (!q) return true;
-                                            return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
-                                        }).length;
-                                        return `${matched} / ${masterData.users.length}`;
-                                    })()}
+                                    {`${filteredUsersWithIndex.length} / ${masterData.users.length}`}
                                 </span>
                             </div>
 
@@ -326,82 +395,14 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {(() => {
-                                            const q = userFilter.trim().toLowerCase();
-                                            return masterData.users
-                                                .map((u, origIdx) => ({ u, origIdx }))
-                                                .filter(({ u }) => {
-                                                    if (roleFilter !== 'all' && u.role !== roleFilter) return false;
-                                                    if (!q) return true;
-                                                    return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
-                                                });
-                                        })().map(({ u, origIdx: i }) => (
-                                            <tr key={u.id}>
-                                                <td>
-                                                    <div className="user-info-cell">
-                                                        {u.avatarUrl ? (
-                                                            <img src={u.avatarUrl} alt="" className="avatar-img" />
-                                                        ) : (
-                                                            <div className="avatar-initials">{getInitial(u.name)}</div>
-                                                        )}
-                                                        <input
-                                                            type="text"
-                                                            className="user-name user-name-input"
-                                                            value={u.name}
-                                                            onChange={(e) => updateUser(i, 'name', e.target.value)}
-                                                            placeholder="表示名"
-                                                            title="クリックで表示名を編集"
-                                                            style={{
-                                                                background: 'transparent',
-                                                                border: '1px solid transparent',
-                                                                color: 'inherit',
-                                                                font: 'inherit',
-                                                                padding: '4px 8px',
-                                                                borderRadius: 8,
-                                                                outline: 'none',
-                                                                minWidth: 0,
-                                                                width: '100%',
-                                                                transition: 'border-color 0.15s, background 0.15s',
-                                                            }}
-                                                            onFocus={(e) => {
-                                                                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
-                                                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                                                            }}
-                                                            onBlur={(e) => {
-                                                                e.currentTarget.style.borderColor = 'transparent';
-                                                                e.currentTarget.style.background = 'transparent';
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                if (document.activeElement !== e.currentTarget) {
-                                                                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
-                                                                }
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                if (document.activeElement !== e.currentTarget) {
-                                                                    e.currentTarget.style.borderColor = 'transparent';
-                                                                }
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div className="email-cell">
-                                                        <Mail size={12} className="muted-icon" />
-                                                        <span>{u.email || '未設定'}</span>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div className="role-select-wrapper">
-                                                        <ShieldCheck size={14} className={`role-icon role-${u.role}`} />
-                                                        <GlassSelect
-                                                            value={u.role}
-                                                            options={ROLE_OPTIONS}
-                                                            onChange={(v) => updateUser(i, 'role', v)}
-                                                            compact
-                                                        />
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                        {filteredUsersWithIndex.map(({ u, origIdx }) => (
+                                            <UserRow
+                                                key={u.id}
+                                                user={u}
+                                                index={origIdx}
+                                                onChangeName={handleUserNameChange}
+                                                onChangeRole={handleUserRoleChange}
+                                            />
                                         ))}
                                     </tbody>
                                 </table>

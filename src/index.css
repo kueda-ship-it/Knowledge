@@ -1212,3 +1212,26 @@ body[data-theme="liquid"] .proposal-card:hover {
   box-shadow: 0 0 0 1px rgba(148,163,184,0.35), 0 8px 22px -10px rgba(148,163,184,0.4) !important;
 }
 .status-option-btn.is-active:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+/* ==================================================== */
+/* ユーザー一覧の表示名インライン編集 input               */
+/* ==================================================== */
+.user-name-input {
+  background: transparent;
+  border: 1px solid transparent;
+  color: inherit;
+  font: inherit;
+  padding: 4px 8px;
+  border-radius: 8px;
+  outline: none;
+  min-width: 0;
+  width: 100%;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.user-name-input:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.user-name-input:focus {
+  border-color: rgba(59, 130, 246, 0.5);
+  background-color: rgba(255, 255, 255, 0.04);
+}

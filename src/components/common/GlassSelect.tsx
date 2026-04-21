@@ -29,14 +29,22 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
             if (popupRef.current?.contains(e.target as Node)) return;
             setOpen(false);
         };
-        const onScroll = () => setOpen(false);
+        const onScroll = (e: Event) => {
+            // ポップアップ内部のスクロールでは閉じない
+            if (popupRef.current?.contains(e.target as Node)) return;
+            // 外側がスクロールされたらボタン位置が変わるので再計算
+            if (btnRef.current) setRect(btnRef.current.getBoundingClientRect());
+        };
+        const onResize = () => {
+            if (btnRef.current) setRect(btnRef.current.getBoundingClientRect());
+        };
         document.addEventListener('mousedown', close);
         window.addEventListener('scroll', onScroll, true);
-        window.addEventListener('resize', onScroll);
+        window.addEventListener('resize', onResize);
         return () => {
             document.removeEventListener('mousedown', close);
             window.removeEventListener('scroll', onScroll, true);
-            window.removeEventListener('resize', onScroll);
+            window.removeEventListener('resize', onResize);
         };
     }, [open]);
 

@@ -119,7 +119,11 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             return alert("依頼番号は半角数字11桁で入力してください");
         }
 
-        const tags = tagInput.split('#').map(t => t.trim()).filter(t => t);
+        // 半角 # / 全角 ＃ / 音楽記号 ♯ のいずれでも区切れるように正規化
+        const tags = tagInput
+            .split(/[#＃♯]/)
+            .map(t => t.trim())
+            .filter(t => t);
         let title = formData.title?.trim();
         if (!title) title = `[${formData.category}] ${selectedIncidents.join(', ')}`;
 

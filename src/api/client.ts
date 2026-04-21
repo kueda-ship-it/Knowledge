@@ -123,9 +123,8 @@ export const apiClient = {
     },
 
     async save(item: KnowledgeItem, oldItem?: KnowledgeItem): Promise<void> {
-        // upsert + .select('id') は supabase-js 内部で Prefer ヘッダや再取得が走り、
-        // 特定条件でハング/タイムアウトする事例があるため、
-        // 既存/新規で明示的に UPDATE / INSERT を分岐する (応答本体も要求しない = Prefer: return=minimal)
+        // supabase-js が内部の auth ロックでハングする事例が発生しているため、
+        // 保存パスは raw fetch で PostgREST を直接叩く。token は localStorage から直接取得。
         const row = {
             id: item.id,
             title: item.title,
@@ -144,12 +143,59 @@ export const apiClient = {
             attachments: item.attachments ?? [],
         };
 
+        const url = (import.meta as any).env.VITE_SUPABASE_URL as string;
+        const anonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY as string;
+
+        // localStorage から JWT を直接取得 (supabase-js の getSession ロック待ちを回避)
+        let accessToken: string | null = null;
+        try {
+            const ref = url.match(/https?:\/\/([^.]+)\./)?.[1];
+            if (ref) {
+                const raw = localStorage.getItem(`sb-${ref}-auth-token`);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    accessToken = parsed?.access_token || parsed?.currentSession?.access_token || null;
+                }
+            }
+        } catch (e) {
+            console.warn('[save] token 取得失敗, supabase-js 経由にフォールバック:', e);
+        }
+
+        // フォールバック: supabase-js 経由 (ロック待ちの可能性あり)
+        if (!accessToken) {
+            const { data } = await supabase.auth.getSession();
+            accessToken = data.session?.access_token || anonKey;
+        }
+
+        const headers: Record<string, string> = {
+            'apikey': anonKey,
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+        };
+
         if (oldItem) {
-            const { error } = await supabase.from('knowledge').update(row).eq('id', item.id);
-            if (error) throw error;
+            // 既存更新: PATCH
+            const res = await fetch(`${url}/rest/v1/knowledge?id=eq.${encodeURIComponent(item.id)}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify(row),
+            });
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                throw new Error(`保存に失敗 (${res.status}): ${text}`);
+            }
         } else {
-            const { error } = await supabase.from('knowledge').insert(row);
-            if (error) throw error;
+            // 新規: POST
+            const res = await fetch(`${url}/rest/v1/knowledge`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(row),
+            });
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                throw new Error(`保存に失敗 (${res.status}): ${text}`);
+            }
         }
 
         // 2. 付随処理 (履歴・通知) はメインの保存完了後に fire-and-forget で実行。

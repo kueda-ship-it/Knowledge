@@ -111,6 +111,36 @@ body[data-theme="dark"] {
 /* ---------- Liquid Glass テーマ ---------- */
 /* 4-layer composition: scene (mesh+orbs) / glass / edge / drop-shadow   */
 /* v0.app glass-refraction 由来の設計トークンを再現                       */
+/* dark / liquid テーマ: ネイティブ input/select/option をテーマに合わせる */
+body[data-theme="dark"],
+body[data-theme="liquid"] {
+  color-scheme: dark;
+}
+
+/* Chrome autofill が白背景になる問題を抑止 (号機/物件名/依頼番号等) */
+body[data-theme="dark"] input:-webkit-autofill,
+body[data-theme="liquid"] input:-webkit-autofill,
+body[data-theme="dark"] input:-webkit-autofill:hover,
+body[data-theme="liquid"] input:-webkit-autofill:hover,
+body[data-theme="dark"] input:-webkit-autofill:focus,
+body[data-theme="liquid"] input:-webkit-autofill:focus,
+body[data-theme="dark"] textarea:-webkit-autofill,
+body[data-theme="liquid"] textarea:-webkit-autofill,
+body[data-theme="dark"] select:-webkit-autofill,
+body[data-theme="liquid"] select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px rgba(24, 28, 40, 0.6) inset !important;
+  -webkit-text-fill-color: #fff !important;
+  caret-color: #fff;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* ネイティブ <select> のドロップダウンオプションをダークに統一 */
+body[data-theme="dark"] select option,
+body[data-theme="liquid"] select option {
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
 body[data-theme="liquid"] {
   /* Accent */
   --primary: oklch(0.68 0.13 195);

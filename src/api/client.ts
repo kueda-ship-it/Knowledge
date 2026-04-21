@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { supabaseRealtime } from '../lib/supabaseRealtime';
 import { supabaseEquipment } from '../lib/supabaseEquipment';
 import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification, KnowledgeGroup } from '../types';
 
@@ -609,10 +610,11 @@ export const apiClient = {
 
     // Master Data Realtime
     // Realtime 基盤不安定時のキルスイッチ: VITE_ENABLE_REALTIME=true の場合のみ購読。
+    // Realtime 専用クライアントを使い、再接続ループが REST/Auth をハングさせないように分離。
     subscribeMasters(_callback: () => void) {
         const enabled = (import.meta as any).env?.VITE_ENABLE_REALTIME === 'true';
         if (!enabled) return null;
-        const channel = supabase.channel('master-data-sync');
+        const channel = supabaseRealtime.channel('master-data-sync');
         channel
             .on('postgres_changes', { event: '*', schema: 'public', table: 'master_categories' }, _callback)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'master_incidents' }, _callback)
@@ -624,7 +626,7 @@ export const apiClient = {
 
     unsubscribeMasters(channel: any) {
         if (channel) {
-            supabase.removeChannel(channel);
+            supabaseRealtime.removeChannel(channel);
         }
     },
 

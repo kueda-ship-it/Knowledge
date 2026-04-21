@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabaseRealtime } from '../lib/supabaseRealtime';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 type PostgresEvent = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
@@ -48,7 +48,7 @@ export function useRealtimeChannel(
             retryTimerRef.current = null;
         }
         if (channelRef.current) {
-            supabase.removeChannel(channelRef.current);
+            supabaseRealtime.removeChannel(channelRef.current);
             channelRef.current = null;
         }
     }, []);
@@ -59,14 +59,14 @@ export function useRealtimeChannel(
 
         // 既存チャンネルを破棄
         if (channelRef.current) {
-            supabase.removeChannel(channelRef.current);
+            supabaseRealtime.removeChannel(channelRef.current);
             channelRef.current = null;
         }
 
         // 無効な設定ではサブスクライブしない（未ログイン時等）
         if (!channelName || listenersRef.current.length === 0) return;
 
-        const channel = supabase.channel(channelName);
+        const channel = supabaseRealtime.channel(channelName);
 
         for (const listener of listenersRef.current) {
             channel.on(

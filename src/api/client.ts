@@ -123,32 +123,33 @@ export const apiClient = {
     },
 
     async save(item: KnowledgeItem, oldItem?: KnowledgeItem): Promise<void> {
-        // 1. Save knowledge
-        const { data: saved, error } = await supabase
-            .from('knowledge')
-            .upsert({
-                id: item.id,
-                title: item.title,
-                machine: item.machine,
-                property: item.property,
-                req_num: item.req_num,
-                category: item.category,
-                incidents: item.incidents,
-                tags: item.tags,
-                content: item.content,
-                phenomenon: item.phenomenon ?? '',
-                countermeasure: item.countermeasure ?? '',
-                status: item.status,
-                updated_at: item.updatedAt,
-                author: item.author,
-                attachments: item.attachments ?? [],
-            })
-            .select('id');
+        // upsert + .select('id') は supabase-js 内部で Prefer ヘッダや再取得が走り、
+        // 特定条件でハング/タイムアウトする事例があるため、
+        // 既存/新規で明示的に UPDATE / INSERT を分岐する (応答本体も要求しない = Prefer: return=minimal)
+        const row = {
+            id: item.id,
+            title: item.title,
+            machine: item.machine,
+            property: item.property,
+            req_num: item.req_num,
+            category: item.category,
+            incidents: item.incidents,
+            tags: item.tags,
+            content: item.content,
+            phenomenon: item.phenomenon ?? '',
+            countermeasure: item.countermeasure ?? '',
+            status: item.status,
+            updated_at: item.updatedAt,
+            author: item.author,
+            attachments: item.attachments ?? [],
+        };
 
-        if (error) throw error;
-        // RLSによるサイレント失敗を検出（エラーなしで書き込まれない場合）
-        if (!saved || saved.length === 0) {
-            throw new Error('Supabaseへの保存が権限により拒否されました（RLSポリシーを確認してください）');
+        if (oldItem) {
+            const { error } = await supabase.from('knowledge').update(row).eq('id', item.id);
+            if (error) throw error;
+        } else {
+            const { error } = await supabase.from('knowledge').insert(row);
+            if (error) throw error;
         }
 
         // 2. 付随処理 (履歴・通知) はメインの保存完了後に fire-and-forget で実行。

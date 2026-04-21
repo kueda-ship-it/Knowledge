@@ -544,16 +544,17 @@ export const apiClient = {
     },
 
     // Master Data Realtime
-    subscribeMasters(callback: () => void) {
+    // Realtime 基盤不安定時のキルスイッチ: VITE_ENABLE_REALTIME=true の場合のみ購読。
+    subscribeMasters(_callback: () => void) {
+        const enabled = (import.meta as any).env?.VITE_ENABLE_REALTIME === 'true';
+        if (!enabled) return null;
         const channel = supabase.channel('master-data-sync');
-        
         channel
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'master_categories' }, callback)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'master_incidents' }, callback)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, callback)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'profile_categories' }, callback)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'master_categories' }, _callback)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'master_incidents' }, _callback)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, _callback)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profile_categories' }, _callback)
             .subscribe();
-
         return channel;
     },
 

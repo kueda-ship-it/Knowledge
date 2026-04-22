@@ -1,5 +1,5 @@
 :root { --primary: #2563eb; --bg: #f8fafc; --text: #334155; --danger: #ef4444; --header-height: 60px; --unsolved-bg: #fff1f2; }
-body { margin: 0; font-family: Avenir, 'Avenir Next', 'Avenir Next LT Pro', 'Avenir LT Std', Nunito, 'BIZ UDPGothic', -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'Yu Gothic Medium', Meiryo, system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+body { margin: 0; font-family: Avenir, 'Avenir Next', 'Avenir Next LT Pro', 'Avenir LT Std', Nunito, -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'Meiryo UI', Meiryo, 'Yu Gothic Medium', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
 
 /* ヘッダー */
 #app-header {

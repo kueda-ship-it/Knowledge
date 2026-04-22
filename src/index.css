@@ -20,14 +20,15 @@
   --space-3xl: 64px;
   --space-4xl: 96px;
 
-  /* Latin: Avenir ファミリーを優先。macOS/iOS は標準搭載、Windows/Android は未搭載のため、 */
-  /* Google Fonts の代替 Nunito (Avenir に近い geometric sans) にフォールバック。 */
-  /* 日本語は BIZ UDPGothic (Universal Design)。 */
+  /* Latin: Avenir ファミリー優先（macOS/iOS 標準搭載）。未搭載環境は Google Fonts の Nunito。 */
+  /* 日本語: macOS は Hiragino、Windows は Meiryo UI (明示指定)、次点 Yu Gothic。 */
   --font-sans:
     Avenir, 'Avenir Next', 'Avenir Next LT Pro', 'Avenir LT Std',
-    Nunito, 'BIZ UDPGothic',
+    Nunito,
     -apple-system, BlinkMacSystemFont,
-    'Hiragino Kaku Gothic ProN', 'Yu Gothic Medium', Meiryo,
+    'Hiragino Kaku Gothic ProN',
+    'Meiryo UI', Meiryo,
+    'Yu Gothic Medium',
     system-ui, sans-serif;
   --font-mono:
     'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono',

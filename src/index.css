@@ -674,6 +674,16 @@ body[data-theme="liquid"] main.main-content[style] {
 /* フォーム入力                              */
 /* ======================================== */
 
+/* フォーム要素・ボタンはデフォルトで body の font-family を継承しないため明示的に指定 */
+button,
+input,
+select,
+textarea,
+optgroup,
+option {
+  font-family: inherit;
+}
+
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
 textarea,
 select {

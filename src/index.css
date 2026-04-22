@@ -20,10 +20,12 @@
   --space-3xl: 64px;
   --space-4xl: 96px;
 
-  /* Latin: Mona Sans (GitHub). Japanese: BIZ UDPGothic (Universal Design). */
-  /* ブラウザは先頭のフォントから順にグリフを引く → 英字は Mona、日本語は BIZ UDP に落ちる */
+  /* Latin: Avenir ファミリーを優先。macOS/iOS は標準搭載、Windows/Android は未搭載のため、 */
+  /* Google Fonts の代替 Nunito (Avenir に近い geometric sans) にフォールバック。 */
+  /* 日本語は BIZ UDPGothic (Universal Design)。 */
   --font-sans:
-    'Mona Sans', 'BIZ UDPGothic',
+    Avenir, 'Avenir Next', 'Avenir Next LT Pro', 'Avenir LT Std',
+    Nunito, 'BIZ UDPGothic',
     -apple-system, BlinkMacSystemFont,
     'Hiragino Kaku Gothic ProN', 'Yu Gothic Medium', Meiryo,
     system-ui, sans-serif;

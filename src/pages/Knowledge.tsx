@@ -17,10 +17,20 @@ interface KnowledgeProps {
 const CACHE_KEY = 'knowledge_data_v1';
 const MASTERS_CACHE_KEY = 'knowledge_masters_v2';
 
+// 作成日 desc でソート。createdAt が空の場合は updatedAt でフォールバック。
+// サーバー側でも同じ順にしているが、古いキャッシュ (updated_at desc) が残っていても
+// 表示順が崩れないように念のためクライアントでもソートする。
+const sortByCreatedDesc = (items: KnowledgeItem[]): KnowledgeItem[] =>
+    [...items].sort((a, b) => {
+        const ak = (a.createdAt ?? a.updatedAt) || '';
+        const bk = (b.createdAt ?? b.updatedAt) || '';
+        return bk.localeCompare(ak);
+    });
+
 export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditItem, onInitialEditConsumed }) => {
     const [view, setView] = useState<'list' | 'editor'>('list');
     const [data, setData] = useState<KnowledgeItem[]>(() =>
-        loadCache<KnowledgeItem[]>(CACHE_KEY, [])
+        sortByCreatedDesc(loadCache<KnowledgeItem[]>(CACHE_KEY, []))
     );
     const [filteredData, setFilteredData] = useState<KnowledgeItem[]>([]);
     const [masterData, setMasterData] = useState<MasterData>(() =>
@@ -152,7 +162,8 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
         // ナレッジ一覧とマスタ取得
         const fetchKnowledge = async () => {
             try {
-                const kData = await apiClient.fetchAll();
+                const raw = await apiClient.fetchAll();
+                const kData = sortByCreatedDesc(raw);
                 setData(kData);
                 saveCache(CACHE_KEY, kData);
             } catch (e) {

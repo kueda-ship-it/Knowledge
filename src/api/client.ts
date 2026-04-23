@@ -594,6 +594,14 @@ export const apiClient = {
         return String(maxNo + 1);
     },
 
+    async deleteProposal(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('operational_proposals')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+    },
+
     async createProposal(proposal: Partial<any>): Promise<void> {
         // source_no が未指定なら種別ごとに自動採番
         const record = { ...proposal };

@@ -222,7 +222,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null }
   }
 
-  const signOut = () => supabase.auth.signOut()
+  // supabase-js の auth ロックが詰まっているとサインアウト含む全操作が返ってこなくなる。
+  // ローカルのセッションストレージを同期的に消してから再読み込みすることで、
+  // どんな状態からでも確実にログイン画面に戻れるようにする。
+  const signOut = () => {
+    try {
+      // sb-<ref>-auth-token など supabase 由来の localStorage キーを全消し
+      const keys = Object.keys(localStorage)
+      for (const k of keys) {
+        if (k.startsWith('sb-') || k === 'supabase.auth.token') localStorage.removeItem(k)
+      }
+      sessionStorage.removeItem('microsoft_graph_token')
+      localStorage.removeItem('microsoft_graph_token')
+    } catch { /* noop */ }
+
+    // サインアウトを fire-and-forget でサーバーにも通知 (失敗しても気にしない)
+    supabase.auth.signOut().catch(() => { /* noop */ })
+
+    // React 状態を介さずハードリロードで画面遷移
+    window.location.replace(window.location.origin)
+  }
 
   return (
     <AuthContext.Provider value={{ user, session, isLoading, signInWithMicrosoft, signInWithEmail, signUpWithEmail, signOut }}>

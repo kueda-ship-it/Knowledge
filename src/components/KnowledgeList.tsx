@@ -241,7 +241,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     </span>
                                 </div>
                                 <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span className="date-badge">{new Date(item.updatedAt).toLocaleDateString()}</span>
+                                    <span className="date-badge">{new Date(item.createdAt ?? item.updatedAt).toLocaleDateString()}</span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '12px' }}>
                                         {getAuthorAvatar(item.author) ? (
                                             <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }} />

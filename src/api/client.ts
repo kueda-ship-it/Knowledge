@@ -61,6 +61,7 @@ export function toItem(row: Record<string, unknown>): KnowledgeItem {
         phenomenon: rawPhenomenon || rawContent, // phenomenonが空ならcontentをセット
         countermeasure: rawCountermeasure || (rawPhenomenon ? rawContent : ''), // phenomenonがあった上でのcontentなら対処とする(旧形式互換)
         status: row.status as 'solved' | 'unsolved',
+        createdAt: row.created_at as string | undefined,
         updatedAt: row.updated_at as string,
         author: row.author as string,
         attachments: (row.attachments as Attachment[]) ?? [],
@@ -74,7 +75,7 @@ export const apiClient = {
             .from('knowledge')
             .select(`
                 id, title, machine, property, req_num, category,
-                incidents, tags, content, phenomenon, countermeasure, status, updated_at, author, attachments,
+                incidents, tags, content, phenomenon, countermeasure, status, created_at, updated_at, author, attachments,
                 knowledge_reactions(type, user_id)
             `)
             .order('created_at', { ascending: false });
@@ -102,7 +103,7 @@ export const apiClient = {
             .from('knowledge')
             .select(`
                 id, title, machine, property, req_num, category,
-                incidents, tags, content, phenomenon, countermeasure, status, updated_at, author, attachments,
+                incidents, tags, content, phenomenon, countermeasure, status, created_at, updated_at, author, attachments,
                 knowledge_reactions(type, user_id)
             `)
             .eq('id', id)

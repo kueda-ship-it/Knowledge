@@ -74,6 +74,7 @@ export interface KnowledgeItem {
     phenomenon?: string;   // 事象
     countermeasure?: string; // 対処
     status: 'solved' | 'unsolved';
+    createdAt?: string;
     updatedAt: string;
     author: string;
     attachments?: Attachment[];

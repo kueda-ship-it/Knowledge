@@ -175,6 +175,20 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         }
     };
 
+    const handleDeleteProposal = async () => {
+        if (!selectedProposal) return;
+        const title = selectedProposal.title || '(無題)';
+        if (!window.confirm(`提議「${title}」を削除します。合議コメントも一緒に削除されます。よろしいですか？`)) return;
+        try {
+            await apiClient.deleteProposal(selectedProposal.id);
+            setProposals(prev => prev.filter(p => p.id !== selectedProposal.id));
+            setSelectedProposal(null);
+        } catch (e) {
+            console.error("Failed to delete proposal:", e);
+            window.alert('削除に失敗しました。時間をおいて再度お試しください。');
+        }
+    };
+
     const handleStatusUpdate = async (id: string, newStatus: string) => {
         try {
             await apiClient.updateProposalStatus(id, newStatus, user?.id);
@@ -1189,6 +1203,27 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         );
                                     })}
                                 </div>
+                            </div>
+                        )}
+
+                        {canEditProposal && (
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '20px' }}>
+                                <button
+                                    onClick={handleDeleteProposal}
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                        padding: '10px 16px', borderRadius: '12px',
+                                        background: 'rgba(248,113,113,0.08)',
+                                        border: '1px solid rgba(248,113,113,0.35)',
+                                        color: '#f87171',
+                                        fontSize: '0.85rem', cursor: 'pointer',
+                                        transition: 'background 0.18s, border-color 0.18s',
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.16)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.6)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.35)'; }}
+                                >
+                                    <Trash2 size={14} />この提議を削除
+                                </button>
                             </div>
                         )}
                     </div>

@@ -3,6 +3,45 @@ import { supabaseRealtime } from '../lib/supabaseRealtime';
 import { supabaseEquipment } from '../lib/supabaseEquipment';
 import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification, KnowledgeGroup } from '../types';
 
+// supabase-js の auth ロック待ちを避けるため、localStorage から直接 JWT を取って
+// PostgREST を叩くヘルパー。書き込み系のパスで supabase.from().insert/update/delete が
+// ハングする事例があるため、writeRest を使う。
+async function rawRest(
+    path: string,
+    init: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: unknown; prefer?: string }
+): Promise<Response> {
+    const url = (import.meta as any).env.VITE_SUPABASE_URL as string;
+    const anonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY as string;
+
+    let accessToken: string | null = null;
+    try {
+        const ref = url.match(/https?:\/\/([^.]+)\./)?.[1];
+        if (ref) {
+            const raw = localStorage.getItem(`sb-${ref}-auth-token`);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                accessToken = parsed?.access_token || parsed?.currentSession?.access_token || null;
+            }
+        }
+    } catch {
+        /* fall through */
+    }
+    if (!accessToken) accessToken = anonKey;
+
+    const headers: Record<string, string> = {
+        'apikey': anonKey,
+        'Authorization': `Bearer ${accessToken}`,
+    };
+    if (init.body !== undefined) headers['Content-Type'] = 'application/json';
+    if (init.prefer) headers['Prefer'] = init.prefer;
+
+    return fetch(`${url}${path}`, {
+        method: init.method,
+        headers,
+        body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+    });
+}
+
 // DB行 → KnowledgeItem の変換
 export function toItem(row: Record<string, unknown>): KnowledgeItem {
     const rawContent = (row.content as string) ?? '';
@@ -521,12 +560,12 @@ export const apiClient = {
     ): Promise<void> {
         const payload: Record<string, any> = { ...patch, updated_at: new Date().toISOString() };
         if (userId) payload.updated_by = userId;
-        const { error } = await supabase
-            .from('operational_proposals')
-            .update(payload)
-            .eq('id', id);
-
-        if (error) throw error;
+        const res = await rawRest(`/rest/v1/operational_proposals?id=eq.${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            body: payload,
+            prefer: 'return=minimal',
+        });
+        if (!res.ok) throw new Error(`更新に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
     },
 
     // 合議コメント: 一覧取得 (author 名を profiles から結合)
@@ -595,11 +634,11 @@ export const apiClient = {
     },
 
     async deleteProposal(id: string): Promise<void> {
-        const { error } = await supabase
-            .from('operational_proposals')
-            .delete()
-            .eq('id', id);
-        if (error) throw error;
+        const res = await rawRest(`/rest/v1/operational_proposals?id=eq.${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            prefer: 'return=minimal',
+        });
+        if (!res.ok) throw new Error(`削除に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
     },
 
     async createProposal(proposal: Partial<any>): Promise<void> {
@@ -609,11 +648,12 @@ export const apiClient = {
             record.source_no = await apiClient.getNextProposalNo(record.category);
         }
 
-        const { error } = await supabase
-            .from('operational_proposals')
-            .insert(record);
-
-        if (error) throw error;
+        const res = await rawRest('/rest/v1/operational_proposals', {
+            method: 'POST',
+            body: record,
+            prefer: 'return=minimal',
+        });
+        if (!res.ok) throw new Error(`作成に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
     },
 
     // Master Data Realtime

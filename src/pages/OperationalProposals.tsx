@@ -366,11 +366,13 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                 category: form.category,
                 visible_groups: form.visible_groups.length > 0 ? form.visible_groups : null,
             });
-            await fetchData();
+            // 一覧 refetch は await しない (fetchProposals が詰まるとモーダルが閉じなくなるため)
+            fetchData().catch(e => console.warn('[handleCreate] refetch failed:', e?.message));
             setShowCreateModal(false);
             setForm({ category: 'Engineer（施工）', title: '', problem: '', proposal: '', author: user?.name ?? '', proposed_at: TODAY, priority: '中', status: '未着手', visible_groups: [] });
         } catch (e) {
             console.error("Failed to create proposal:", e);
+            window.alert('作成に失敗しました。時間をおいて再度お試しください。');
         } finally {
             setCreating(false);
         }

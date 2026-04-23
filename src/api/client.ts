@@ -38,7 +38,7 @@ export const apiClient = {
                 incidents, tags, content, phenomenon, countermeasure, status, updated_at, author, attachments,
                 knowledge_reactions(type, user_id)
             `)
-            .order('updated_at', { ascending: false });
+            .order('created_at', { ascending: false });
 
         if (error) throw error;
         

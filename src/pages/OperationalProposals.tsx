@@ -191,14 +191,22 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
 
     const handleStatusUpdate = async (id: string, newStatus: string) => {
         try {
-            await apiClient.updateProposalStatus(id, newStatus, user?.id);
+            // 15秒で強制タイムアウト (auth ロック / ネットワーク不安定に備えて)
+            const updateP = apiClient.updateProposalStatus(id, newStatus, user?.id);
+            const timeoutP = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('timeout: updateProposalStatus (15s)')), 15000),
+            );
+            await Promise.race([updateP, timeoutP]);
             const updated_by = user?.id;
             const updated_at = new Date().toISOString();
             setProposals(prev => prev.map(p => p.id === id ? { ...p, status: newStatus as any, updated_by, updated_at } : p));
             if (selectedProposal?.id === id) {
                 setSelectedProposal(prev => prev ? { ...prev, status: newStatus as any, updated_by, updated_at } : null);
             }
-        } catch (e) { console.error("Failed to update status:", e); }
+        } catch (e: any) {
+            console.error("Failed to update status:", e);
+            window.alert(`ステータス更新に失敗しました。${e?.message ?? ''}`);
+        }
     };
 
     // 選択時にコメントをロード / 編集stateを初期化
@@ -738,7 +746,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                     onClick={() => setSelectedProposal(proposal)}
                                     style={{
                                         cursor: 'pointer', padding: '16px 24px',
-                                        display: 'flex', alignItems: 'center', gap: '24px',
+                                        display: 'flex', flexDirection: 'column', gap: '6px',
                                         border: '1px solid transparent',
                                         background: 'var(--glass-bg)',
                                         borderRadius: '16px',
@@ -746,66 +754,74 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         backdropFilter: 'blur(10px)',
                                         ['--card-accent' as any]: catStyle.color,
                                     }}>
-                                    {/* カテゴリバッジ */}
-                                    <div style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                        padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
-                                        background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}`, whiteSpace: 'nowrap',
-                                        boxShadow: `0 0 12px ${catStyle.border}`, flexShrink: 0,
-                                    }}>
-                                        <Tag size={12} />{getNormalizedCategory(proposal.category)}
-                                    </div>
-                                    {/* No */}
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                                        No.{proposal.source_no || '—'}
-                                    </span>
-                                    {/* ステータスバッジ */}
-                                    <div style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                        padding: '4px 12px', borderRadius: '20px',
-                                        fontSize: '0.75rem', fontWeight: 800,
-                                        background: proposal.status === '完了' ? 'rgba(16,185,129,0.15)' : proposal.status === '対応中' ? 'rgba(245,158,11,0.15)' : proposal.status === '保留' ? 'rgba(148,163,184,0.15)' : 'rgba(239,68,68,0.15)',
-                                        color: proposal.status === '完了' ? '#34d399' : proposal.status === '対応中' ? '#fbbf24' : proposal.status === '保留' ? '#94a3b8' : '#f87171',
-                                        border: '1px solid currentColor',
-                                        boxShadow: proposal.status === '完了' ? '0 0 12px rgba(52,211,153,0.4)' : proposal.status === '対応中' ? '0 0 12px rgba(251,191,36,0.4)' : proposal.status === '保留' ? '0 0 12px rgba(148,163,184,0.3)' : '0 0 12px rgba(248,113,113,0.4)',
-                                        whiteSpace: 'nowrap', flexShrink: 0,
-                                    }}>
-                                        {getStatusIcon(proposal.status)}{proposal.status}
-                                    </div>
-                                    {/* タイトル + 問題点 (水平レイアウト) */}
-                                    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: '12px', overflow: 'hidden' }}>
-                                        <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 0, maxWidth: '40%' }}>
+                                    {/* 1行目: カテゴリ / No / ステータス / タイトル / 右側メタ */}
+                                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '16px', width: '100%' }}>
+                                        {/* カテゴリバッジ (icon + text 横並び) */}
+                                        <div style={{
+                                            display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
+                                            padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
+                                            background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}`, whiteSpace: 'nowrap',
+                                            boxShadow: `0 0 12px ${catStyle.border}`, flexShrink: 0, lineHeight: 1,
+                                        }}>
+                                            <Tag size={12} style={{ flexShrink: 0 }} />
+                                            <span>{getNormalizedCategory(proposal.category)}</span>
+                                        </div>
+                                        {/* No */}
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                            No.{proposal.source_no || '—'}
+                                        </span>
+                                        {/* ステータスバッジ (icon + text 横並び) */}
+                                        <div style={{
+                                            display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
+                                            padding: '4px 12px', borderRadius: '20px',
+                                            fontSize: '0.75rem', fontWeight: 800,
+                                            background: proposal.status === '完了' ? 'rgba(16,185,129,0.15)' : proposal.status === '対応中' ? 'rgba(245,158,11,0.15)' : proposal.status === '保留' ? 'rgba(148,163,184,0.15)' : 'rgba(239,68,68,0.15)',
+                                            color: proposal.status === '完了' ? '#34d399' : proposal.status === '対応中' ? '#fbbf24' : proposal.status === '保留' ? '#94a3b8' : '#f87171',
+                                            border: '1px solid currentColor',
+                                            boxShadow: proposal.status === '完了' ? '0 0 12px rgba(52,211,153,0.4)' : proposal.status === '対応中' ? '0 0 12px rgba(251,191,36,0.4)' : proposal.status === '保留' ? '0 0 12px rgba(148,163,184,0.3)' : '0 0 12px rgba(248,113,113,0.4)',
+                                            whiteSpace: 'nowrap', flexShrink: 0, lineHeight: 1,
+                                        }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center' }}>{getStatusIcon(proposal.status)}</span>
+                                            <span>{proposal.status}</span>
+                                        </div>
+                                        {/* タイトル */}
+                                        <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
                                             {proposal.title}
                                         </h3>
-                                        {(() => {
-                                            // 問題点 → 改善提案 → description の順で優先表示
-                                            const desc = proposal.description || '';
-                                            const marker = '【改善提案】\n';
-                                            const idx = desc.indexOf(marker);
-                                            const preview = (proposal as any).problem
-                                                || (idx >= 0 ? desc.slice(0, idx).trim() : desc.trim())
-                                                || (proposal as any).proposal
-                                                || '';
-                                            if (!preview) return null;
-                                            return (
-                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)', lineHeight: 1.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
-                                                    {preview}
-                                                </span>
-                                            );
-                                        })()}
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px', color: 'var(--text-dim)' }}>
-                                        <UserIdentity name={proposal.author} size={18} />
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
-                                            <Calendar size={14} />
-                                            {proposal.proposed_at ? new Date(proposal.proposed_at).toLocaleDateString() : '未設定'}
+                                        {/* 右側メタ */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', color: 'var(--text-dim)', flexShrink: 0 }}>
+                                            <UserIdentity name={proposal.author} size={18} />
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
+                                                <Calendar size={14} />
+                                                {proposal.proposed_at ? new Date(proposal.proposed_at).toLocaleDateString() : '未設定'}
+                                            </div>
+                                            <div style={{
+                                                width: '8px', height: '8px', borderRadius: '50%',
+                                                background: getPriorityColor(proposal.priority),
+                                                boxShadow: `0 0 8px ${getPriorityColor(proposal.priority)}77`,
+                                            }} title={`優先度: ${proposal.priority}`} />
                                         </div>
-                                        <div style={{
-                                            width: '8px', height: '8px', borderRadius: '50%',
-                                            background: getPriorityColor(proposal.priority),
-                                            boxShadow: `0 0 8px ${getPriorityColor(proposal.priority)}77`,
-                                        }} title={`優先度: ${proposal.priority}`} />
                                     </div>
+                                    {/* 2行目: 問題点プレビュー */}
+                                    {(() => {
+                                        const desc = proposal.description || '';
+                                        const marker = '【改善提案】\n';
+                                        const idx = desc.indexOf(marker);
+                                        const preview = (proposal as any).problem
+                                            || (idx >= 0 ? desc.slice(0, idx).trim() : desc.trim())
+                                            || (proposal as any).proposal
+                                            || '';
+                                        if (!preview) return null;
+                                        return (
+                                            <p style={{
+                                                fontSize: '0.85rem', color: 'var(--text-dim)', lineHeight: 1.5,
+                                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                margin: 0, paddingLeft: '2px',
+                                            }}>
+                                                {preview}
+                                            </p>
+                                        );
+                                    })()}
                                 </div>
                             );
                         })}

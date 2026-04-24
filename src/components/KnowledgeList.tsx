@@ -223,6 +223,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 ) : (
                     data.map((item, index) => {
                         const isExpanded = expandedId === item.id;
+                        const hasSubRow = (item.tags && item.tags.length > 0) || (item.attachments && item.attachments.length > 0) || (item.incidents && item.incidents.length > 0);
                         return (
                             <div
                                 key={item.id}
@@ -230,15 +231,30 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                 className={`knowledge-card ${item.status}`}
                                 style={{ cursor: 'pointer', padding: '10px 14px' }}
                             >
-                                {/* コンパクト 1行レイアウト (grid) */}
+                                {/* Grid: バッジ類は両行をまたいで垂直中央揃え。タイトルは1行目、タグ/展開ボタンは2行目 */}
                                 <div style={{
                                     display: 'grid',
-                                    gridTemplateColumns: '80px 66px 130px 70px minmax(0, 1fr) 130px 120px 90px 28px',
+                                    gridTemplateColumns: '28px 74px 90px 130px 90px minmax(0,1fr) 130px 110px 100px',
+                                    gridTemplateRows: 'auto auto',
                                     alignItems: 'center',
                                     columnGap: '10px',
+                                    rowGap: '4px',
                                 }}>
-                                    {/* ステータス */}
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                                    {/* Col 1 / Row 2: 開閉 chevron (2行目左端) */}
+                                    <button
+                                        onClick={e => { e.stopPropagation(); setExpandedId(isExpanded ? null : item.id); }}
+                                        style={{
+                                            gridColumn: 1, gridRow: 2,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            width: '24px', height: '24px', padding: 0,
+                                            background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)',
+                                            borderRadius: '6px', cursor: 'pointer', color: 'var(--muted)',
+                                        }} title={isExpanded ? '閉じる' : '開く'}>
+                                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                    </button>
+
+                                    {/* ステータス (両行・左寄せ・中央揃え) */}
+                                    <div style={{ gridColumn: 2, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                                         {item.status === 'solved' ? (
                                             <span style={{ fontSize: '0.78rem', color: '#22c55e', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 700, lineHeight: 1 }}>
                                                 <Check size={12} /> 解決済
@@ -247,53 +263,113 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                             <span style={{ fontSize: '0.78rem', color: '#ef4444', fontWeight: 700, lineHeight: 1 }}>未解決</span>
                                         )}
                                     </div>
-                                    {/* No */}
-                                    <span style={{ fontSize: '0.72rem', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 7px', borderRadius: '8px', border: '1px solid var(--glass-border)', whiteSpace: 'nowrap', justifySelf: 'start' }}>
-                                        No.{index + 1} / {data.length}
-                                    </span>
-                                    {/* 区分 (カテゴリ) */}
-                                    <div style={{ display: 'flex', justifyContent: 'flex-start', minWidth: 0 }}>
+                                    {/* No (両行・左寄せ・28px 高) */}
+                                    <div style={{ gridColumn: 3, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                                        <span style={{
+                                            display: 'inline-flex', alignItems: 'center',
+                                            height: '28px', padding: '0 10px', boxSizing: 'border-box',
+                                            fontSize: '0.75rem', color: 'var(--muted)',
+                                            background: 'rgba(255,255,255,0.05)', borderRadius: '8px',
+                                            border: '1px solid var(--glass-border)', whiteSpace: 'nowrap', lineHeight: 1,
+                                        }}>
+                                            No.{index + 1} / {data.length}
+                                        </span>
+                                    </div>
+                                    {/* 区分 (両行・左寄せ・28px 高) */}
+                                    <div style={{ gridColumn: 4, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
                                         {item.category ? (
-                                            <span className={`metadata-badge ${getCategoryBadgeClass(item.category)}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{item.category}</span>
+                                            <span className={`metadata-badge ${getCategoryBadgeClass(item.category)}`} style={{
+                                                height: '28px', padding: '0 12px', boxSizing: 'border-box', lineHeight: 1,
+                                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+                                            }}>{item.category}</span>
                                         ) : null}
                                     </div>
-                                    {/* 詳細 (machine) */}
-                                    <div style={{ display: 'flex', justifyContent: 'flex-start', minWidth: 0 }}>
+                                    {/* 詳細 (両行・左寄せ・28px 高) */}
+                                    <div style={{ gridColumn: 5, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
                                         {item.machine ? (
-                                            <span className="metadata-badge badge-machine" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{item.machine}</span>
+                                            <span className="metadata-badge badge-machine" style={{
+                                                height: '28px', padding: '0 12px', boxSizing: 'border-box', lineHeight: 1,
+                                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+                                            }}>{item.machine}</span>
                                         ) : null}
                                     </div>
-                                    {/* タイトル */}
-                                    <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'left', minWidth: 0 }}>
+
+                                    {/* タイトル (1行目・左寄せ) */}
+                                    <div style={{
+                                        gridColumn: 6, gridRow: 1,
+                                        fontSize: '1rem', fontWeight: 700, color: 'var(--text)',
+                                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                        textAlign: 'left', minWidth: 0,
+                                    }}>
                                         {stripCategoryFromTitle(item.title)}
                                     </div>
-                                    {/* 著者 */}
-                                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
-                                        {getAuthorAvatar(item.author) ? (
-                                            <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                                        ) : (
-                                            <div className="user-avatar-fallback" style={{ width: '18px', height: '18px', fontSize: '0.6rem', flexShrink: 0 }}>
-                                                {getInitial(item.author)}
-                                            </div>
+                                    {/* 2行目・タイトル列: タグ/インシデント/添付 (コンパクト表示時のみ) */}
+                                    <div style={{
+                                        gridColumn: 6, gridRow: 2,
+                                        display: 'flex', flexWrap: 'nowrap', overflow: 'hidden',
+                                        gap: '6px', alignItems: 'center', minWidth: 0,
+                                    }}>
+                                        {!isExpanded && hasSubRow && (
+                                            <>
+                                                {item.incidents && item.incidents.length > 0 && (
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{item.incidents.join(', ')}</span>
+                                                )}
+                                                {item.tags?.map((tag, i) => (
+                                                    <span key={i} style={{ fontSize: '0.75rem', color: 'var(--primary)', whiteSpace: 'nowrap' }}>#{tag}</span>
+                                                ))}
+                                                {item.attachments && item.attachments.length > 0 && (
+                                                    <span className="metadata-badge badge-attachment" style={{ height: '24px', padding: '0 10px', boxSizing: 'border-box', lineHeight: 1, fontSize: '0.72rem' }}>
+                                                        <Paperclip size={11} /> {item.attachments.length}
+                                                    </span>
+                                                )}
+                                            </>
                                         )}
-                                        <span style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.author}</span>
                                     </div>
-                                    {/* 日付 (中央) */}
-                                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                        <span className="date-badge" style={{ whiteSpace: 'nowrap' }}>{new Date(item.createdAt ?? item.updatedAt).toLocaleDateString()}</span>
+
+                                    {/* 投稿者 (両行・左寄せ・中央揃え) */}
+                                    <div style={{ gridColumn: 7, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                                        <div style={{
+                                            display: 'flex', alignItems: 'center', gap: '6px',
+                                            fontSize: '0.78rem', color: '#94a3b8',
+                                            minWidth: 0, overflow: 'hidden',
+                                        }}>
+                                            {getAuthorAvatar(item.author) ? (
+                                                <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                                            ) : (
+                                                <div className="user-avatar-fallback" style={{ width: '18px', height: '18px', fontSize: '0.6rem', flexShrink: 0 }}>
+                                                    {getInitial(item.author)}
+                                                </div>
+                                            )}
+                                            <span style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.author}</span>
+                                        </div>
                                     </div>
-                                    {/* 👍/⚠ (中央) */}
+                                    {/* 日付 (両行・中央揃え、フォント 0.78rem で投稿者と合わせる) */}
+                                    <div style={{ gridColumn: 8, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <span style={{
+                                            display: 'inline-flex', alignItems: 'center',
+                                            height: '28px', padding: '0 10px', boxSizing: 'border-box',
+                                            fontSize: '0.78rem', color: 'var(--muted)',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid var(--glass-border)',
+                                            borderRadius: '10px', whiteSpace: 'nowrap', lineHeight: 1,
+                                        }}>
+                                            {new Date(item.createdAt ?? item.updatedAt).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    {/* 👍⚠ (両行・中央揃え) */}
                                     <div
                                         onClick={e => e.stopPropagation()}
                                         style={{
+                                            gridColumn: 9, gridRow: '1 / span 2',
                                             display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center',
-                                            padding: '4px 10px', background: 'rgba(255, 255, 255, 0.05)',
+                                            height: '28px', padding: '0 10px', boxSizing: 'border-box',
+                                            background: 'rgba(255, 255, 255, 0.05)',
                                             borderRadius: '20px', border: '1px solid var(--glass-border)',
                                         }}>
                                         <span
                                             onMouseEnter={e => (item.likeCount || 0) > 0 && handlePillEnter(`${item.id}-like`, e.currentTarget)}
                                             onMouseLeave={() => setHoveredPill(null)}
-                                            style={{ position: 'relative', fontSize: '0.8rem', color: (item.likeCount || 0) > 0 ? 'var(--primary)' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, cursor: 'default' }}>
+                                            style={{ position: 'relative', fontSize: '0.78rem', color: (item.likeCount || 0) > 0 ? 'var(--primary)' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, cursor: 'default', lineHeight: 1 }}>
                                             <ThumbsUp size={12} fill={(item.likeCount || 0) > 0 ? 'var(--primary)' : 'transparent'} />
                                             {item.likeCount || 0}
                                             {renderPopover(item.likeUsers, '👍 いいね！', `${item.id}-like`)}
@@ -301,34 +377,13 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         <span
                                             onMouseEnter={e => (item.wrongCount || 0) > 0 && handlePillEnter(`${item.id}-wrong`, e.currentTarget)}
                                             onMouseLeave={() => setHoveredPill(null)}
-                                            style={{ position: 'relative', fontSize: '0.8rem', color: (item.wrongCount || 0) > 0 ? '#ef4444' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, cursor: 'default' }}>
+                                            style={{ position: 'relative', fontSize: '0.78rem', color: (item.wrongCount || 0) > 0 ? '#ef4444' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, cursor: 'default', lineHeight: 1 }}>
                                             <AlertTriangle size={12} fill={(item.wrongCount || 0) > 0 ? '#ef4444' : 'transparent'} />
                                             {item.wrongCount || 0}
                                             {renderPopover(item.wrongUsers, '⚠ 違うよ！', `${item.id}-wrong`)}
                                         </span>
                                     </div>
-                                    {/* 展開インジケータ (中央) */}
-                                    <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--muted)' }}>
-                                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                    </div>
                                 </div>
-
-                                {/* タグ + 添付 (サブ行・コンパクト表示時のみ) */}
-                                {!isExpanded && ((item.tags && item.tags.length > 0) || (item.attachments && item.attachments.length > 0) || (item.incidents && item.incidents.length > 0)) && (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', marginTop: '6px' }}>
-                                        {item.incidents && item.incidents.length > 0 && (
-                                            <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>{item.incidents.join(', ')}</span>
-                                        )}
-                                        {item.tags?.map((tag, i) => (
-                                            <span key={i} style={{ fontSize: '0.78rem', color: 'var(--primary)' }}>#{tag}</span>
-                                        ))}
-                                        {item.attachments && item.attachments.length > 0 && (
-                                            <span className="metadata-badge badge-attachment">
-                                                <Paperclip size={12} /> {item.attachments.length}
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
 
                                 {/* 展開: 事象・対処 (読み取り専用) */}
                                 {isExpanded && (

@@ -794,17 +794,10 @@ body[data-theme="liquid"] .sidebar-tag.active {
   border: 1px solid var(--card-border);
 }
 
-/* hover: 浮き上がりは無し、カード色に応じたアウトラインで示す */
+/* hover: 浮き上がり無し、背景も変えず、ボーダー 1px の色だけカテゴリ色に変える */
 .knowledge-card:hover {
   border-color: var(--card-accent, var(--primary));
-  box-shadow: 0 0 0 1px var(--card-accent, var(--primary)),
-              0 8px 24px -10px color-mix(in oklab, var(--card-accent, var(--primary)) 40%, transparent);
-}
-body[data-theme="light"] .knowledge-card:hover {
-  background: color-mix(in oklab, var(--card-accent, var(--primary)) 6%, transparent);
-}
-body[data-theme="dark"] .knowledge-card:hover {
-  background: color-mix(in oklab, var(--card-accent, var(--primary)) 10%, transparent);
+  box-shadow: none;
 }
 body[data-theme="liquid"] .knowledge-card {
   background: linear-gradient(135deg,
@@ -819,14 +812,15 @@ body[data-theme="liquid"] .knowledge-card {
     inset 0 1px 0 rgba(255,255,255,0.12);
 }
 body[data-theme="liquid"] .knowledge-card:hover {
+  /* 浮き上がり無し・背景変化無し、ボーダーカテゴリ色のみ */
   background: linear-gradient(135deg,
-    rgba(255,255,255,0.13),
-    rgba(255,255,255,0.05));
+    rgba(255,255,255,0.08),
+    rgba(255,255,255,0.03));
   box-shadow:
-    0 8px 32px rgba(0,0,0,0.32),
-    var(--lg-accent-glow),
-    0 0 0 1px rgba(255,255,255,0.16),
-    inset 0 1px 0 rgba(255,255,255,0.18);
+    0 4px 16px rgba(0,0,0,0.25),
+    0 0 0 1px var(--card-accent, rgba(255,255,255,0.16)),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+  border-color: var(--card-accent, var(--primary));
 }
 
 .knowledge-card:active {
@@ -846,17 +840,19 @@ body[data-theme="liquid"] .knowledge-card.unsolved {
     inset 0 1px 0 rgba(255,255,255,0.1);
 }
 .knowledge-card.unsolved:hover {
-  border-color: rgba(239,68,68,0.4);
+  /* unsolved 固有の赤ではなく、カテゴリ色 (--card-accent) を優先 */
+  border-color: var(--card-accent, rgba(239,68,68,0.4));
 }
 body[data-theme="liquid"] .knowledge-card.unsolved:hover {
+  /* 浮き上がり無し・背景変化無し */
   background: linear-gradient(135deg,
-    rgba(239,68,68,0.2),
-    rgba(239,68,68,0.06));
+    rgba(239,68,68,0.14),
+    rgba(239,68,68,0.04));
   box-shadow:
-    0 8px 32px rgba(0,0,0,0.32),
-    0 0 40px rgba(239,68,68,0.18),
-    0 0 0 1px rgba(239,68,68,0.4),
-    inset 0 1px 0 rgba(255,255,255,0.14);
+    0 4px 16px rgba(0,0,0,0.25),
+    0 0 0 1px var(--card-accent, rgba(239,68,68,0.28)),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+  border-color: var(--card-accent, rgba(239,68,68,0.4));
 }
 
 /* ======================================== */

@@ -521,14 +521,15 @@ export const apiClient = {
     },
 
     async updateProposalStatus(id: string, status: string, userId?: string): Promise<void> {
+        // supabase-js 経由だと auth ロック詰まりでステータス更新が固まることがあるため rawRest で直叩き
         const patch: Record<string, any> = { status, updated_at: new Date().toISOString() };
         if (userId) patch.updated_by = userId;
-        const { error } = await supabase
-            .from('operational_proposals')
-            .update(patch)
-            .eq('id', id);
-
-        if (error) throw error;
+        const res = await rawRest(`/rest/v1/operational_proposals?id=eq.${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            body: patch,
+            prefer: 'return=minimal',
+        });
+        if (!res.ok) throw new Error(`ステータス更新に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
     },
 
     // 指定カテゴリへの所属を追加 (既に所属していれば no-op)

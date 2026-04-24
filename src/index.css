@@ -794,17 +794,17 @@ body[data-theme="liquid"] .sidebar-tag.active {
   border: 1px solid var(--card-border);
 }
 
+/* hover: 浮き上がりは無し、カード色に応じたアウトラインで示す */
 .knowledge-card:hover {
-  transform: translateY(-2px) scale(1.01);
-  box-shadow: var(--card-shadow-lg);
+  border-color: var(--card-accent, var(--primary));
+  box-shadow: 0 0 0 1px var(--card-accent, var(--primary)),
+              0 8px 24px -10px color-mix(in oklab, var(--card-accent, var(--primary)) 40%, transparent);
 }
 body[data-theme="light"] .knowledge-card:hover {
-  border-color: var(--primary);
-  background: color-mix(in oklab, var(--primary) 6%, transparent);
+  background: color-mix(in oklab, var(--card-accent, var(--primary)) 6%, transparent);
 }
 body[data-theme="dark"] .knowledge-card:hover {
-  border-color: var(--primary);
-  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  background: color-mix(in oklab, var(--card-accent, var(--primary)) 10%, transparent);
 }
 body[data-theme="liquid"] .knowledge-card {
   background: linear-gradient(135deg,

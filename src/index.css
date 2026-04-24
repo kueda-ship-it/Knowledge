@@ -627,16 +627,19 @@ body[data-theme="liquid"] .logout-btn-red:hover {
 
 .menu-card:hover {
   transform: translateY(-8px) scale(1.02) !important;
+  /* hover ボーダーを各カードのアイコン色 (--icon-color) に合わせる */
+  border-color: var(--icon-color, var(--primary)) !important;
 }
 body[data-theme="light"] .menu-card:hover {
-  background: color-mix(in oklab, var(--primary) 8%, transparent) !important;
-  border-color: var(--primary) !important;
+  background: color-mix(in oklab, var(--icon-color, var(--primary)) 8%, transparent) !important;
+  border-color: var(--icon-color, var(--primary)) !important;
   box-shadow: 0 20px 40px -10px rgba(0,0,0,0.12) !important;
 }
 body[data-theme="dark"] .menu-card:hover {
-  background: color-mix(in oklab, var(--primary) 12%, transparent) !important;
-  border-color: var(--primary) !important;
-  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4) !important;
+  background: color-mix(in oklab, var(--icon-color, var(--primary)) 12%, transparent) !important;
+  border-color: var(--icon-color, var(--primary)) !important;
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4),
+              0 0 24px -4px color-mix(in oklab, var(--icon-color, var(--primary)) 45%, transparent) !important;
 }
 body[data-theme="liquid"] .menu-card:hover {
   background: linear-gradient(135deg,
@@ -644,9 +647,10 @@ body[data-theme="liquid"] .menu-card:hover {
     rgba(255,255,255,0.022)) !important;
   box-shadow:
     0 20px 60px -10px rgba(0,0,0,0.4),
-    0 0 60px color-mix(in oklab, var(--primary) 22%, transparent),
-    0 0 0 1px rgba(255,255,255,0.14),
+    0 0 60px color-mix(in oklab, var(--icon-color, var(--primary)) 30%, transparent),
+    0 0 0 1px var(--icon-color, rgba(255,255,255,0.14)),
     inset 0 1px 0 rgba(255,255,255,0.14) !important;
+  border-color: var(--icon-color, var(--primary)) !important;
 }
 
 /* Liquid: メニューラベルを落ち着いた色に (白すぎ対策) */

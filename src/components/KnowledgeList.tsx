@@ -452,17 +452,41 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                                 )}
                                             </div>
                                         )}
-                                        {/* 事象 */}
+                                        {/* 事象 (琥珀系アクセント) */}
                                         {item.phenomenon && (
-                                            <div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px', letterSpacing: '0.05em' }}>事象</div>
+                                            <div style={{
+                                                borderLeft: '3px solid #fbbf24',
+                                                background: 'rgba(251, 191, 36, 0.06)',
+                                                borderRadius: '6px',
+                                                padding: '10px 14px',
+                                            }}>
+                                                <div style={{
+                                                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                                    fontSize: '0.78rem', fontWeight: 700, marginBottom: '6px',
+                                                    color: '#fbbf24', letterSpacing: '0.05em',
+                                                }}>
+                                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fbbf24', boxShadow: '0 0 6px #fbbf24' }} />
+                                                    事象
+                                                </div>
                                                 <div style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{item.phenomenon}</div>
                                             </div>
                                         )}
-                                        {/* 対処 */}
+                                        {/* 対処 (ミント系アクセント) */}
                                         {item.countermeasure && (
-                                            <div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px', letterSpacing: '0.05em' }}>対処</div>
+                                            <div style={{
+                                                borderLeft: '3px solid #34d399',
+                                                background: 'rgba(52, 211, 153, 0.06)',
+                                                borderRadius: '6px',
+                                                padding: '10px 14px',
+                                            }}>
+                                                <div style={{
+                                                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                                    fontSize: '0.78rem', fontWeight: 700, marginBottom: '6px',
+                                                    color: '#34d399', letterSpacing: '0.05em',
+                                                }}>
+                                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399', boxShadow: '0 0 6px #34d399' }} />
+                                                    対処
+                                                </div>
                                                 <div style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{item.countermeasure}</div>
                                             </div>
                                         )}

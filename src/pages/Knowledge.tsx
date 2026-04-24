@@ -14,7 +14,8 @@ interface KnowledgeProps {
     onInitialEditConsumed?: () => void;
 }
 
-const CACHE_KEY = 'knowledge_data_v1';
+// v1 → v2: createdAt を含むようスキーマを変更したため旧キャッシュを破棄する
+const CACHE_KEY = 'knowledge_data_v2';
 const MASTERS_CACHE_KEY = 'knowledge_masters_v2';
 
 // 作成日 desc でソート。createdAt が空の場合は updatedAt でフォールバック。

@@ -775,7 +775,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 <div style={{ gridColumn: '1', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                                                     <div style={{
                                                         display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
-                                                        height: '26px', padding: '0 10px', boxSizing: 'border-box',
+                                                        height: '28px', padding: '0 10px', boxSizing: 'border-box',
                                                         borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
                                                         background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}`, whiteSpace: 'nowrap',
                                                         boxShadow: `0 0 12px ${catStyle.border}`, lineHeight: 1,
@@ -792,7 +792,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 <div style={{ gridColumn: '3', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                                                     <div style={{
                                                         display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
-                                                        height: '26px', padding: '0 12px', boxSizing: 'border-box',
+                                                        height: '28px', padding: '0 12px', boxSizing: 'border-box',
                                                         borderRadius: '20px',
                                                         fontSize: '0.75rem', fontWeight: 800,
                                                         background: proposal.status === '完了' ? 'rgba(16,185,129,0.15)' : proposal.status === '対応中' ? 'rgba(245,158,11,0.15)' : proposal.status === '保留' ? 'rgba(148,163,184,0.15)' : 'rgba(239,68,68,0.15)',
@@ -828,7 +828,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 <div style={{ gridColumn: '6', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                     <div style={{
                                                         display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                                        height: '26px', padding: '0 10px', boxSizing: 'border-box',
+                                                        height: '28px', padding: '0 10px', boxSizing: 'border-box',
                                                         borderRadius: '10px', fontSize: '0.75rem',
                                                         background: 'rgba(255,255,255,0.05)', color: 'var(--text-dim)',
                                                         border: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap', lineHeight: 1,
@@ -842,9 +842,9 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                     <span
                                                         title={`優先度: ${proposal.priority}`}
                                                         style={{
-                                                            width: '12px', height: '12px', borderRadius: '50%',
+                                                            width: '8px', height: '8px', borderRadius: '50%',
                                                             background: getPriorityColor(proposal.priority),
-                                                            boxShadow: `0 0 10px ${getPriorityColor(proposal.priority)}99`,
+                                                            boxShadow: `0 0 6px ${getPriorityColor(proposal.priority)}99`,
                                                             border: `1px solid ${getPriorityColor(proposal.priority)}`,
                                                         }}
                                                     />

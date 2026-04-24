@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { KnowledgeItem, User } from '../types';
-import { RotateCcw, Check, Paperclip, ThumbsUp, AlertTriangle } from 'lucide-react';
+import { RotateCcw, Check, Paperclip, ThumbsUp, AlertTriangle, ChevronDown, ChevronUp, Edit3 } from 'lucide-react';
 
 interface KnowledgeListProps {
     data: KnowledgeItem[];
@@ -53,6 +53,8 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
     const getInitial = (name: string) => name.charAt(0).toUpperCase();
 
     const [hoveredPill, setHoveredPill] = useState<{ key: string; rect: DOMRect; placement: 'top' | 'bottom' } | null>(null);
+    // カードの展開状態 (展開すると事象・対処が読み取り専用で見える)
+    const [expandedId, setExpandedId] = useState<string | null>(null);
 
     const handlePillEnter = (key: string, el: HTMLElement) => {
         const rect = el.getBoundingClientRect();
@@ -219,118 +221,175 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 ) : data.length === 0 ? (
                     <p style={{ textAlign: 'center', color: '#94a3b8', marginTop: '40px' }}>データがありません</p>
                 ) : (
-                    data.map((item, index) => (
-                        <div
-                            key={item.id}
-                            onClick={() => onItemClick(item)}
-                            className={`knowledge-card ${item.status}`}
-                        >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    {item.status === 'solved' ? (
-                                        <span style={{ fontSize: '0.8rem', color: '#22c55e', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}>
-                                            <Check size={12} /> 解決済
-                                        </span>
-                                    ) : (
-                                        <span style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 'bold' }}>
-                                            未解決
-                                        </span>
-                                    )}
-                                    <span style={{ fontSize: '0.72rem', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '1px 7px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                    data.map((item, index) => {
+                        const isExpanded = expandedId === item.id;
+                        return (
+                            <div
+                                key={item.id}
+                                onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                                className={`knowledge-card ${item.status}`}
+                                style={{ cursor: 'pointer', padding: '10px 14px' }}
+                            >
+                                {/* コンパクト 1行レイアウト (grid) */}
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '80px 66px 130px 70px minmax(0, 1fr) 130px 120px 90px 28px',
+                                    alignItems: 'center',
+                                    columnGap: '10px',
+                                }}>
+                                    {/* ステータス */}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                                        {item.status === 'solved' ? (
+                                            <span style={{ fontSize: '0.78rem', color: '#22c55e', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 700, lineHeight: 1 }}>
+                                                <Check size={12} /> 解決済
+                                            </span>
+                                        ) : (
+                                            <span style={{ fontSize: '0.78rem', color: '#ef4444', fontWeight: 700, lineHeight: 1 }}>未解決</span>
+                                        )}
+                                    </div>
+                                    {/* No */}
+                                    <span style={{ fontSize: '0.72rem', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 7px', borderRadius: '8px', border: '1px solid var(--glass-border)', whiteSpace: 'nowrap', justifySelf: 'start' }}>
                                         No.{index + 1} / {data.length}
                                     </span>
-                                </div>
-                                <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span className="date-badge">{new Date(item.createdAt ?? item.updatedAt).toLocaleDateString()}</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '12px' }}>
+                                    {/* 区分 (カテゴリ) */}
+                                    <div style={{ display: 'flex', justifyContent: 'flex-start', minWidth: 0 }}>
+                                        {item.category ? (
+                                            <span className={`metadata-badge ${getCategoryBadgeClass(item.category)}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{item.category}</span>
+                                        ) : null}
+                                    </div>
+                                    {/* 詳細 (machine) */}
+                                    <div style={{ display: 'flex', justifyContent: 'flex-start', minWidth: 0 }}>
+                                        {item.machine ? (
+                                            <span className="metadata-badge badge-machine" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{item.machine}</span>
+                                        ) : null}
+                                    </div>
+                                    {/* タイトル */}
+                                    <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'left', minWidth: 0 }}>
+                                        {stripCategoryFromTitle(item.title)}
+                                    </div>
+                                    {/* 著者 */}
+                                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                                         {getAuthorAvatar(item.author) ? (
-                                            <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }} />
+                                            <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                                         ) : (
-                                            <div className="user-avatar-fallback" style={{ width: '18px', height: '18px', fontSize: '0.6rem' }}>
+                                            <div className="user-avatar-fallback" style={{ width: '18px', height: '18px', fontSize: '0.6rem', flexShrink: 0 }}>
                                                 {getInitial(item.author)}
                                             </div>
                                         )}
-                                        <span style={{ fontWeight: '500' }}>{item.author}</span>
+                                        <span style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.author}</span>
+                                    </div>
+                                    {/* 日付 (中央) */}
+                                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                        <span className="date-badge" style={{ whiteSpace: 'nowrap' }}>{new Date(item.createdAt ?? item.updatedAt).toLocaleDateString()}</span>
+                                    </div>
+                                    {/* 👍/⚠ (中央) */}
+                                    <div
+                                        onClick={e => e.stopPropagation()}
+                                        style={{
+                                            display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center',
+                                            padding: '4px 10px', background: 'rgba(255, 255, 255, 0.05)',
+                                            borderRadius: '20px', border: '1px solid var(--glass-border)',
+                                        }}>
+                                        <span
+                                            onMouseEnter={e => (item.likeCount || 0) > 0 && handlePillEnter(`${item.id}-like`, e.currentTarget)}
+                                            onMouseLeave={() => setHoveredPill(null)}
+                                            style={{ position: 'relative', fontSize: '0.8rem', color: (item.likeCount || 0) > 0 ? 'var(--primary)' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, cursor: 'default' }}>
+                                            <ThumbsUp size={12} fill={(item.likeCount || 0) > 0 ? 'var(--primary)' : 'transparent'} />
+                                            {item.likeCount || 0}
+                                            {renderPopover(item.likeUsers, '👍 いいね！', `${item.id}-like`)}
+                                        </span>
+                                        <span
+                                            onMouseEnter={e => (item.wrongCount || 0) > 0 && handlePillEnter(`${item.id}-wrong`, e.currentTarget)}
+                                            onMouseLeave={() => setHoveredPill(null)}
+                                            style={{ position: 'relative', fontSize: '0.8rem', color: (item.wrongCount || 0) > 0 ? '#ef4444' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, cursor: 'default' }}>
+                                            <AlertTriangle size={12} fill={(item.wrongCount || 0) > 0 ? '#ef4444' : 'transparent'} />
+                                            {item.wrongCount || 0}
+                                            {renderPopover(item.wrongUsers, '⚠ 違うよ！', `${item.id}-wrong`)}
+                                        </span>
+                                    </div>
+                                    {/* 展開インジケータ (中央) */}
+                                    <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--muted)' }}>
+                                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                     </div>
                                 </div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                                {item.machine && (
-                                    <span className="metadata-badge badge-machine">{item.machine}</span>
+
+                                {/* タグ + 添付 (サブ行・コンパクト表示時のみ) */}
+                                {!isExpanded && ((item.tags && item.tags.length > 0) || (item.attachments && item.attachments.length > 0) || (item.incidents && item.incidents.length > 0)) && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', marginTop: '6px' }}>
+                                        {item.incidents && item.incidents.length > 0 && (
+                                            <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>{item.incidents.join(', ')}</span>
+                                        )}
+                                        {item.tags?.map((tag, i) => (
+                                            <span key={i} style={{ fontSize: '0.78rem', color: 'var(--primary)' }}>#{tag}</span>
+                                        ))}
+                                        {item.attachments && item.attachments.length > 0 && (
+                                            <span className="metadata-badge badge-attachment">
+                                                <Paperclip size={12} /> {item.attachments.length}
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
-                                <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text)' }}>
-                                    {stripCategoryFromTitle(item.title)}
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-                                {item.category && (
-                                    <span className={`metadata-badge ${getCategoryBadgeClass(item.category)}`}>{item.category}</span>
-                                )}
-                                {item.incidents && item.incidents.length > 0 && (
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>{item.incidents.join(', ')}</span>
-                                )}
-                            </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
-                                {item.tags?.map((tag, i) => (
-                                    <span key={i} style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>#{tag}</span>
-                                ))}
-                                {item.attachments && item.attachments.length > 0 && (
-                                    <span className="metadata-badge badge-attachment">
-                                        <Paperclip size={12} /> {item.attachments.length}
-                                    </span>
-                                )}
-                                <div style={{ 
-                                    marginLeft: 'auto', 
-                                    display: 'flex', 
-                                    gap: '12px', 
-                                    alignItems: 'center',
-                                    padding: '4px 12px',
-                                    background: 'rgba(255, 255, 255, 0.05)',
-                                    borderRadius: '20px',
-                                    border: '1px solid var(--glass-border)'
-                                }}>
-                                    <span
+
+                                {/* 展開: 事象・対処 (読み取り専用) */}
+                                {isExpanded && (
+                                    <div
                                         onClick={e => e.stopPropagation()}
-                                        onMouseEnter={e => (item.likeCount || 0) > 0 && handlePillEnter(`${item.id}-like`, e.currentTarget)}
-                                        onMouseLeave={() => setHoveredPill(null)}
                                         style={{
-                                            position: 'relative',
-                                            fontSize: '0.85rem',
-                                            color: (item.likeCount || 0) > 0 ? 'var(--primary)' : 'var(--muted)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '5px',
-                                            fontWeight: 'bold',
-                                            textShadow: (item.likeCount || 0) > 0 ? '0 0 10px color-mix(in oklab, var(--primary) 55%, transparent)' : 'none',
-                                            cursor: 'default'
+                                            marginTop: '12px', padding: '12px 14px',
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid rgba(255,255,255,0.06)',
+                                            borderRadius: '12px',
+                                            display: 'flex', flexDirection: 'column', gap: '12px',
                                         }}>
-                                        <ThumbsUp size={14} fill={(item.likeCount || 0) > 0 ? 'var(--primary)' : 'transparent'} />
-                                        {item.likeCount || 0}
-                                        {renderPopover(item.likeUsers, '👍 いいね！', `${item.id}-like`)}
-                                    </span>
-                                    <span
-                                        onClick={e => e.stopPropagation()}
-                                        onMouseEnter={e => (item.wrongCount || 0) > 0 && handlePillEnter(`${item.id}-wrong`, e.currentTarget)}
-                                        onMouseLeave={() => setHoveredPill(null)}
-                                        style={{
-                                            position: 'relative',
-                                            fontSize: '0.85rem',
-                                            color: (item.wrongCount || 0) > 0 ? '#ef4444' : 'var(--muted)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '5px',
-                                            fontWeight: 'bold',
-                                            textShadow: (item.wrongCount || 0) > 0 ? '0 0 10px rgba(239, 68, 68, 0.5)' : 'none',
-                                            cursor: 'default'
-                                        }}>
-                                        <AlertTriangle size={14} fill={(item.wrongCount || 0) > 0 ? '#ef4444' : 'transparent'} />
-                                        {item.wrongCount || 0}
-                                        {renderPopover(item.wrongUsers, '⚠ 違うよ！', `${item.id}-wrong`)}
-                                    </span>
-                                </div>
+                                        {/* インシデント・タグ・添付 */}
+                                        {((item.incidents && item.incidents.length > 0) || (item.tags && item.tags.length > 0) || (item.attachments && item.attachments.length > 0)) && (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                                                {item.incidents && item.incidents.length > 0 && (
+                                                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>{item.incidents.join(', ')}</span>
+                                                )}
+                                                {item.tags?.map((tag, i) => (
+                                                    <span key={i} style={{ fontSize: '0.78rem', color: 'var(--primary)' }}>#{tag}</span>
+                                                ))}
+                                                {item.attachments && item.attachments.length > 0 && (
+                                                    <span className="metadata-badge badge-attachment">
+                                                        <Paperclip size={12} /> {item.attachments.length}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {/* 事象 */}
+                                        {item.phenomenon && (
+                                            <div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px', letterSpacing: '0.05em' }}>事象</div>
+                                                <div style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{item.phenomenon}</div>
+                                            </div>
+                                        )}
+                                        {/* 対処 */}
+                                        {item.countermeasure && (
+                                            <div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: 700, marginBottom: '4px', letterSpacing: '0.05em' }}>対処</div>
+                                                <div style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{item.countermeasure}</div>
+                                            </div>
+                                        )}
+                                        {/* 編集ボタン (展開ビュー下部) */}
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '4px' }}>
+                                            <button
+                                                onClick={() => { setExpandedId(null); onItemClick(item); }}
+                                                style={{
+                                                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                                    padding: '6px 14px', borderRadius: '10px', cursor: 'pointer',
+                                                    fontSize: '0.82rem',
+                                                    background: 'rgba(99,102,241,0.15)', color: '#c7d2fe',
+                                                    border: '1px solid rgba(99,102,241,0.45)',
+                                                }}>
+                                                <Edit3 size={13} /> 編集
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
         </div>

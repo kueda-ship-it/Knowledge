@@ -58,15 +58,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
             </div>
 
-            {/* 1. Incident Search */}
+            {/* 1. Incident Search — 見出しとアイコンは削除し、検索窓のみ */}
             <div className="sidebar-section">
-                <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--muted)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    <Search size={14} /> インシデント検索
-                </h4>
                 <div className="search-box" style={{ position: 'relative' }}>
                     <input
                         type="text"
-                        placeholder="キーワード検索..."
+                        placeholder="インシデント検索..."
                         onChange={(e) => onSearch(e.target.value)}
                         className="glass-input"
                         style={{

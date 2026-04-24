@@ -564,7 +564,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                     </button>
                 </div>
 
-                <div style={{ flex: 1, display: 'flex', gap: '10px', flexWrap: 'nowrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <div style={{ flex: 1, display: 'flex', gap: '10px', flexWrap: 'nowrap', justifyContent: 'flex-start', alignItems: 'center', minWidth: 0 }}>
                     {user?.role !== 'viewer' && (
                         <button
                             className="btn-indigo-solid"
@@ -578,6 +578,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                 cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap',
                                 boxShadow: '0 2px 12px rgba(99,102,241,0.4)',
                                 marginRight: '8px',
+                                flexShrink: 0,
                             }}
                         >
                             <Plus size={15} /> 新規追加
@@ -586,7 +587,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
 
                     <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.12)', marginRight: '4px', flexShrink: 0 }} />
 
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start', justifyContent: 'center', minWidth: 0, overflowX: 'auto', paddingTop: '4px', paddingBottom: '4px' }}>
                     {/* カテゴリフィルター */}
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap', alignItems: 'center' }}>
                         {categories.map(cat => {

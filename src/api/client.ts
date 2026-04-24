@@ -619,18 +619,17 @@ export const apiClient = {
     },
 
     async getNextProposalNo(category: string): Promise<string> {
-        const { data, error } = await supabase
-            .from('operational_proposals')
-            .select('source_no')
-            .eq('category', category);
-
-        if (error) throw error;
-
-        const maxNo = (data ?? []).reduce((max, row) => {
+        // supabase-js 経由だと auth ロック詰まりで追加処理が止まるため rawRest で直叩き
+        const res = await rawRest(
+            `/rest/v1/operational_proposals?select=source_no&category=eq.${encodeURIComponent(category)}`,
+            { method: 'GET' },
+        );
+        if (!res.ok) throw new Error(`採番に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        const rows = (await res.json()) as Array<{ source_no: string | null }>;
+        const maxNo = rows.reduce((max, row) => {
             const n = parseInt(row.source_no || '0', 10);
             return n > max ? n : max;
         }, 0);
-
         return String(maxNo + 1);
     },
 

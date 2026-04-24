@@ -165,8 +165,8 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 </button>
             </div>
 
-            {/* Status Filter Badges */}
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', overflowX: 'auto', flexShrink: 0, paddingBottom: '2px' }}>
+            {/* Status Filter Badges (overflow-x:auto は overflow-y を 'auto' 化して hover 浮き上がりを切るので、paddingTop/Bottom で余白を確保) */}
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', overflowX: 'auto', flexShrink: 0, paddingTop: '4px', paddingBottom: '4px' }}>
                 {statusOptions.map(opt => (
                     <button
                         key={opt.value}
@@ -192,7 +192,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
             </div>
 
             {/* Category Filters */}
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid var(--border)', overflowX: 'auto', flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', paddingTop: '4px', paddingBottom: '10px', borderBottom: '1px solid var(--border)', overflowX: 'auto', flexShrink: 0 }}>
                 {categories.map(cat => (
                     <button
                         key={cat}

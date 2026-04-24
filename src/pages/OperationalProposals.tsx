@@ -510,15 +510,15 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         const displayName = targetUser?.name || raw || '—';
 
         return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
                 {targetUser?.avatarUrl ? (
-                    <img src={targetUser.avatarUrl} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--glass-border)' }} />
+                    <img src={targetUser.avatarUrl} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--glass-border)', flexShrink: 0 }} />
                 ) : (
-                    <div className="user-avatar-fallback" style={{ width: size, height: size, fontSize: size * 0.42 }}>
+                    <div className="user-avatar-fallback" style={{ width: size, height: size, fontSize: size * 0.42, flexShrink: 0 }}>
                         {displayName.charAt(0)}
                     </div>
                 )}
-                <span style={{ fontSize: '0.85rem' }}>{displayName}</span>
+                <span style={{ fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{displayName}</span>
             </div>
         );
     };
@@ -746,7 +746,12 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                     onClick={() => setSelectedProposal(proposal)}
                                     style={{
                                         cursor: 'pointer', padding: '16px 24px',
-                                        display: 'flex', flexDirection: 'column', gap: '6px',
+                                        display: 'grid',
+                                        gridTemplateColumns: '150px 70px 90px minmax(0, 1fr) 150px 120px 32px',
+                                        gridTemplateRows: 'auto auto',
+                                        columnGap: '12px',
+                                        rowGap: '4px',
+                                        alignItems: 'center',
                                         border: '1px solid transparent',
                                         background: 'var(--glass-bg)',
                                         borderRadius: '16px',
@@ -754,82 +759,6 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         backdropFilter: 'blur(10px)',
                                         ['--card-accent' as any]: catStyle.color,
                                     }}>
-                                    {/* 1行目: 固定列幅で並べて、どのカードでも同じ列位置に揃える */}
-                                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '12px', width: '100%' }}>
-                                        {/* 種別 (左寄せ・固定列幅) */}
-                                        <div style={{ width: '150px', flexShrink: 0, display: 'flex', justifyContent: 'flex-start' }}>
-                                            <div style={{
-                                                display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
-                                                height: '26px', padding: '0 10px', boxSizing: 'border-box',
-                                                borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
-                                                background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}`, whiteSpace: 'nowrap',
-                                                boxShadow: `0 0 12px ${catStyle.border}`, lineHeight: 1,
-                                            }}>
-                                                <Tag size={12} style={{ flexShrink: 0 }} />
-                                                <span>{getNormalizedCategory(proposal.category)}</span>
-                                            </div>
-                                        </div>
-                                        {/* No (左寄せ・固定列幅) */}
-                                        <div style={{ width: '70px', flexShrink: 0, fontSize: '0.75rem', color: 'var(--text-dim)', textAlign: 'left', whiteSpace: 'nowrap' }}>
-                                            No.{proposal.source_no || '—'}
-                                        </div>
-                                        {/* ステータスバッジ (左寄せ・固定列幅) */}
-                                        <div style={{ width: '90px', flexShrink: 0, display: 'flex', justifyContent: 'flex-start' }}>
-                                            <div style={{
-                                                display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
-                                                height: '26px', padding: '0 12px', boxSizing: 'border-box',
-                                                borderRadius: '20px',
-                                                fontSize: '0.75rem', fontWeight: 800,
-                                                background: proposal.status === '完了' ? 'rgba(16,185,129,0.15)' : proposal.status === '対応中' ? 'rgba(245,158,11,0.15)' : proposal.status === '保留' ? 'rgba(148,163,184,0.15)' : 'rgba(239,68,68,0.15)',
-                                                color: proposal.status === '完了' ? '#34d399' : proposal.status === '対応中' ? '#fbbf24' : proposal.status === '保留' ? '#94a3b8' : '#f87171',
-                                                border: '1px solid currentColor',
-                                                boxShadow: proposal.status === '完了' ? '0 0 12px rgba(52,211,153,0.4)' : proposal.status === '対応中' ? '0 0 12px rgba(251,191,36,0.4)' : proposal.status === '保留' ? '0 0 12px rgba(148,163,184,0.3)' : '0 0 12px rgba(248,113,113,0.4)',
-                                                whiteSpace: 'nowrap', lineHeight: 1,
-                                            }}>
-                                                <span style={{ display: 'inline-flex', alignItems: 'center' }}>{getStatusIcon(proposal.status)}</span>
-                                                <span>{proposal.status}</span>
-                                            </div>
-                                        </div>
-                                        {/* タイトル (左寄せ・可変幅、開始位置は常に同じ列) */}
-                                        <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0, textAlign: 'left' }}>
-                                            {proposal.title}
-                                        </h3>
-                                        {/* 投稿者 (左寄せ・固定列幅) */}
-                                        <div style={{ width: '130px', flexShrink: 0, display: 'flex', justifyContent: 'flex-start', color: 'var(--text-dim)' }}>
-                                            <UserIdentity name={proposal.author} size={18} />
-                                        </div>
-                                        {/* 日付 (中央揃え・固定列幅) */}
-                                        <div style={{ width: '120px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
-                                            <div style={{
-                                                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                                padding: '4px 10px', borderRadius: '10px', fontSize: '0.75rem',
-                                                background: 'rgba(255,255,255,0.05)', color: 'var(--text-dim)',
-                                                border: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap', lineHeight: 1,
-                                            }}>
-                                                <Calendar size={12} />
-                                                {proposal.proposed_at ? new Date(proposal.proposed_at).toLocaleDateString() : '未設定'}
-                                            </div>
-                                        </div>
-                                        {/* 優先度 (中央揃え・固定列幅) */}
-                                        <div style={{ width: '64px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
-                                            <div style={{
-                                                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                                padding: '4px 10px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 700,
-                                                background: `${getPriorityColor(proposal.priority)}22`,
-                                                color: getPriorityColor(proposal.priority),
-                                                border: `1px solid ${getPriorityColor(proposal.priority)}55`,
-                                                whiteSpace: 'nowrap', lineHeight: 1,
-                                            }} title={`優先度: ${proposal.priority}`}>
-                                                <span style={{
-                                                    width: '6px', height: '6px', borderRadius: '50%',
-                                                    background: getPriorityColor(proposal.priority),
-                                                    boxShadow: `0 0 6px ${getPriorityColor(proposal.priority)}99`,
-                                                }} />
-                                                <span>{proposal.priority}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {/* 2行目: 問題点プレビュー (タイトル列の開始位置に揃える) */}
                                     {(() => {
                                         const desc = proposal.description || '';
                                         const marker = '【改善提案】\n';
@@ -838,16 +767,89 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                             || (idx >= 0 ? desc.slice(0, idx).trim() : desc.trim())
                                             || (proposal as any).proposal
                                             || '';
-                                        if (!preview) return null;
-                                        // タイトル列の開始位置 = 150 + 70 + 90 + 12*3 (gap) = 346px
+                                        const hasPreview = !!preview;
+                                        const spanRows = hasPreview ? '1 / span 2' : '1';
                                         return (
-                                            <p style={{
-                                                fontSize: '0.85rem', color: 'var(--text-dim)', lineHeight: 1.5,
-                                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                                margin: 0, marginLeft: '346px',
-                                            }}>
-                                                {preview}
-                                            </p>
+                                            <>
+                                                {/* 種別 (全行・左寄せ・垂直中央) */}
+                                                <div style={{ gridColumn: '1', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                                                    <div style={{
+                                                        display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
+                                                        height: '26px', padding: '0 10px', boxSizing: 'border-box',
+                                                        borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
+                                                        background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}`, whiteSpace: 'nowrap',
+                                                        boxShadow: `0 0 12px ${catStyle.border}`, lineHeight: 1,
+                                                    }}>
+                                                        <Tag size={12} style={{ flexShrink: 0 }} />
+                                                        <span>{getNormalizedCategory(proposal.category)}</span>
+                                                    </div>
+                                                </div>
+                                                {/* No (全行・左寄せ・垂直中央) */}
+                                                <div style={{ gridColumn: '2', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', fontSize: '0.75rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                                                    No.{proposal.source_no || '—'}
+                                                </div>
+                                                {/* 進捗バッジ (全行・左寄せ・垂直中央) */}
+                                                <div style={{ gridColumn: '3', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                                                    <div style={{
+                                                        display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
+                                                        height: '26px', padding: '0 12px', boxSizing: 'border-box',
+                                                        borderRadius: '20px',
+                                                        fontSize: '0.75rem', fontWeight: 800,
+                                                        background: proposal.status === '完了' ? 'rgba(16,185,129,0.15)' : proposal.status === '対応中' ? 'rgba(245,158,11,0.15)' : proposal.status === '保留' ? 'rgba(148,163,184,0.15)' : 'rgba(239,68,68,0.15)',
+                                                        color: proposal.status === '完了' ? '#34d399' : proposal.status === '対応中' ? '#fbbf24' : proposal.status === '保留' ? '#94a3b8' : '#f87171',
+                                                        border: '1px solid currentColor',
+                                                        boxShadow: proposal.status === '完了' ? '0 0 12px rgba(52,211,153,0.4)' : proposal.status === '対応中' ? '0 0 12px rgba(251,191,36,0.4)' : proposal.status === '保留' ? '0 0 12px rgba(148,163,184,0.3)' : '0 0 12px rgba(248,113,113,0.4)',
+                                                        whiteSpace: 'nowrap', lineHeight: 1,
+                                                    }}>
+                                                        <span style={{ display: 'inline-flex', alignItems: 'center' }}>{getStatusIcon(proposal.status)}</span>
+                                                        <span>{proposal.status}</span>
+                                                    </div>
+                                                </div>
+                                                {/* タイトル (1行目・左寄せ) */}
+                                                <h3 style={{ gridColumn: '4', gridRow: '1', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, textAlign: 'left' }}>
+                                                    {proposal.title}
+                                                </h3>
+                                                {/* 問題点プレビュー (2行目・タイトル列) */}
+                                                {hasPreview && (
+                                                    <p style={{
+                                                        gridColumn: '4', gridRow: '2',
+                                                        fontSize: '0.85rem', color: 'var(--text-dim)', lineHeight: 1.5,
+                                                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                        margin: 0, minWidth: 0, textAlign: 'left',
+                                                    }}>
+                                                        {preview}
+                                                    </p>
+                                                )}
+                                                {/* 投稿者 (全行・左寄せ・1行固定) */}
+                                                <div style={{ gridColumn: '5', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                                                    <UserIdentity name={proposal.author} size={18} />
+                                                </div>
+                                                {/* 日付バッジ (全行・中央揃え) */}
+                                                <div style={{ gridColumn: '6', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <div style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                                        height: '26px', padding: '0 10px', boxSizing: 'border-box',
+                                                        borderRadius: '10px', fontSize: '0.75rem',
+                                                        background: 'rgba(255,255,255,0.05)', color: 'var(--text-dim)',
+                                                        border: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap', lineHeight: 1,
+                                                    }}>
+                                                        <Calendar size={12} />
+                                                        {proposal.proposed_at ? new Date(proposal.proposed_at).toLocaleDateString() : '未設定'}
+                                                    </div>
+                                                </div>
+                                                {/* 優先度ドット (全行・中央揃え・テキスト無し) */}
+                                                <div style={{ gridColumn: '7', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <span
+                                                        title={`優先度: ${proposal.priority}`}
+                                                        style={{
+                                                            width: '12px', height: '12px', borderRadius: '50%',
+                                                            background: getPriorityColor(proposal.priority),
+                                                            boxShadow: `0 0 10px ${getPriorityColor(proposal.priority)}99`,
+                                                            border: `1px solid ${getPriorityColor(proposal.priority)}`,
+                                                        }}
+                                                    />
+                                                </div>
+                                            </>
                                         );
                                     })()}
                                 </div>

@@ -126,8 +126,12 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
             res = res.filter(item => item.author === user.name);
         }
 
-        // Sort: newest first
-        res.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        // Sort: 作成日の新しい順 (createdAt が無い古い行は updatedAt にフォールバック)
+        res.sort((a, b) => {
+            const bKey = new Date(b.createdAt ?? b.updatedAt).getTime();
+            const aKey = new Date(a.createdAt ?? a.updatedAt).getTime();
+            return bKey - aKey;
+        });
 
         setFilteredData(res);
     }, [data, searchKeyword, selectedTags, selectedCategories, filterType, user]);

@@ -754,55 +754,80 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         backdropFilter: 'blur(10px)',
                                         ['--card-accent' as any]: catStyle.color,
                                     }}>
-                                    {/* 1行目: カテゴリ / No / ステータス / タイトル / 右側メタ */}
-                                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '16px', width: '100%' }}>
-                                        {/* カテゴリバッジ (icon + text 横並び) */}
-                                        <div style={{
-                                            display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
-                                            padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
-                                            background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}`, whiteSpace: 'nowrap',
-                                            boxShadow: `0 0 12px ${catStyle.border}`, flexShrink: 0, lineHeight: 1,
-                                        }}>
-                                            <Tag size={12} style={{ flexShrink: 0 }} />
-                                            <span>{getNormalizedCategory(proposal.category)}</span>
+                                    {/* 1行目: 固定列幅で並べて、どのカードでも同じ列位置に揃える */}
+                                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '12px', width: '100%' }}>
+                                        {/* 種別 (左寄せ・固定列幅) */}
+                                        <div style={{ width: '150px', flexShrink: 0, display: 'flex', justifyContent: 'flex-start' }}>
+                                            <div style={{
+                                                display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
+                                                padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
+                                                background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}`, whiteSpace: 'nowrap',
+                                                boxShadow: `0 0 12px ${catStyle.border}`, lineHeight: 1,
+                                            }}>
+                                                <Tag size={12} style={{ flexShrink: 0 }} />
+                                                <span>{getNormalizedCategory(proposal.category)}</span>
+                                            </div>
                                         </div>
-                                        {/* No */}
-                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                        {/* No (左寄せ・固定列幅) */}
+                                        <div style={{ width: '70px', flexShrink: 0, fontSize: '0.75rem', color: 'var(--text-dim)', textAlign: 'left', whiteSpace: 'nowrap' }}>
                                             No.{proposal.source_no || '—'}
-                                        </span>
-                                        {/* ステータスバッジ (icon + text 横並び) */}
-                                        <div style={{
-                                            display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
-                                            padding: '4px 12px', borderRadius: '20px',
-                                            fontSize: '0.75rem', fontWeight: 800,
-                                            background: proposal.status === '完了' ? 'rgba(16,185,129,0.15)' : proposal.status === '対応中' ? 'rgba(245,158,11,0.15)' : proposal.status === '保留' ? 'rgba(148,163,184,0.15)' : 'rgba(239,68,68,0.15)',
-                                            color: proposal.status === '完了' ? '#34d399' : proposal.status === '対応中' ? '#fbbf24' : proposal.status === '保留' ? '#94a3b8' : '#f87171',
-                                            border: '1px solid currentColor',
-                                            boxShadow: proposal.status === '完了' ? '0 0 12px rgba(52,211,153,0.4)' : proposal.status === '対応中' ? '0 0 12px rgba(251,191,36,0.4)' : proposal.status === '保留' ? '0 0 12px rgba(148,163,184,0.3)' : '0 0 12px rgba(248,113,113,0.4)',
-                                            whiteSpace: 'nowrap', flexShrink: 0, lineHeight: 1,
-                                        }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center' }}>{getStatusIcon(proposal.status)}</span>
-                                            <span>{proposal.status}</span>
                                         </div>
-                                        {/* タイトル */}
-                                        <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
+                                        {/* ステータスバッジ (左寄せ・固定列幅) */}
+                                        <div style={{ width: '90px', flexShrink: 0, display: 'flex', justifyContent: 'flex-start' }}>
+                                            <div style={{
+                                                display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
+                                                padding: '4px 12px', borderRadius: '20px',
+                                                fontSize: '0.75rem', fontWeight: 800,
+                                                background: proposal.status === '完了' ? 'rgba(16,185,129,0.15)' : proposal.status === '対応中' ? 'rgba(245,158,11,0.15)' : proposal.status === '保留' ? 'rgba(148,163,184,0.15)' : 'rgba(239,68,68,0.15)',
+                                                color: proposal.status === '完了' ? '#34d399' : proposal.status === '対応中' ? '#fbbf24' : proposal.status === '保留' ? '#94a3b8' : '#f87171',
+                                                border: '1px solid currentColor',
+                                                boxShadow: proposal.status === '完了' ? '0 0 12px rgba(52,211,153,0.4)' : proposal.status === '対応中' ? '0 0 12px rgba(251,191,36,0.4)' : proposal.status === '保留' ? '0 0 12px rgba(148,163,184,0.3)' : '0 0 12px rgba(248,113,113,0.4)',
+                                                whiteSpace: 'nowrap', lineHeight: 1,
+                                            }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center' }}>{getStatusIcon(proposal.status)}</span>
+                                                <span>{proposal.status}</span>
+                                            </div>
+                                        </div>
+                                        {/* タイトル (左寄せ・可変幅、開始位置は常に同じ列) */}
+                                        <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0, textAlign: 'left' }}>
                                             {proposal.title}
                                         </h3>
-                                        {/* 右側メタ */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', color: 'var(--text-dim)', flexShrink: 0 }}>
+                                        {/* 投稿者 (左寄せ・固定列幅) */}
+                                        <div style={{ width: '130px', flexShrink: 0, display: 'flex', justifyContent: 'flex-start', color: 'var(--text-dim)' }}>
                                             <UserIdentity name={proposal.author} size={18} />
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
-                                                <Calendar size={14} />
+                                        </div>
+                                        {/* 日付 (中央揃え・固定列幅) */}
+                                        <div style={{ width: '120px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+                                            <div style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                                padding: '4px 10px', borderRadius: '10px', fontSize: '0.75rem',
+                                                background: 'rgba(255,255,255,0.05)', color: 'var(--text-dim)',
+                                                border: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap', lineHeight: 1,
+                                            }}>
+                                                <Calendar size={12} />
                                                 {proposal.proposed_at ? new Date(proposal.proposed_at).toLocaleDateString() : '未設定'}
                                             </div>
+                                        </div>
+                                        {/* 優先度 (中央揃え・固定列幅) */}
+                                        <div style={{ width: '64px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
                                             <div style={{
-                                                width: '8px', height: '8px', borderRadius: '50%',
-                                                background: getPriorityColor(proposal.priority),
-                                                boxShadow: `0 0 8px ${getPriorityColor(proposal.priority)}77`,
-                                            }} title={`優先度: ${proposal.priority}`} />
+                                                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                                padding: '4px 10px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 700,
+                                                background: `${getPriorityColor(proposal.priority)}22`,
+                                                color: getPriorityColor(proposal.priority),
+                                                border: `1px solid ${getPriorityColor(proposal.priority)}55`,
+                                                whiteSpace: 'nowrap', lineHeight: 1,
+                                            }} title={`優先度: ${proposal.priority}`}>
+                                                <span style={{
+                                                    width: '6px', height: '6px', borderRadius: '50%',
+                                                    background: getPriorityColor(proposal.priority),
+                                                    boxShadow: `0 0 6px ${getPriorityColor(proposal.priority)}99`,
+                                                }} />
+                                                <span>{proposal.priority}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    {/* 2行目: 問題点プレビュー */}
+                                    {/* 2行目: 問題点プレビュー (タイトル列の開始位置に揃える) */}
                                     {(() => {
                                         const desc = proposal.description || '';
                                         const marker = '【改善提案】\n';
@@ -812,11 +837,12 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                             || (proposal as any).proposal
                                             || '';
                                         if (!preview) return null;
+                                        // タイトル列の開始位置 = 150 + 70 + 90 + 12*3 (gap) = 346px
                                         return (
                                             <p style={{
                                                 fontSize: '0.85rem', color: 'var(--text-dim)', lineHeight: 1.5,
                                                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                                margin: 0, paddingLeft: '2px',
+                                                margin: 0, marginLeft: '346px',
                                             }}>
                                                 {preview}
                                             </p>

@@ -10,6 +10,8 @@ interface KnowledgeListProps {
     filterType: 'all' | 'unsolved' | 'solved' | 'mine';
     onFilterChange: (type: 'all' | 'unsolved' | 'solved' | 'mine') => void;
     onItemClick: (item: KnowledgeItem) => void;
+    // 展開時のみ押せるリアクション切替 (楽観的 UI + バックグラウンド同期)
+    onToggleReaction?: (item: KnowledgeItem, type: 'like' | 'wrong') => void;
     user: User;
     categories: string[];
     selectedCategories: string[];
@@ -26,6 +28,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
     filterType,
     onFilterChange,
     onItemClick,
+    onToggleReaction,
     categories,
     selectedCategories,
     onCategoryToggle,
@@ -212,7 +215,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 ))}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {loading ? (
                     <div style={{ textAlign: 'center', marginTop: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -240,13 +243,13 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     columnGap: '10px',
                                     rowGap: '4px',
                                 }}>
-                                    {/* Col 1 / Row 2: 開閉 chevron (2行目左端) */}
+                                    {/* Col 1: 開閉 chevron (両行・カード垂直中央) */}
                                     <button
                                         onClick={e => { e.stopPropagation(); setExpandedId(isExpanded ? null : item.id); }}
                                         style={{
-                                            gridColumn: 1, gridRow: 2,
+                                            gridColumn: 1, gridRow: '1 / span 2',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            width: '24px', height: '24px', padding: 0,
+                                            width: '24px', height: '24px', padding: 0, justifySelf: 'start',
                                             background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)',
                                             borderRadius: '6px', cursor: 'pointer', color: 'var(--muted)',
                                         }} title={isExpanded ? '閉じる' : '開く'}>
@@ -294,14 +297,31 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         ) : null}
                                     </div>
 
-                                    {/* タイトル (1行目・左寄せ) */}
+                                    {/* タイトル + 編集ボタン (1行目・左寄せ、常に編集可) */}
                                     <div style={{
                                         gridColumn: 6, gridRow: 1,
-                                        fontSize: '1rem', fontWeight: 700, color: 'var(--text)',
-                                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                        textAlign: 'left', minWidth: 0,
+                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                        minWidth: 0, overflow: 'hidden',
                                     }}>
-                                        {stripCategoryFromTitle(item.title)}
+                                        <div style={{
+                                            fontSize: '1rem', fontWeight: 700, color: 'var(--text)',
+                                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                            textAlign: 'left', minWidth: 0, flexShrink: 1,
+                                        }}>
+                                            {stripCategoryFromTitle(item.title)}
+                                        </div>
+                                        <button
+                                            onClick={e => { e.stopPropagation(); onItemClick(item); }}
+                                            title="編集"
+                                            style={{
+                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                width: '24px', height: '24px', padding: 0, flexShrink: 0,
+                                                background: 'rgba(99,102,241,0.12)', color: '#c7d2fe',
+                                                border: '1px solid rgba(99,102,241,0.4)', borderRadius: '6px',
+                                                cursor: 'pointer',
+                                            }}>
+                                            <Edit3 size={12} />
+                                        </button>
                                     </div>
                                     {/* 2行目・タイトル列: タグ/インシデント/添付 (コンパクト表示時のみ) */}
                                     <div style={{
@@ -356,7 +376,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                             {new Date(item.createdAt ?? item.updatedAt).toLocaleDateString()}
                                         </span>
                                     </div>
-                                    {/* 👍⚠ (両行・中央揃え) */}
+                                    {/* 👍⚠ (両行・中央揃え。展開時のみクリックでトグル) */}
                                     <div
                                         onClick={e => e.stopPropagation()}
                                         style={{
@@ -367,18 +387,34 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                             borderRadius: '20px', border: '1px solid var(--glass-border)',
                                         }}>
                                         <span
+                                            onClick={e => { if (isExpanded && onToggleReaction) { e.stopPropagation(); onToggleReaction(item, 'like'); } }}
                                             onMouseEnter={e => (item.likeCount || 0) > 0 && handlePillEnter(`${item.id}-like`, e.currentTarget)}
                                             onMouseLeave={() => setHoveredPill(null)}
-                                            style={{ position: 'relative', fontSize: '0.78rem', color: (item.likeCount || 0) > 0 ? 'var(--primary)' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, cursor: 'default', lineHeight: 1 }}>
-                                            <ThumbsUp size={12} fill={(item.likeCount || 0) > 0 ? 'var(--primary)' : 'transparent'} />
+                                            title={isExpanded ? 'いいね！をトグル' : '展開してから押せます'}
+                                            style={{
+                                                position: 'relative', fontSize: '0.78rem',
+                                                color: item.myReaction === 'like' ? 'var(--primary)' : (item.likeCount || 0) > 0 ? 'var(--primary)' : 'var(--muted)',
+                                                display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, lineHeight: 1,
+                                                cursor: isExpanded ? 'pointer' : 'default',
+                                                opacity: isExpanded ? 1 : 0.9,
+                                            }}>
+                                            <ThumbsUp size={12} fill={item.myReaction === 'like' ? 'var(--primary)' : (item.likeCount || 0) > 0 ? 'var(--primary)' : 'transparent'} />
                                             {item.likeCount || 0}
                                             {renderPopover(item.likeUsers, '👍 いいね！', `${item.id}-like`)}
                                         </span>
                                         <span
+                                            onClick={e => { if (isExpanded && onToggleReaction) { e.stopPropagation(); onToggleReaction(item, 'wrong'); } }}
                                             onMouseEnter={e => (item.wrongCount || 0) > 0 && handlePillEnter(`${item.id}-wrong`, e.currentTarget)}
                                             onMouseLeave={() => setHoveredPill(null)}
-                                            style={{ position: 'relative', fontSize: '0.78rem', color: (item.wrongCount || 0) > 0 ? '#ef4444' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, cursor: 'default', lineHeight: 1 }}>
-                                            <AlertTriangle size={12} fill={(item.wrongCount || 0) > 0 ? '#ef4444' : 'transparent'} />
+                                            title={isExpanded ? 'だめだねをトグル' : '展開してから押せます'}
+                                            style={{
+                                                position: 'relative', fontSize: '0.78rem',
+                                                color: item.myReaction === 'wrong' ? '#ef4444' : (item.wrongCount || 0) > 0 ? '#ef4444' : 'var(--muted)',
+                                                display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, lineHeight: 1,
+                                                cursor: isExpanded ? 'pointer' : 'default',
+                                                opacity: isExpanded ? 1 : 0.9,
+                                            }}>
+                                            <AlertTriangle size={12} fill={item.myReaction === 'wrong' ? '#ef4444' : (item.wrongCount || 0) > 0 ? '#ef4444' : 'transparent'} />
                                             {item.wrongCount || 0}
                                             {renderPopover(item.wrongUsers, '⚠ 違うよ！', `${item.id}-wrong`)}
                                         </span>
@@ -426,20 +462,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                                 <div style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{item.countermeasure}</div>
                                             </div>
                                         )}
-                                        {/* 編集ボタン (展開ビュー下部) */}
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '4px' }}>
-                                            <button
-                                                onClick={() => { setExpandedId(null); onItemClick(item); }}
-                                                style={{
-                                                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                                    padding: '6px 14px', borderRadius: '10px', cursor: 'pointer',
-                                                    fontSize: '0.82rem',
-                                                    background: 'rgba(99,102,241,0.15)', color: '#c7d2fe',
-                                                    border: '1px solid rgba(99,102,241,0.45)',
-                                                }}>
-                                                <Edit3 size={13} /> 編集
-                                            </button>
-                                        </div>
+                                        {/* 編集はタイトル右のボタンに集約しているのでここでは出さない */}
                                     </div>
                                 )}
                             </div>

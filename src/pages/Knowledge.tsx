@@ -234,6 +234,38 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialEditItem]);
 
+    // 一覧カードの展開ビューから呼ばれるリアクション (いいね / だめだね) トグル。
+    // Optimistic UI + バックグラウンド同期。失敗時はロールバック。
+    const handleToggleReaction = async (item: KnowledgeItem, type: 'like' | 'wrong') => {
+        const userId = (user as any).id as string | undefined;
+        if (!userId) return alert('ユーザーIDが見つかりません');
+
+        const original = data.find(d => d.id === item.id) ?? item;
+        const next: KnowledgeItem = { ...original };
+        const isRemoving = next.myReaction === type;
+        if (isRemoving) {
+            next.myReaction = null;
+            if (type === 'like') next.likeCount = Math.max(0, (next.likeCount || 0) - 1);
+            else next.wrongCount = Math.max(0, (next.wrongCount || 0) - 1);
+        } else {
+            if (next.myReaction === 'like') next.likeCount = Math.max(0, (next.likeCount || 0) - 1);
+            if (next.myReaction === 'wrong') next.wrongCount = Math.max(0, (next.wrongCount || 0) - 1);
+            next.myReaction = type;
+            if (type === 'like') next.likeCount = (next.likeCount || 0) + 1;
+            else next.wrongCount = (next.wrongCount || 0) + 1;
+        }
+
+        setData(prev => prev.map(i => i.id === next.id ? next : i));
+
+        try {
+            await apiClient.toggleReaction(item.id, userId, type);
+        } catch (e) {
+            console.error('[handleToggleReaction] sync failed:', e);
+            setData(prev => prev.map(i => i.id === original.id ? original : i));
+            alert('リアクションの同期に失敗しました');
+        }
+    };
+
     const handleSave = async (updatedItem: KnowledgeItem, shouldClose = true) => {
         setData(prev => {
             const index = prev.findIndex(i => i.id === updatedItem.id);
@@ -288,6 +320,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                             filterType={filterType}
                             onFilterChange={setFilterType}
                             onItemClick={handleEditItem}
+                            onToggleReaction={handleToggleReaction}
                             user={user}
                             categories={masterData.categories}
                             selectedCategories={selectedCategories}

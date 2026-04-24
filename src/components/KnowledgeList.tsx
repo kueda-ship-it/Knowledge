@@ -215,7 +215,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 ))}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {loading ? (
                     <div style={{ textAlign: 'center', marginTop: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -232,7 +232,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                 key={item.id}
                                 onClick={() => setExpandedId(isExpanded ? null : item.id)}
                                 className={`knowledge-card ${item.status}`}
-                                style={{ cursor: 'pointer', padding: '10px 14px' }}
+                                style={{ cursor: 'pointer', padding: '10px 14px', marginBottom: 0 }}
                             >
                                 {/* Grid: バッジ類は両行をまたいで垂直中央揃え。タイトルは1行目、タグ/展開ボタンは2行目 */}
                                 <div style={{
@@ -260,11 +260,14 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     <div style={{ gridColumn: 2, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                                         <span style={{
                                             display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                            fontSize: '0.78rem', fontWeight: 700, lineHeight: 1,
+                                            height: '16px', // アイコンサイズ(12px)より少し大きく確保、baseline ずれ防止
+                                            fontSize: '0.78rem', fontWeight: 700, lineHeight: '16px',
                                             color: item.status === 'solved' ? '#22c55e' : '#ef4444',
                                         }}>
-                                            {item.status === 'solved' ? <Check size={12} /> : <AlertTriangle size={12} />}
-                                            <span>{item.status === 'solved' ? '解決済' : '未解決'}</span>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px', flexShrink: 0 }}>
+                                                {item.status === 'solved' ? <Check size={14} strokeWidth={2.5} /> : <AlertTriangle size={14} strokeWidth={2.5} />}
+                                            </span>
+                                            <span style={{ lineHeight: '16px' }}>{item.status === 'solved' ? '解決済' : '未解決'}</span>
                                         </span>
                                     </div>
                                     {/* No (両行・左寄せ・28px 高) */}

@@ -405,14 +405,14 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                                 position: 'relative', fontSize: '0.78rem',
                                                 color: item.myReaction === 'like' ? 'var(--primary)' : (item.likeCount || 0) > 0 ? 'var(--primary)' : 'var(--muted)',
                                                 display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 700,
-                                                height: '14px', lineHeight: '14px',
+                                                height: '16px', lineHeight: 1,
                                                 cursor: isExpanded ? 'pointer' : 'default',
                                                 opacity: isExpanded ? 1 : 0.9,
                                             }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px', flexShrink: 0 }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', flexShrink: 0 }}>
                                                 <ThumbsUp size={12} style={{ display: 'block' }} fill={item.myReaction === 'like' ? 'var(--primary)' : (item.likeCount || 0) > 0 ? 'var(--primary)' : 'transparent'} />
                                             </span>
-                                            <span style={{ lineHeight: '14px', display: 'inline-block' }}>{item.likeCount || 0}</span>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '16px', minWidth: '8px' }}>{item.likeCount || 0}</span>
                                             {renderPopover(item.likeUsers, '👍 いいね！', `${item.id}-like`)}
                                         </span>
                                         <span
@@ -424,14 +424,14 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                                 position: 'relative', fontSize: '0.78rem',
                                                 color: item.myReaction === 'wrong' ? '#ef4444' : (item.wrongCount || 0) > 0 ? '#ef4444' : 'var(--muted)',
                                                 display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 700,
-                                                height: '14px', lineHeight: '14px',
+                                                height: '16px', lineHeight: 1,
                                                 cursor: isExpanded ? 'pointer' : 'default',
                                                 opacity: isExpanded ? 1 : 0.9,
                                             }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px', flexShrink: 0 }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', flexShrink: 0 }}>
                                                 <AlertCircle size={12} style={{ display: 'block' }} fill={item.myReaction === 'wrong' ? '#ef4444' : (item.wrongCount || 0) > 0 ? '#ef4444' : 'transparent'} />
                                             </span>
-                                            <span style={{ lineHeight: '14px', display: 'inline-block' }}>{item.wrongCount || 0}</span>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '16px', minWidth: '8px' }}>{item.wrongCount || 0}</span>
                                             {renderPopover(item.wrongUsers, '⚠ 違うよ！', `${item.id}-wrong`)}
                                         </span>
                                     </div>

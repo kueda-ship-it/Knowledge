@@ -142,6 +142,22 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
         { value: 'mine', label: '自分の投稿' },
     ];
 
+    // フィルタピルの色をバッジ配色と合わせる
+    // rgb は "R, G, B" 形式。active 時に rgba(..,0.18/0.6) で背景/ボーダーに使う。
+    const statusColorRgb: Record<string, { rgb: string; text: string } | null> = {
+        all: null, // default (primary)
+        solved: { rgb: '34, 197, 94', text: '#4ade80' },   // 解決済: 緑
+        unsolved: { rgb: '239, 68, 68', text: '#fca5a5' }, // 未解決: 赤
+        mine: null, // default (primary)
+    };
+    const getCategoryColorRgb = (cat: string): { rgb: string; text: string } => {
+        const n = cat.toLowerCase();
+        if (n.includes('dispatcher')) return { rgb: '139, 92, 246', text: '#c4b5fd' }; // 紫
+        if (n.includes('construction')) return { rgb: '59, 130, 246', text: '#93c5fd' }; // 青
+        if (n.includes('after') || n.includes('aftertrouble')) return { rgb: '249, 115, 22', text: '#fdba74' }; // 橙
+        return { rgb: '99, 102, 241', text: '#c7d2fe' }; // デフォルト: インディゴ
+    };
+
     return (
         <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -167,52 +183,67 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
 
             {/* Status Filter Badges (overflow-x:auto は overflow-y を 'auto' 化して hover 浮き上がりを切るので、paddingTop/Bottom で余白を確保) */}
             <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', overflowX: 'auto', flexShrink: 0, paddingTop: '4px', paddingBottom: '4px' }}>
-                {statusOptions.map(opt => (
-                    <button
-                        key={opt.value}
-                        onClick={() => onFilterChange(opt.value)}
-                        className={`cursor-hint-pill${filterType === opt.value ? ' is-active' : ''}`}
-                        style={{
-                            flexShrink: 0,
-                            padding: '5px 14px', borderRadius: '20px', border: '1px solid var(--glass-border)', cursor: 'pointer',
-                            fontSize: '0.82rem',
-                            backgroundColor: filterType === opt.value ? 'color-mix(in oklab, var(--primary) 55%, transparent)' : 'rgba(255,255,255,0.05)',
-                            color: filterType === opt.value ? 'white' : 'rgba(255,255,255,0.6)',
-                            borderColor: filterType === opt.value ? 'color-mix(in oklab, var(--primary) 80%, transparent)' : 'rgba(255,255,255,0.15)',
-                            fontWeight: filterType === opt.value ? 'bold' : 'normal',
-                            backdropFilter: 'blur(8px)',
-                            display: 'flex', alignItems: 'center', gap: '4px',
-                            whiteSpace: 'nowrap'
-                        }}
-                    >
-                        {filterType === opt.value && <Check size={11} />}
-                        {opt.label}
-                    </button>
-                ))}
+                {statusOptions.map(opt => {
+                    const active = filterType === opt.value;
+                    const tone = statusColorRgb[opt.value];
+                    const bg = active
+                        ? (tone ? `rgba(${tone.rgb}, 0.25)` : 'color-mix(in oklab, var(--primary) 55%, transparent)')
+                        : 'rgba(255,255,255,0.05)';
+                    const border = active
+                        ? (tone ? `rgba(${tone.rgb}, 0.65)` : 'color-mix(in oklab, var(--primary) 80%, transparent)')
+                        : 'rgba(255,255,255,0.15)';
+                    const fg = active ? (tone?.text ?? 'white') : 'rgba(255,255,255,0.6)';
+                    return (
+                        <button
+                            key={opt.value}
+                            onClick={() => onFilterChange(opt.value)}
+                            className={`cursor-hint-pill${active ? ' is-active' : ''}`}
+                            style={{
+                                flexShrink: 0,
+                                padding: '5px 14px', borderRadius: '20px', border: '1px solid', cursor: 'pointer',
+                                fontSize: '0.82rem',
+                                backgroundColor: bg,
+                                color: fg,
+                                borderColor: border,
+                                fontWeight: active ? 'bold' : 'normal',
+                                backdropFilter: 'blur(8px)',
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            {active && <Check size={11} />}
+                            {opt.label}
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Category Filters */}
             <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', paddingTop: '4px', paddingBottom: '10px', borderBottom: '1px solid var(--border)', overflowX: 'auto', flexShrink: 0 }}>
-                {categories.map(cat => (
-                    <button
-                        key={cat}
-                        onClick={() => onCategoryToggle(cat)}
-                        className={`cursor-hint-pill${selectedCategories.includes(cat) ? ' is-active' : ''}`}
-                        style={{
-                            flexShrink: 0,
-                            padding: '5px 14px', borderRadius: '20px', border: '1px solid var(--glass-border)', cursor: 'pointer',
-                            fontSize: '0.82rem',
-                            backgroundColor: selectedCategories.includes(cat) ? 'rgba(99, 102, 241, 0.5)' : 'rgba(255,255,255,0.05)',
-                            color: selectedCategories.includes(cat) ? 'white' : 'rgba(255,255,255,0.6)',
-                            borderColor: selectedCategories.includes(cat) ? 'rgba(99, 102, 241, 0.8)' : 'rgba(255,255,255,0.15)',
-                            fontWeight: selectedCategories.includes(cat) ? 'bold' : 'normal',
-                            backdropFilter: 'blur(8px)',
-                            whiteSpace: 'nowrap'
-                        }}
-                    >
-                        {cat}
-                    </button>
-                ))}
+                {categories.map(cat => {
+                    const active = selectedCategories.includes(cat);
+                    const tone = getCategoryColorRgb(cat);
+                    return (
+                        <button
+                            key={cat}
+                            onClick={() => onCategoryToggle(cat)}
+                            className={`cursor-hint-pill${active ? ' is-active' : ''}`}
+                            style={{
+                                flexShrink: 0,
+                                padding: '5px 14px', borderRadius: '20px', border: '1px solid', cursor: 'pointer',
+                                fontSize: '0.82rem',
+                                backgroundColor: active ? `rgba(${tone.rgb}, 0.25)` : 'rgba(255,255,255,0.05)',
+                                color: active ? tone.text : 'rgba(255,255,255,0.6)',
+                                borderColor: active ? `rgba(${tone.rgb}, 0.65)` : 'rgba(255,255,255,0.15)',
+                                fontWeight: active ? 'bold' : 'normal',
+                                backdropFilter: 'blur(8px)',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            {cat}
+                        </button>
+                    );
+                })}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -227,12 +258,16 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                     data.map((item, index) => {
                         const isExpanded = expandedId === item.id;
                         const hasSubRow = (item.tags && item.tags.length > 0) || (item.attachments && item.attachments.length > 0) || (item.incidents && item.incidents.length > 0);
+                        const catTone = getCategoryColorRgb(item.category || '');
                         return (
                             <div
                                 key={item.id}
                                 onClick={() => setExpandedId(isExpanded ? null : item.id)}
                                 className={`knowledge-card ${item.status}`}
-                                style={{ cursor: 'pointer', padding: '10px 14px', marginBottom: 0 }}
+                                style={{
+                                    cursor: 'pointer', padding: '10px 14px', marginBottom: 0,
+                                    ['--card-accent' as any]: `rgba(${catTone.rgb}, 0.9)`,
+                                }}
                             >
                                 {/* Grid: バッジ類は両行をまたいで垂直中央揃え。タイトルは1行目、タグ/展開ボタンは2行目 */}
                                 <div style={{

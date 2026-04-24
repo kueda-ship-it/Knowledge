@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { KnowledgeItem, User } from '../types';
-import { RotateCcw, Check, Paperclip, ThumbsUp, AlertTriangle, ChevronDown, ChevronUp, Edit3 } from 'lucide-react';
+import { RotateCcw, Check, Paperclip, ThumbsUp, AlertTriangle, AlertCircle, ChevronDown, ChevronUp, Edit3 } from 'lucide-react';
 
 interface KnowledgeListProps {
     data: KnowledgeItem[];
@@ -215,7 +215,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 ))}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {loading ? (
                     <div style={{ textAlign: 'center', marginTop: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -259,15 +259,21 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     {/* ステータス (両行・左寄せ、アイコン + テキストで列揃え) */}
                                     <div style={{ gridColumn: 2, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                                         <span style={{
-                                            display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                            height: '16px', // アイコンサイズ(12px)より少し大きく確保、baseline ずれ防止
+                                            display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                            height: '16px',
                                             fontSize: '0.78rem', fontWeight: 700, lineHeight: '16px',
                                             color: item.status === 'solved' ? '#22c55e' : '#ef4444',
                                         }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px', flexShrink: 0 }}>
-                                                {item.status === 'solved' ? <Check size={14} strokeWidth={2.5} /> : <AlertTriangle size={14} strokeWidth={2.5} />}
+                                            {/* アイコンは visual-center が揃うよう、同一ビューボックスの円形アイコン (Check / AlertCircle) を採用 */}
+                                            <span style={{
+                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                width: '14px', height: '14px', flexShrink: 0,
+                                            }}>
+                                                {item.status === 'solved'
+                                                    ? <Check size={14} strokeWidth={3} style={{ display: 'block' }} />
+                                                    : <AlertCircle size={14} strokeWidth={2.5} style={{ display: 'block' }} />}
                                             </span>
-                                            <span style={{ lineHeight: '16px' }}>{item.status === 'solved' ? '解決済' : '未解決'}</span>
+                                            <span style={{ lineHeight: '16px', display: 'inline-block' }}>{item.status === 'solved' ? '解決済' : '未解決'}</span>
                                         </span>
                                     </div>
                                     {/* No (両行・左寄せ・28px 高) */}

@@ -432,9 +432,9 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case '完了': return <CheckCircle size={16} />;
-            case '対応中': return <Clock size={16} />;
-            default: return <AlertCircle size={16} />;
+            case '完了': return <CheckCircle size={12} />;
+            case '対応中': return <Clock size={12} />;
+            default: return <AlertCircle size={12} />;
         }
     };
 
@@ -760,7 +760,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         <div style={{ width: '150px', flexShrink: 0, display: 'flex', justifyContent: 'flex-start' }}>
                                             <div style={{
                                                 display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
-                                                padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
+                                                height: '26px', padding: '0 10px', boxSizing: 'border-box',
+                                                borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
                                                 background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}`, whiteSpace: 'nowrap',
                                                 boxShadow: `0 0 12px ${catStyle.border}`, lineHeight: 1,
                                             }}>
@@ -776,7 +777,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         <div style={{ width: '90px', flexShrink: 0, display: 'flex', justifyContent: 'flex-start' }}>
                                             <div style={{
                                                 display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
-                                                padding: '4px 12px', borderRadius: '20px',
+                                                height: '26px', padding: '0 12px', boxSizing: 'border-box',
+                                                borderRadius: '20px',
                                                 fontSize: '0.75rem', fontWeight: 800,
                                                 background: proposal.status === '完了' ? 'rgba(16,185,129,0.15)' : proposal.status === '対応中' ? 'rgba(245,158,11,0.15)' : proposal.status === '保留' ? 'rgba(148,163,184,0.15)' : 'rgba(239,68,68,0.15)',
                                                 color: proposal.status === '完了' ? '#34d399' : proposal.status === '対応中' ? '#fbbf24' : proposal.status === '保留' ? '#94a3b8' : '#f87171',

@@ -215,7 +215,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 ))}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 {loading ? (
                     <div style={{ textAlign: 'center', marginTop: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -256,15 +256,16 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                     </button>
 
-                                    {/* ステータス (両行・左寄せ・中央揃え) */}
+                                    {/* ステータス (両行・左寄せ、アイコン + テキストで列揃え) */}
                                     <div style={{ gridColumn: 2, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                                        {item.status === 'solved' ? (
-                                            <span style={{ fontSize: '0.78rem', color: '#22c55e', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 700, lineHeight: 1 }}>
-                                                <Check size={12} /> 解決済
-                                            </span>
-                                        ) : (
-                                            <span style={{ fontSize: '0.78rem', color: '#ef4444', fontWeight: 700, lineHeight: 1 }}>未解決</span>
-                                        )}
+                                        <span style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                            fontSize: '0.78rem', fontWeight: 700, lineHeight: 1,
+                                            color: item.status === 'solved' ? '#22c55e' : '#ef4444',
+                                        }}>
+                                            {item.status === 'solved' ? <Check size={12} /> : <AlertTriangle size={12} />}
+                                            <span>{item.status === 'solved' ? '解決済' : '未解決'}</span>
+                                        </span>
                                     </div>
                                     {/* No (両行・左寄せ・28px 高) */}
                                     <div style={{ gridColumn: 3, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>

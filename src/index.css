@@ -986,21 +986,21 @@ body[data-theme="liquid"] .glass-refract-wrap > .glass-specular {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Dispatcher / Machine 用 (バイオレット/サファイア系) */
+/* 号機バッジ: オフホワイト系 (視認性重視で色は主張せず) */
 .badge-machine {
-  background: rgba(99, 102, 241, 0.15);
-  color: #6366f1;
-  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 body[data-theme="dark"] .badge-machine,
 body[data-theme="liquid"] .badge-machine {
-  color: #a5b4fc;
+  color: #f3f4f6;
 }
 
 body[data-theme="liquid"] .badge-machine {
-  background: rgba(99, 102, 241, 0.1);
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
 }
 
 /* カテゴリ汎用 */
@@ -1090,7 +1090,7 @@ body[data-theme="liquid"] .badge-attachment {
 }
 
 .knowledge-card:hover .badge-machine {
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.18);
 }
 
 .knowledge-card:hover .badge-attachment {

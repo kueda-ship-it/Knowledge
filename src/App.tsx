@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { KnowledgeItem, ChatMessage, ChatProposalRef } from './types';
+import { KnowledgeItem, ChatMessage, ChatProposalRef, ChatAction, ProposalDraft, KnowledgeDraft, NavigateParams } from './types';
 import { Header } from './components/Header';
 import { Login } from './pages/Login';
 import { Menu } from './pages/Menu';
@@ -42,6 +42,10 @@ function App() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [pendingEdit, setPendingEdit] = useState<KnowledgeItem | null>(null);
     const [pendingProposalId, setPendingProposalId] = useState<string | null>(null);
+    // AI チャットからの一括連携
+    const [pendingProposalDraft, setPendingProposalDraft] = useState<ProposalDraft | null>(null);
+    const [pendingKnowledgeDraft, setPendingKnowledgeDraft] = useState<KnowledgeDraft | null>(null);
+    const [pendingNavParams, setPendingNavParams] = useState<NavigateParams | null>(null);
     const [proposals, setProposals] = useState<any[]>([]);
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [isChatSearching, setIsChatSearching] = useState(false);
@@ -212,7 +216,10 @@ function App() {
                 text: res.message || '回答を取得できませんでした。',
                 results: knowledgeHits.length ? knowledgeHits : undefined,
                 proposalResults: proposalHits.length ? proposalHits : undefined,
-                noResults: !knowledgeHits.length && !proposalHits.length,
+                // action がある場合は noResults 扱いしない (アクションも有効な応答)
+                noResults: !knowledgeHits.length && !proposalHits.length && !res.action,
+                action: res.action,
+                actionState: res.action ? 'pending' : undefined,
             };
             setChatMessages(prev => [...prev, assistantMsg]);
         } catch (e) {
@@ -241,6 +248,55 @@ function App() {
     const handleChatProposalClick = (p: ChatProposalRef) => {
         setPendingProposalId(p.id);
         navigate('proposals');
+    };
+
+    // チャットの action を実行する。書き込み系は対応する画面のモーダルへドラフトを渡し、
+    // 実際の保存はユーザーがモーダル内で確認・編集してから行う方針 (LLM の幻覚で勝手に insert しない)。
+    const dispatchChatAction = useCallback((messageId: string, action: ChatAction) => {
+        try {
+            switch (action.type) {
+                case 'create_proposal': {
+                    setPendingProposalDraft(action.draft);
+                    navigate('proposals');
+                    break;
+                }
+                case 'create_knowledge': {
+                    setPendingKnowledgeDraft(action.draft);
+                    navigate('knowledge');
+                    break;
+                }
+                case 'navigate': {
+                    setPendingNavParams(action.params ?? null);
+                    navigate(action.view);
+                    break;
+                }
+            }
+            setChatMessages(prev => prev.map(m =>
+                m.id === messageId ? { ...m, actionState: 'done' } : m
+            ));
+        } catch (e: any) {
+            console.error('[dispatchChatAction] failed:', e);
+            setChatMessages(prev => prev.map(m =>
+                m.id === messageId ? { ...m, actionState: 'failed', actionError: e?.message ?? '不明なエラー' } : m
+            ));
+        }
+    }, []);
+
+    const handleActionConfirm = (messageId: string) => {
+        const msg = chatMessages.find(m => m.id === messageId);
+        if (!msg?.action) return;
+        // 二重実行防止
+        if (msg.actionState === 'confirmed' || msg.actionState === 'done') return;
+        setChatMessages(prev => prev.map(m =>
+            m.id === messageId ? { ...m, actionState: 'confirmed' } : m
+        ));
+        dispatchChatAction(messageId, msg.action);
+    };
+
+    const handleActionCancel = (messageId: string) => {
+        setChatMessages(prev => prev.map(m =>
+            m.id === messageId ? { ...m, actionState: 'cancelled' } : m
+        ));
     };
 
     if (isLoading) {
@@ -282,6 +338,10 @@ function App() {
                         onBack={() => navigate('menu')}
                         initialEditItem={pendingEdit}
                         onInitialEditConsumed={() => setPendingEdit(null)}
+                        initialNewDraft={pendingKnowledgeDraft}
+                        onInitialNewDraftConsumed={() => setPendingKnowledgeDraft(null)}
+                        initialNavParams={pendingNavParams}
+                        onInitialNavParamsConsumed={() => setPendingNavParams(null)}
                     />
                 )}
 
@@ -312,6 +372,10 @@ function App() {
                         user={user}
                         initialProposalId={pendingProposalId}
                         onInitialProposalConsumed={() => setPendingProposalId(null)}
+                        initialDraft={pendingProposalDraft}
+                        onInitialDraftConsumed={() => setPendingProposalDraft(null)}
+                        initialNavParams={pendingNavParams}
+                        onInitialNavParamsConsumed={() => setPendingNavParams(null)}
                     />
                 )}
             </div>
@@ -328,6 +392,8 @@ function App() {
                 onChatSend={handleChatSend}
                 onChatResultClick={handleChatKnowledgeClick}
                 onProposalClick={handleChatProposalClick}
+                onActionConfirm={handleActionConfirm}
+                onActionCancel={handleActionCancel}
             />
         </div>
     );

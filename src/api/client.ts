@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { supabaseRealtime } from '../lib/supabaseRealtime';
 import { supabaseEquipment } from '../lib/supabaseEquipment';
-import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification, KnowledgeGroup } from '../types';
+import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification, KnowledgeGroup, ChatAction } from '../types';
 
 // supabase-js の auth ロック待ちを避けるため、localStorage から直接 JWT を取って
 // PostgREST を叩くヘルパー。書き込み系のパスで supabase.from().insert/update/delete が
@@ -738,7 +738,7 @@ export const apiClient = {
         history: Array<{ role: 'user' | 'assistant'; content: string }>,
         knowledge: KnowledgeItem[],
         proposals: any[],
-    ): Promise<{ message: string; knowledgeIds: string[]; proposalIds: string[] }> {
+    ): Promise<{ message: string; knowledgeIds: string[]; proposalIds: string[]; action?: ChatAction }> {
         const kSlim = knowledge.map(k => ({
             id: k.id,
             title: k.title,
@@ -772,10 +772,13 @@ export const apiClient = {
         const { data, error } = await Promise.race([invokeP, timeoutP]) as any;
         if (error) throw error;
         const d = (data ?? {}) as any;
+        // action は LLM が返した時のみ含まれる。形式チェックは UI 側で実施。
+        const action = d.action && typeof d.action === 'object' ? (d.action as ChatAction) : undefined;
         return {
             message: String(d.message ?? ''),
             knowledgeIds: Array.isArray(d.knowledgeIds) ? d.knowledgeIds.map(String) : [],
             proposalIds: Array.isArray(d.proposalIds) ? d.proposalIds.map(String) : [],
+            action,
         };
     }
 };

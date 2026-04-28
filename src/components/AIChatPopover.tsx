@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Send, CheckCircle, AlertCircle, X, ClipboardList } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle, AlertCircle, X, ClipboardList, Zap, Check, XCircle } from 'lucide-react';
 import { ChatMessage, KnowledgeItem, ChatProposalRef } from '../types';
 
 interface AIChatPopoverProps {
@@ -8,6 +8,8 @@ interface AIChatPopoverProps {
     onChatSend: (text: string) => void;
     onChatResultClick: (item: KnowledgeItem) => void;
     onProposalClick?: (p: ChatProposalRef) => void;
+    onActionConfirm?: (messageId: string) => void;
+    onActionCancel?: (messageId: string) => void;
 }
 
 export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
@@ -16,6 +18,8 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
     onChatSend,
     onChatResultClick,
     onProposalClick,
+    onActionConfirm,
+    onActionCancel,
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [chatInput, setChatInput] = useState('');
@@ -36,6 +40,157 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
         if (!chatInput.trim() || isChatSearching) return;
         onChatSend(chatInput.trim());
         setChatInput('');
+    };
+
+    const handleConfirmAction = (msgId: string) => {
+        // 親側に実行を委譲。すべて画面遷移を伴うのでポップオーバーは閉じる
+        // (create_* はモーダルが開くので、ポップオーバーが手前に残ると邪魔)。
+        onActionConfirm?.(msgId);
+        setIsOpen(false);
+    };
+
+    const renderActionCard = (msg: ChatMessage) => {
+        if (!msg.action) return null;
+        const state = msg.actionState ?? 'pending';
+        const isNavigate = msg.action.type === 'navigate';
+
+        // アクション種別に応じた色・ラベル
+        const meta = (() => {
+            switch (msg.action!.type) {
+                case 'create_proposal':
+                    return { label: '運用提議を作成', color: '#a855f7', icon: <ClipboardList size={14} /> };
+                case 'create_knowledge':
+                    return { label: 'ナレッジを登録', color: '#10b981', icon: <CheckCircle size={14} /> };
+                case 'navigate':
+                    return { label: '画面を開く', color: 'var(--primary)', icon: <Zap size={14} /> };
+            }
+        })();
+
+        const confirmText = msg.action.confirmText
+            ?? (isNavigate ? '画面を開きますか？' : 'この内容で実行しますか？');
+
+        // 状態別の表示
+        if (state === 'cancelled') {
+            return (
+                <div style={{ marginTop: '8px', fontSize: '0.8rem', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <XCircle size={12} /> キャンセルしました
+                </div>
+            );
+        }
+        if (state === 'done') {
+            return (
+                <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <CheckCircle size={12} /> {isNavigate ? '画面を開きました' : '実行しました'}
+                </div>
+            );
+        }
+        if (state === 'failed') {
+            return (
+                <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <AlertCircle size={12} /> 失敗: {msg.actionError ?? '不明なエラー'}
+                </div>
+            );
+        }
+
+        // pending / confirmed (実行中)
+        const busy = state === 'confirmed';
+
+        // create 系のドラフト・サマリー
+        const renderSummary = () => {
+            if (msg.action!.type === 'create_proposal') {
+                const d = msg.action!.draft;
+                return (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--muted)', display: 'grid', gap: '4px' }}>
+                        <div><strong>件名:</strong> {d.title}</div>
+                        {d.problem && <div><strong>問題点:</strong> {d.problem}</div>}
+                        {d.proposal && <div><strong>提案:</strong> {d.proposal}</div>}
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {d.category && <span>区分: {d.category}</span>}
+                            {d.priority && <span>優先度: {d.priority}</span>}
+                            {d.status && <span>状態: {d.status}</span>}
+                        </div>
+                    </div>
+                );
+            }
+            if (msg.action!.type === 'create_knowledge') {
+                const d = msg.action!.draft;
+                return (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--muted)', display: 'grid', gap: '4px' }}>
+                        <div><strong>件名:</strong> {d.title}</div>
+                        {d.machine && <div><strong>対象:</strong> {d.machine}</div>}
+                        {d.phenomenon && <div><strong>事象:</strong> {d.phenomenon}</div>}
+                        {d.countermeasure && <div><strong>対処:</strong> {d.countermeasure}</div>}
+                    </div>
+                );
+            }
+            // navigate
+            const params = msg.action!.params;
+            const parts: string[] = [`画面: ${msg.action!.view}`];
+            if (params?.search) parts.push(`検索: ${params.search}`);
+            if (params?.knowledgeFilter) parts.push(`絞込: ${params.knowledgeFilter}`);
+            if (params?.proposalStatus) parts.push(`状態: ${params.proposalStatus}`);
+            if (params?.proposalCategory) parts.push(`区分: ${params.proposalCategory}`);
+            return <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>{parts.join(' / ')}</div>;
+        };
+
+        return (
+            <div
+                className="glass-subtle"
+                style={{
+                    marginTop: '8px',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    borderLeft: `3px solid ${meta.color}`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: meta.color, fontSize: '0.85rem' }}>
+                    {meta.icon} {meta.label}
+                </div>
+                {renderSummary()}
+                <div style={{ fontSize: '0.85rem', color: 'var(--text)' }}>{confirmText}</div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        onClick={() => handleConfirmAction(msg.id)}
+                        disabled={busy}
+                        style={{
+                            flex: 1,
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: meta.color,
+                            color: 'white',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            cursor: busy ? 'wait' : 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                            opacity: busy ? 0.6 : 1,
+                        }}
+                    >
+                        <Check size={14} /> {busy ? '実行中...' : (isNavigate ? '開く' : '実行')}
+                    </button>
+                    {!isNavigate && (
+                        <button
+                            onClick={() => onActionCancel?.(msg.id)}
+                            disabled={busy}
+                            style={{
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--glass-border)',
+                                background: 'transparent',
+                                color: 'var(--text)',
+                                fontSize: '0.85rem',
+                                cursor: busy ? 'not-allowed' : 'pointer',
+                            }}
+                        >
+                            キャンセル
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -137,6 +292,8 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                                         ))}
                                     </div>
                                 )}
+
+                                {msg.action && renderActionCard(msg)}
 
                                 {msg.proposalResults && msg.proposalResults.length > 0 && (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>

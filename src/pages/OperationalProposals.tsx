@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, Clock, AlertCircle, User as UserIcon, Calendar, MessageSquare, Tag, ArrowUpDown, Hash, Plus, ArrowLeft, Edit2, Send, X, Check, Gavel, Trash2 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { supabase } from '../lib/supabase';
-import { OperationalProposal, OperationalProposalComment, User } from '../types';
+import { OperationalProposal, OperationalProposalComment, User, ProposalDraft, NavigateParams } from '../types';
 import { BackButton } from '../components/common/BackButton';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
 import { loadCache, saveCache } from '../utils/cache';
@@ -12,6 +12,12 @@ interface ProposalsProps {
     user?: User;
     initialProposalId?: string | null;
     onInitialProposalConsumed?: () => void;
+    // AI チャットからの「運用提議を立てる」アクション。新規作成モーダルを下書き入りで開く。
+    initialDraft?: ProposalDraft | null;
+    onInitialDraftConsumed?: () => void;
+    // AI チャットからの「絞り込みで開く」アクション
+    initialNavParams?: NavigateParams | null;
+    onInitialNavParamsConsumed?: () => void;
 }
 
 type SortMode = 'date' | 'number';
@@ -45,7 +51,7 @@ const resolveProfileByName = (users: User[], raw: string): User | undefined => {
     return candidates[0];
 };
 
-export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, initialProposalId, onInitialProposalConsumed }) => {
+export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, initialProposalId, onInitialProposalConsumed, initialDraft, onInitialDraftConsumed, initialNavParams, onInitialNavParamsConsumed }) => {
     const PROPOSALS_CACHE_KEY = 'proposals_data_v1';
     const USERS_CACHE_KEY = 'knl_users_master_v1';
     const loadProposalCache = (): OperationalProposal[] => loadCache<OperationalProposal[]>(PROPOSALS_CACHE_KEY, []);
@@ -71,6 +77,48 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             onInitialProposalConsumed?.();
         }
     }, [initialProposalId, proposals]);
+
+    // AIチャットの create_proposal アクション → 新規作成モーダルを下書き入りで開く
+    useEffect(() => {
+        if (!initialDraft) return;
+        setForm(prev => ({
+            ...prev,
+            title: initialDraft.title ?? prev.title,
+            problem: initialDraft.problem ?? prev.problem,
+            proposal: initialDraft.proposal ?? prev.proposal,
+            category: initialDraft.category ?? prev.category,
+            priority: initialDraft.priority ?? prev.priority,
+            status: initialDraft.status ?? prev.status,
+            author: user?.name ?? prev.author,
+            proposed_at: TODAY,
+        }));
+        setShowCreateModal(true);
+        onInitialDraftConsumed?.();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialDraft]);
+
+    // AIチャットの navigate アクション → status / category 絞り込み + openCreate を反映
+    useEffect(() => {
+        if (!initialNavParams) return;
+        if (initialNavParams.proposalStatus) {
+            setActiveStatus(initialNavParams.proposalStatus);
+        }
+        if (initialNavParams.proposalCategory) {
+            setActiveCategory(initialNavParams.proposalCategory);
+        }
+        if (initialNavParams.openCreate) {
+            // 空フォームで新規作成モーダルを開く (ユーザー自身に記入してもらう)
+            setForm(prev => ({
+                ...prev,
+                title: '', problem: '', proposal: '',
+                author: user?.name ?? prev.author,
+                proposed_at: TODAY,
+            }));
+            setShowCreateModal(true);
+        }
+        onInitialNavParamsConsumed?.();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialNavParams]);
 
     // 詳細モーダル用: 合議コメント / インライン編集
     const [comments, setComments] = useState<OperationalProposalComment[]>([]);

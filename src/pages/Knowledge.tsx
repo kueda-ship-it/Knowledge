@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { KnowledgeList } from '../components/KnowledgeList';
 import { Editor } from '../components/Editor';
-import { KnowledgeItem, User, MasterData } from '../types';
+import { KnowledgeItem, User, MasterData, KnowledgeDraft, NavigateParams } from '../types';
 import { apiClient, toItem } from '../api/client';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
 import { loadCache, saveCache } from '../utils/cache';
@@ -12,6 +12,12 @@ interface KnowledgeProps {
     onBack: () => void;
     initialEditItem?: KnowledgeItem | null;
     onInitialEditConsumed?: () => void;
+    // AI チャットの create_knowledge アクション。新規エディタを下書き入りで開く。
+    initialNewDraft?: KnowledgeDraft | null;
+    onInitialNewDraftConsumed?: () => void;
+    // AI チャットの navigate アクション (検索 / フィルタ反映)
+    initialNavParams?: NavigateParams | null;
+    onInitialNavParamsConsumed?: () => void;
 }
 
 // v1 → v2: createdAt を含むようスキーマを変更したため旧キャッシュを破棄する
@@ -28,7 +34,7 @@ const sortByCreatedDesc = (items: KnowledgeItem[]): KnowledgeItem[] =>
         return bk.localeCompare(ak);
     });
 
-export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditItem, onInitialEditConsumed }) => {
+export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditItem, onInitialEditConsumed, initialNewDraft, onInitialNewDraftConsumed, initialNavParams, onInitialNavParamsConsumed }) => {
     const [view, setView] = useState<'list' | 'editor'>('list');
     const [data, setData] = useState<KnowledgeItem[]>(() =>
         sortByCreatedDesc(loadCache<KnowledgeItem[]>(CACHE_KEY, []))
@@ -233,6 +239,47 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialEditItem]);
+
+    // AI チャットの create_knowledge アクション → 新規エディタをドラフト入りで開く。
+    // 既存 id を持たないので fetchOne は呼ばない (handleEditItem を使わない)。
+    useEffect(() => {
+        if (!initialNewDraft) return;
+        const draft: KnowledgeItem = {
+            // id 空文字 + 未保存判定として用いる (Editor 側は formData をそのまま新規 INSERT する)
+            id: '',
+            title: initialNewDraft.title ?? '',
+            machine: initialNewDraft.machine ?? '',
+            property: '',
+            req_num: '',
+            category: initialNewDraft.category ?? '',
+            incidents: initialNewDraft.incidents ?? [],
+            tags: initialNewDraft.tags ?? [],
+            content: initialNewDraft.content ?? '',
+            phenomenon: initialNewDraft.phenomenon ?? '',
+            countermeasure: initialNewDraft.countermeasure ?? '',
+            status: initialNewDraft.status ?? 'unsolved',
+            updatedAt: new Date().toISOString(),
+            author: user.name,
+        };
+        setEditingItem(draft);
+        setView('editor');
+        onInitialNewDraftConsumed?.();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialNewDraft]);
+
+    // AI チャットの navigate アクション → 検索 / フィルタ / openCreate を即時反映
+    useEffect(() => {
+        if (!initialNavParams) return;
+        if (initialNavParams.search != null) setSearchKeyword(initialNavParams.search);
+        if (initialNavParams.knowledgeFilter) setFilterType(initialNavParams.knowledgeFilter);
+        if (initialNavParams.openCreate) {
+            // 空エディタを開く (ユーザー自身に記入してもらう)
+            setEditingItem(null);
+            setView('editor');
+        }
+        onInitialNavParamsConsumed?.();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialNavParams]);
 
     // 一覧カードの展開ビューから呼ばれるリアクション (いいね / だめだね) トグル。
     // Optimistic UI + バックグラウンド同期。失敗時はロールバック。

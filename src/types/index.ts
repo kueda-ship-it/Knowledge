@@ -50,6 +50,65 @@ export interface ChatMessage {
     results?: KnowledgeItem[];
     proposalResults?: ChatProposalRef[];
     noResults?: boolean;
+    action?: ChatAction;
+    // ユーザーがアクションを承認 / 却下 / 実行済みの状態
+    actionState?: 'pending' | 'confirmed' | 'cancelled' | 'done' | 'failed';
+    actionError?: string;
+}
+
+// AI チャットからアプリ操作を呼び出すためのアクション定義。
+// write 系 (create_*) は実行前にユーザー確認 UI を出す。read 系 (navigate) は即実行。
+export type ChatAction =
+    | {
+          type: 'create_proposal';
+          confirmText: string;
+          draft: ProposalDraft;
+      }
+    | {
+          type: 'create_knowledge';
+          confirmText: string;
+          draft: KnowledgeDraft;
+      }
+    | {
+          type: 'navigate';
+          // navigate は LLM の意図表示用に短い説明を持つ
+          confirmText?: string;
+          view: 'knowledge' | 'dashboard' | 'proposals' | 'evaluation' | 'filelist' | 'menu';
+          params?: NavigateParams;
+      };
+
+export interface ProposalDraft {
+    title: string;
+    problem?: string;
+    proposal?: string;
+    category?: string;       // 'Engineer（障害）' | 'Engineer（施工）' | '施工管理' | '設置管理' | 'その他'
+    priority?: '高' | '中' | '低';
+    status?: '未着手' | '対応中' | '完了' | '保留';
+}
+
+export interface KnowledgeDraft {
+    title: string;
+    machine?: string;
+    category?: string;
+    phenomenon?: string;     // 事象
+    countermeasure?: string; // 対処
+    tags?: string[];
+    incidents?: string[];
+    status?: 'solved' | 'unsolved';
+    content?: string;
+}
+
+export interface NavigateParams {
+    // Knowledge 画面の検索キーワード
+    search?: string;
+    // Knowledge 画面の filterType
+    knowledgeFilter?: 'all' | 'unsolved' | 'solved' | 'mine';
+    // OperationalProposals 画面の status / category 絞り込み
+    proposalStatus?: '全て' | '未着手' | '対応中' | '完了' | '保留';
+    proposalCategory?: string;
+    // 遷移先で「新規作成」モーダル / エディタを開く。
+    // 「提議を登録したい」のように具体内容が無い意図向け (空フォームを開いて、ユーザーに記入を委ねる)
+    openCreate?: boolean;
 }
 
 export interface Attachment {

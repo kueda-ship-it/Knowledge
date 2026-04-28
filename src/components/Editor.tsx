@@ -44,8 +44,12 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             setSelectedIncidents(item.incidents || []);
             setTagInput((item.tags || []).join(' #'));
             setAttachments(item.attachments || []);
-            // 履歴取得
-            apiClient.fetchHistory(item.id).then(setHistory).catch(console.error);
+            // 履歴取得 (新規作成 (id 空) のときはスキップ)
+            if (item.id) {
+                apiClient.fetchHistory(item.id).then(setHistory).catch(console.error);
+            } else {
+                setHistory([]);
+            }
         } else {
             setFormData({
                 title: '', machine: '', property: '', req_num: '',
@@ -131,6 +135,9 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         const countermeasure = formData.countermeasure || '';
         const content = phenomenon && countermeasure ? `${phenomenon}\n\n【対処】\n${countermeasure}` : (phenomenon || countermeasure || formData.content || '');
 
+        // 既存編集 vs 新規作成の判定。AI チャットからの下書き (initialNewDraft) は
+        // item に値が入っているが id は空文字なので、これも新規扱いにする。
+        const isNew = !item?.id;
         const payload: KnowledgeItem = {
             id: item?.id || Date.now().toString(),
             machine: formData.machine || '',
@@ -153,7 +160,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         try {
             // 30秒でタイムアウト（ネットワーク不安定時にハング防止）
             await Promise.race([
-                apiClient.save(payload, item || undefined),
+                apiClient.save(payload, isNew ? undefined : (item || undefined)),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 30000))
             ]);
             onSave(payload);

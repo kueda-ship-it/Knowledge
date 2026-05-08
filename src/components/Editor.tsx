@@ -5,6 +5,8 @@ import { apiClient } from '../api/client';
 import { useOneDriveUpload } from '../hooks/useOneDriveUpload';
 import { EditHistory } from '../types';
 import { GlassSelect } from './common/GlassSelect';
+import { TagInput } from './common/TagInput';
+import { TagStat } from '../utils/tagUtils';
 
 interface EditorProps {
     item: KnowledgeItem | null;
@@ -13,9 +15,10 @@ interface EditorProps {
     onDelete: (id: string) => void;
     onCancel: () => void;
     user: { name: string, role: string, email?: string };
+    existingTags?: TagStat[];
 }
 
-export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete, onCancel, user }) => {
+export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete, onCancel, user, existingTags = [] }) => {
     const [formData, setFormData] = useState<Partial<KnowledgeItem>>({
         title: '', machine: '', property: '', req_num: '',
         category: '', incidents: [], tags: [], content: '',
@@ -477,7 +480,12 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
 
                 <div>
                     <label>タグ (#区切り)</label>
-                    <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="#js #error" style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }} />
+                    <TagInput
+                        value={tagInput}
+                        onChange={setTagInput}
+                        existingTags={existingTags}
+                        placeholder="#js #error"
+                    />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

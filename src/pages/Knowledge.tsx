@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { KnowledgeList } from '../components/KnowledgeList';
 import { Editor } from '../components/Editor';
@@ -6,6 +6,7 @@ import { KnowledgeItem, User, MasterData, KnowledgeDraft, NavigateParams } from 
 import { apiClient, toItem } from '../api/client';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
 import { loadCache, saveCache } from '../utils/cache';
+import { aggregateTags } from '../utils/tagUtils';
 
 interface KnowledgeProps {
     user: User;
@@ -56,6 +57,9 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
 
     // Editor state
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
+
+    // 既存タグの集計 (Editor のオートコンプリートに渡す)。data 変化時のみ再計算。
+    const existingTagStats = useMemo(() => aggregateTags(data), [data]);
 
     // 初回ロード
     useEffect(() => {
@@ -391,6 +395,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                                     onDelete={handleDelete}
                                     onCancel={() => setView('list')}
                                     user={user}
+                                    existingTags={existingTagStats}
                                 />
                             </div>
                         </div>

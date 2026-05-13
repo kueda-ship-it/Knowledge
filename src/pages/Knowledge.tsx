@@ -264,6 +264,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
             status: initialNewDraft.status ?? 'unsolved',
             updatedAt: new Date().toISOString(),
             author: user.name,
+            updatedBy: user.name,
         };
         setEditingItem(draft);
         setView('editor');

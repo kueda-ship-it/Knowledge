@@ -158,8 +158,9 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             createdAt: item?.createdAt,
             updatedAt: new Date().toISOString(),
             // 投稿者 (author) は新規作成時のみ現ユーザー。既存編集では元の投稿者を保持する。
-            // 「最終更新者」は knowledge_history.changed_by から導出する (DB に専用カラムは持たない)。
             author: item?.author || user.name,
+            // 最終更新者は毎回現ユーザー (status/content/title 以外の編集でも正確に追跡するため専用列で保持)
+            updatedBy: user.name,
             attachments,
         };
 
@@ -585,7 +586,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                                 : ''}
                         </span>
                         <span>
-                            最終更新: <strong>{history[0]?.changedBy ?? item.author}</strong> &nbsp;
+                            最終更新: <strong>{item.updatedBy ?? history[0]?.changedBy ?? item.author}</strong> &nbsp;
                             {new Date(item.updatedAt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </span>
                     </div>

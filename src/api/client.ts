@@ -64,6 +64,7 @@ export function toItem(row: Record<string, unknown>): KnowledgeItem {
         createdAt: row.created_at as string | undefined,
         updatedAt: row.updated_at as string,
         author: row.author as string,
+        updatedBy: (row.updated_by as string | null) ?? undefined,
         attachments: (row.attachments as Attachment[]) ?? [],
     };
 }
@@ -75,7 +76,7 @@ export const apiClient = {
             .from('knowledge')
             .select(`
                 id, title, machine, property, req_num, category,
-                incidents, tags, content, phenomenon, countermeasure, status, created_at, updated_at, author, attachments,
+                incidents, tags, content, phenomenon, countermeasure, status, created_at, updated_at, author, updated_by, attachments,
                 knowledge_reactions(type, user_id)
             `)
             .order('created_at', { ascending: false });
@@ -103,7 +104,7 @@ export const apiClient = {
             .from('knowledge')
             .select(`
                 id, title, machine, property, req_num, category,
-                incidents, tags, content, phenomenon, countermeasure, status, created_at, updated_at, author, attachments,
+                incidents, tags, content, phenomenon, countermeasure, status, created_at, updated_at, author, updated_by, attachments,
                 knowledge_reactions(type, user_id)
             `)
             .eq('id', id)
@@ -181,6 +182,7 @@ export const apiClient = {
             status: item.status,
             updated_at: item.updatedAt,
             author: item.author,
+            updated_by: item.updatedBy ?? item.author,
             attachments: item.attachments ?? [],
         };
 

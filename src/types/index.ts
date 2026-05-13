@@ -135,7 +135,8 @@ export interface KnowledgeItem {
     status: 'solved' | 'unsolved';
     createdAt?: string;
     updatedAt: string;
-    author: string;
+    author: string;       // 投稿者 (作成時に固定、編集では変更しない)
+    updatedBy?: string;   // 最終更新者 (保存時に毎回上書き)
     attachments?: Attachment[];
     // Extension
     likeCount?: number;

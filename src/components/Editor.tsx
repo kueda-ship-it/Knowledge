@@ -154,8 +154,12 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             phenomenon,
             countermeasure,
             status: formData.status || 'unsolved',
+            // 既存編集時は元の作成日時を保持。新規時のみ undefined (DB の default で created_at が入る)
+            createdAt: item?.createdAt,
             updatedAt: new Date().toISOString(),
-            author: user.name, // 最終更新者を常に現在のユーザーにする
+            // 投稿者 (author) は新規作成時のみ現ユーザー。既存編集では元の投稿者を保持する。
+            // 「最終更新者」は knowledge_history.changed_by から導出する (DB に専用カラムは持たない)。
+            author: item?.author || user.name,
             attachments,
         };
 
@@ -573,9 +577,17 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                 </div>
 
                 {item && (
-                    <div style={{ fontSize: '0.78rem', color: 'var(--muted)', textAlign: 'right', marginTop: '8px' }}>
-                        最終更新: <strong>{item.author}</strong> &nbsp;
-                        {new Date(item.updatedAt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    <div style={{ fontSize: '0.78rem', color: 'var(--muted)', textAlign: 'right', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
+                        <span>
+                            投稿者: <strong>{item.author}</strong> &nbsp;
+                            {item.createdAt
+                                ? new Date(item.createdAt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                : ''}
+                        </span>
+                        <span>
+                            最終更新: <strong>{history[0]?.changedBy ?? item.author}</strong> &nbsp;
+                            {new Date(item.updatedAt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </span>
                     </div>
                 )}
                 <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>

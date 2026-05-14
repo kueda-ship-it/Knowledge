@@ -572,27 +572,16 @@ export const apiClient = {
         if (!res.ok) throw new Error(`更新に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
     },
 
-    // 合議コメント: 一覧取得 (author 名を profiles から結合)
+    // 合議コメント: 一覧取得
+    // 旧実装は profiles (FDW foreign table、1リクエスト1秒近く) を結合していたため
+    // モーダルを開くたびに数秒待たされていた。表示用の名前解決はページ側の
+    // usersMaster で行うので、ここではコメント行だけ rawRest で取って即返す
+    // (supabase-js の auth ロック競合も回避)。
     async fetchProposalComments(proposalId: string): Promise<any[]> {
-        const { data, error } = await supabase
-            .from('operational_proposal_comments')
-            .select('id, proposal_id, author_id, body, created_at, updated_at')
-            .eq('proposal_id', proposalId)
-            .order('created_at', { ascending: true });
-
-        if (error) throw error;
-
-        const rows = data ?? [];
-        if (rows.length === 0) return [];
-
-        const ids = Array.from(new Set(rows.map(r => r.author_id).filter(Boolean)));
-        const { data: profs } = await supabase
-            .from('profiles')
-            .select('id, display_name')
-            .in('id', ids);
-        const nameById = new Map<string, string>((profs ?? []).map((p: any) => [p.id, p.display_name]));
-
-        return rows.map(r => ({ ...r, author_name: nameById.get(r.author_id) ?? '' }));
+        const path = `/rest/v1/operational_proposal_comments?proposal_id=eq.${encodeURIComponent(proposalId)}&select=id,proposal_id,author_id,body,created_at,updated_at&order=created_at.asc`;
+        const res = await rawRest(path, { method: 'GET' });
+        if (!res.ok) throw new Error(`合議の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        return (await res.json()) as any[];
     },
 
     async createProposalComment(proposalId: string, body: string, userId: string): Promise<void> {

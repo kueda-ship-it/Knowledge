@@ -279,11 +279,17 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         let cancelled = false;
         setCommentsLoading(true);
         apiClient.fetchProposalComments(selectedProposal.id)
-            .then(rows => { if (!cancelled) setComments(rows as OperationalProposalComment[]); })
+            .then(rows => {
+                if (cancelled) return;
+                // 表示名はページに既にロード済みの usersMaster から解決 (profiles FDW を叩かない)
+                const nameById = new Map(usersMaster.map(u => [u.id, u.name]));
+                const enriched = (rows as any[]).map(r => ({ ...r, author_name: nameById.get(r.author_id) ?? '' }));
+                setComments(enriched as OperationalProposalComment[]);
+            })
             .catch(e => console.warn('[OperationalProposals] fetchProposalComments failed:', e?.message))
             .finally(() => { if (!cancelled) setCommentsLoading(false); });
         return () => { cancelled = true; };
-    }, [selectedProposal?.id]);
+    }, [selectedProposal?.id, usersMaster]);
 
     // 提議のコメント Realtime 購読 (追記・更新・削除をライブ反映)
     useRealtimeChannel(selectedProposal ? `proposal-comments-${selectedProposal.id}` : 'proposal-comments-idle', selectedProposal ? [
@@ -291,14 +297,10 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             event: 'INSERT',
             table: 'operational_proposal_comments',
             filter: `proposal_id=eq.${selectedProposal.id}`,
-            callback: async (payload) => {
+            callback: (payload) => {
                 const row = payload.new as any;
-                let author_name = '';
-                if (row.author_id) {
-                    const { data } = await supabase
-                        .from('profiles').select('display_name').eq('id', row.author_id).maybeSingle();
-                    author_name = (data as any)?.display_name ?? '';
-                }
+                // ローカル usersMaster から名前解決 (profiles FDW を叩かない)
+                const author_name = usersMaster.find(u => u.id === row.author_id)?.name ?? '';
                 setComments(prev => prev.some(c => c.id === row.id) ? prev : [...prev, { ...row, author_name }]);
             },
         },
@@ -390,7 +392,9 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             setCommentDraft('');
             // Realtime 経由で反映されるが、保険として即時リロード
             const rows = await apiClient.fetchProposalComments(selectedProposal.id);
-            setComments(rows as OperationalProposalComment[]);
+            const nameById = new Map(usersMaster.map(u => [u.id, u.name]));
+            const enriched = (rows as any[]).map(r => ({ ...r, author_name: nameById.get(r.author_id) ?? '' }));
+            setComments(enriched as OperationalProposalComment[]);
         } catch (e) {
             console.error("Failed to add comment:", e);
         } finally {

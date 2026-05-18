@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { KnowledgeList } from '../components/KnowledgeList';
 import { Editor } from '../components/Editor';
-import { KnowledgeItem, User, MasterData, KnowledgeDraft, NavigateParams } from '../types';
+import { KnowledgeItem, User, MasterData, KnowledgeDraft, NavigateParams, ProposalDraft } from '../types';
 import { apiClient, toItem } from '../api/client';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
 import { loadCache, saveCache } from '../utils/cache';
@@ -19,6 +19,8 @@ interface KnowledgeProps {
     // AI チャットの navigate アクション (検索 / フィルタ反映)
     initialNavParams?: NavigateParams | null;
     onInitialNavParamsConsumed?: () => void;
+    // 「提議に展開」: ナレッジ編集画面から提議画面へ下書きを渡して遷移する。
+    onDispatchToProposal?: (draft: ProposalDraft) => void;
 }
 
 // v1 → v2: createdAt を含むようスキーマを変更したため旧キャッシュを破棄する
@@ -35,7 +37,7 @@ const sortByCreatedDesc = (items: KnowledgeItem[]): KnowledgeItem[] =>
         return bk.localeCompare(ak);
     });
 
-export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditItem, onInitialEditConsumed, initialNewDraft, onInitialNewDraftConsumed, initialNavParams, onInitialNavParamsConsumed }) => {
+export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditItem, onInitialEditConsumed, initialNewDraft, onInitialNewDraftConsumed, initialNavParams, onInitialNavParamsConsumed, onDispatchToProposal }) => {
     const [view, setView] = useState<'list' | 'editor'>('list');
     const [data, setData] = useState<KnowledgeItem[]>(() =>
         sortByCreatedDesc(loadCache<KnowledgeItem[]>(CACHE_KEY, []))
@@ -397,6 +399,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                                     onCancel={() => setView('list')}
                                     user={user}
                                     existingTags={existingTagStats}
+                                    onDispatchToProposal={onDispatchToProposal}
                                 />
                             </div>
                         </div>

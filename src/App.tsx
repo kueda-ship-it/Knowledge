@@ -342,6 +342,11 @@ function App() {
                         onInitialNewDraftConsumed={() => setPendingKnowledgeDraft(null)}
                         initialNavParams={pendingNavParams}
                         onInitialNavParamsConsumed={() => setPendingNavParams(null)}
+                        onDispatchToProposal={(draft) => {
+                            // 「提議に展開」: 提議画面に切り替えて、新規提議モーダルを下書き入りで開く
+                            setPendingProposalDraft(draft);
+                            navigate('proposals');
+                        }}
                     />
                 )}
 
@@ -376,6 +381,14 @@ function App() {
                         onInitialDraftConsumed={() => setPendingProposalDraft(null)}
                         initialNavParams={pendingNavParams}
                         onInitialNavParamsConsumed={() => setPendingNavParams(null)}
+                        onOpenKnowledge={(knowledgeId) => {
+                            // 提議の「元クレームナレッジを開く」リンク。
+                            // dashboardData にあれば即 Editor で開く、無ければ id 空のスタブで開いて画面側で fetchOne させる。
+                            const hit = dashboardData.find(k => k.id === knowledgeId);
+                            if (hit) setPendingEdit(hit);
+                            else setPendingEdit({ id: knowledgeId } as KnowledgeItem);
+                            navigate('knowledge');
+                        }}
                     />
                 )}
             </div>

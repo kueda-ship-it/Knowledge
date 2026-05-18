@@ -84,6 +84,7 @@ export interface ProposalDraft {
     category?: string;       // 'Engineer（障害）' | 'Engineer（施工）' | '施工管理' | '設置管理' | 'その他'
     priority?: '高' | '中' | '低';
     status?: '未着手' | '対応中' | '完了' | '保留';
+    source_knowledge_id?: string; // クレームナレッジから「提議に展開」した場合に元 id を保持
 }
 
 export interface KnowledgeDraft {
@@ -137,6 +138,7 @@ export interface KnowledgeItem {
     updatedAt: string;
     author: string;       // 投稿者 (作成時に固定、編集では変更しない)
     updatedBy?: string;   // 最終更新者 (保存時に毎回上書き)
+    claimLevel?: number;  // クレーム強度 0-10 (0=通常、1-10=クレーム、数値が高いほど強い)
     attachments?: Attachment[];
     // Extension
     likeCount?: number;
@@ -176,6 +178,7 @@ export interface OperationalProposal {
     source_no?: string;
     updated_by?: string; // profiles.id (最終更新者)
     visible_groups?: string[] | null; // 公開先グループ (NULL/空 = 全員公開)。decision があれば常に全員公開
+    source_knowledge_id?: string; // 元クレームナレッジ id (「提議に展開」で起票された場合に set)
     created_at: string;
     updated_at: string;
 }

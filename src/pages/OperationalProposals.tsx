@@ -18,6 +18,8 @@ interface ProposalsProps {
     // AI チャットからの「絞り込みで開く」アクション
     initialNavParams?: NavigateParams | null;
     onInitialNavParamsConsumed?: () => void;
+    // 「元クレームナレッジ」リンクから親 (App) に遷移を委譲する
+    onOpenKnowledge?: (knowledgeId: string) => void;
 }
 
 type SortMode = 'date' | 'number';
@@ -51,7 +53,7 @@ const resolveProfileByName = (users: User[], raw: string): User | undefined => {
     return candidates[0];
 };
 
-export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, initialProposalId, onInitialProposalConsumed, initialDraft, onInitialDraftConsumed, initialNavParams, onInitialNavParamsConsumed }) => {
+export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, initialProposalId, onInitialProposalConsumed, initialDraft, onInitialDraftConsumed, initialNavParams, onInitialNavParamsConsumed, onOpenKnowledge }) => {
     const PROPOSALS_CACHE_KEY = 'proposals_data_v1';
     const USERS_CACHE_KEY = 'knl_users_master_v1';
     const loadProposalCache = (): OperationalProposal[] => loadCache<OperationalProposal[]>(PROPOSALS_CACHE_KEY, []);
@@ -78,7 +80,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         }
     }, [initialProposalId, proposals]);
 
-    // AIチャットの create_proposal アクション → 新規作成モーダルを下書き入りで開く
+    // AIチャットの create_proposal アクション or ナレッジ画面からの「提議に展開」
+    // → 新規作成モーダルを下書き入りで開く
     useEffect(() => {
         if (!initialDraft) return;
         setForm(prev => ({
@@ -91,6 +94,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             status: initialDraft.status ?? prev.status,
             author: user?.name ?? prev.author,
             proposed_at: TODAY,
+            source_knowledge_id: initialDraft.source_knowledge_id ?? '',
         }));
         setShowCreateModal(true);
         onInitialDraftConsumed?.();
@@ -146,6 +150,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         priority: '中' as '高' | '中' | '低',
         status: '未着手' as '未着手' | '対応中' | '完了' | '保留',
         visible_groups: [] as string[], // 空 = 全員公開
+        source_knowledge_id: '' as string, // クレームナレッジから「提議に展開」で起票された場合に元 id
     });
 
     const masterCategories = ['Engineer（障害）', 'Engineer（施工）', '施工管理', '設置管理'];
@@ -426,6 +431,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                 status: form.status,
                 category: form.category,
                 visible_groups: form.visible_groups.length > 0 ? form.visible_groups : null,
+                source_knowledge_id: form.source_knowledge_id?.trim() || null,
             });
             const timeoutP = new Promise<never>((_, reject) =>
                 setTimeout(() => reject(new Error('timeout: createProposal (20s)')), 20000),
@@ -434,7 +440,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             // 一覧 refetch は await しない (fetchProposals が詰まるとモーダルが閉じなくなるため)
             fetchData().catch(e => console.warn('[handleCreate] refetch failed:', e?.message));
             setShowCreateModal(false);
-            setForm({ category: 'Engineer（施工）', title: '', problem: '', proposal: '', author: user?.name ?? '', proposed_at: TODAY, priority: '中', status: '未着手', visible_groups: [] });
+            setForm({ category: 'Engineer（施工）', title: '', problem: '', proposal: '', author: user?.name ?? '', proposed_at: TODAY, priority: '中', status: '未着手', visible_groups: [], source_knowledge_id: '' });
         } catch (e: any) {
             console.error("Failed to create proposal:", e);
             window.alert(`作成に失敗しました。${e?.message ?? ''}`);
@@ -940,7 +946,28 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                             </div>
                         </div>
 
-                        <h2 style={{ fontSize: '1.85rem', fontWeight: 700, marginBottom: '24px', color: 'var(--text)', lineHeight: 1.3 }}>{selectedProposal.title}</h2>
+                        <h2 style={{ fontSize: '1.85rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text)', lineHeight: 1.3 }}>{selectedProposal.title}</h2>
+
+                        {/* 元クレームナレッジへのリンク (展開元がある場合のみ表示) */}
+                        {selectedProposal.source_knowledge_id && (
+                            <button
+                                type="button"
+                                onClick={() => onOpenKnowledge?.(selectedProposal.source_knowledge_id!)}
+                                disabled={!onOpenKnowledge}
+                                title="このチケットの元となったクレームナレッジを開く"
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                    padding: '8px 14px', marginBottom: '20px',
+                                    background: 'rgba(239, 68, 68, 0.08)',
+                                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                                    color: '#fca5a5', borderRadius: '12px',
+                                    fontSize: '0.85rem', fontWeight: 600,
+                                    cursor: onOpenKnowledge ? 'pointer' : 'default',
+                                }}>
+                                🔗 元クレームナレッジを開く
+                                <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontFamily: 'monospace' }}>#{selectedProposal.source_knowledge_id}</span>
+                            </button>
+                        )}
 
                         <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
                             <div style={{
@@ -1364,10 +1391,27 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                         background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
                         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
                     }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
                             <ModalCloseButton onClick={() => setShowCreateModal(false)} />
                             <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>新規チケット追加</h2>
                         </div>
+
+                        {/* クレームナレッジから「提議に展開」で起票された場合の元参照表示 */}
+                        {form.source_knowledge_id && (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '10px',
+                                padding: '10px 14px', marginBottom: '20px',
+                                background: 'rgba(239, 68, 68, 0.08)',
+                                border: '1px solid rgba(239, 68, 68, 0.35)',
+                                borderRadius: '10px',
+                                fontSize: '0.82rem', color: '#fca5a5',
+                            }}>
+                                <span>🔗 クレームナレッジから展開されました</span>
+                                <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#94a3b8', fontFamily: 'monospace' }}>
+                                    knowledge_id: {form.source_knowledge_id}
+                                </span>
+                            </div>
+                        )}
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             {/* 種別 */}

@@ -61,6 +61,7 @@ export function toItem(row: Record<string, unknown>): KnowledgeItem {
         phenomenon: rawPhenomenon || rawContent, // phenomenonが空ならcontentをセット
         countermeasure: rawCountermeasure || (rawPhenomenon ? rawContent : ''), // phenomenonがあった上でのcontentなら対処とする(旧形式互換)
         status: row.status as 'solved' | 'unsolved',
+        recordType: (row.record_type as 'trouble' | 'incident') ?? 'trouble',
         createdAt: row.created_at as string | undefined,
         updatedAt: row.updated_at as string,
         author: row.author as string,
@@ -77,7 +78,7 @@ export const apiClient = {
             .from('knowledge')
             .select(`
                 id, title, machine, property, req_num, category,
-                incidents, tags, content, phenomenon, countermeasure, status, created_at, updated_at, author, updated_by, claim_level, attachments,
+                incidents, tags, content, phenomenon, countermeasure, status, record_type, created_at, updated_at, author, updated_by, claim_level, attachments,
                 knowledge_reactions(type, user_id)
             `)
             .order('created_at', { ascending: false });
@@ -105,7 +106,7 @@ export const apiClient = {
             .from('knowledge')
             .select(`
                 id, title, machine, property, req_num, category,
-                incidents, tags, content, phenomenon, countermeasure, status, created_at, updated_at, author, updated_by, claim_level, attachments,
+                incidents, tags, content, phenomenon, countermeasure, status, record_type, created_at, updated_at, author, updated_by, claim_level, attachments,
                 knowledge_reactions(type, user_id)
             `)
             .eq('id', id)
@@ -181,6 +182,7 @@ export const apiClient = {
             phenomenon: item.phenomenon ?? '',
             countermeasure: item.countermeasure ?? '',
             status: item.status,
+            record_type: item.recordType ?? 'trouble',
             updated_at: item.updatedAt,
             author: item.author,
             updated_by: item.updatedBy ?? item.author,
@@ -742,6 +744,7 @@ export const apiClient = {
             phenomenon: k.phenomenon,
             countermeasure: k.countermeasure,
             status: k.status,
+            recordType: k.recordType,
             updatedAt: k.updatedAt,
         }));
         const pSlim = proposals.map((p: any) => ({

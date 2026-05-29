@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { KnowledgeItem, User } from '../types';
-import { RotateCcw, Check, Paperclip, ThumbsUp, AlertTriangle, AlertCircle, ChevronDown, ChevronUp, Edit3, AlertOctagon } from 'lucide-react';
+import { RotateCcw, Check, Paperclip, ThumbsUp, AlertTriangle, AlertCircle, ChevronDown, ChevronUp, Edit3, AlertOctagon, Wrench, Siren } from 'lucide-react';
+
+// 種別 (トラブル / インシデント) の表示メタ
+const RECORD_TYPE_META: Record<'trouble' | 'incident', { label: string; rgb: string; Icon: typeof Wrench }> = {
+    trouble: { label: 'トラブル', rgb: '245, 158, 11', Icon: Wrench },
+    incident: { label: 'インシデント', rgb: '239, 68, 68', Icon: Siren },
+};
 
 interface KnowledgeListProps {
     data: KnowledgeItem[];
@@ -9,6 +15,8 @@ interface KnowledgeListProps {
     onReload: () => void;
     filterType: 'all' | 'unsolved' | 'solved' | 'mine';
     onFilterChange: (type: 'all' | 'unsolved' | 'solved' | 'mine') => void;
+    recordTypeFilter: 'all' | 'trouble' | 'incident';
+    onRecordTypeFilterChange: (type: 'all' | 'trouble' | 'incident') => void;
     onItemClick: (item: KnowledgeItem) => void;
     // 展開時のみ押せるリアクション切替 (楽観的 UI + バックグラウンド同期)
     onToggleReaction?: (item: KnowledgeItem, type: 'like' | 'wrong') => void;
@@ -27,6 +35,8 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
     onReload,
     filterType,
     onFilterChange,
+    recordTypeFilter,
+    onRecordTypeFilterChange,
     onItemClick,
     onToggleReaction,
     categories,
@@ -218,6 +228,46 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 })}
             </div>
 
+            {/* Record Type Filter Badges (トラブル / インシデント) */}
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', overflowX: 'auto', flexShrink: 0, paddingTop: '4px', paddingBottom: '4px' }}>
+                {([
+                    { value: 'all', label: '全て', rgb: null as string | null },
+                    { value: 'trouble', label: RECORD_TYPE_META.trouble.label, rgb: RECORD_TYPE_META.trouble.rgb },
+                    { value: 'incident', label: RECORD_TYPE_META.incident.label, rgb: RECORD_TYPE_META.incident.rgb },
+                ] as const).map(opt => {
+                    const active = recordTypeFilter === opt.value;
+                    const bg = active
+                        ? (opt.rgb ? `rgba(${opt.rgb}, 0.25)` : 'color-mix(in oklab, var(--primary) 55%, transparent)')
+                        : 'rgba(255,255,255,0.05)';
+                    const border = active
+                        ? (opt.rgb ? `rgba(${opt.rgb}, 0.65)` : 'color-mix(in oklab, var(--primary) 80%, transparent)')
+                        : 'rgba(255,255,255,0.15)';
+                    const fg = active ? (opt.rgb ? `rgb(${opt.rgb})` : 'white') : 'rgba(255,255,255,0.6)';
+                    return (
+                        <button
+                            key={opt.value}
+                            onClick={() => onRecordTypeFilterChange(opt.value)}
+                            className={`cursor-hint-pill${active ? ' is-active' : ''}`}
+                            style={{
+                                flexShrink: 0,
+                                padding: '5px 14px', borderRadius: '20px', border: '1px solid', cursor: 'pointer',
+                                fontSize: '0.82rem',
+                                backgroundColor: bg,
+                                color: fg,
+                                borderColor: border,
+                                fontWeight: active ? 'bold' : 'normal',
+                                backdropFilter: 'blur(8px)',
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            {active && <Check size={11} />}
+                            {opt.label}
+                        </button>
+                    );
+                })}
+            </div>
+
             {/* Category Filters */}
             <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', paddingTop: '4px', paddingBottom: '10px', borderBottom: '1px solid var(--border)', overflowX: 'auto', flexShrink: 0 }}>
                 {categories.map(cat => {
@@ -280,7 +330,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     col2 はクレームバッジ専用 (claim_level=0 のときは空、width は保持して全カードの列を揃える) */}
                                 <div style={{
                                     display: 'grid',
-                                    gridTemplateColumns: '28px 92px 74px 90px 130px 90px minmax(0,1fr) 130px 110px 100px',
+                                    gridTemplateColumns: '28px 92px 74px 96px 90px 130px 90px minmax(0,1fr) 130px 110px 100px',
                                     gridTemplateRows: 'auto auto',
                                     alignItems: 'center',
                                     columnGap: '10px',
@@ -345,8 +395,29 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                             <span style={{ lineHeight: '16px', display: 'inline-block' }}>{item.status === 'solved' ? '解決済' : '未解決'}</span>
                                         </span>
                                     </div>
+                                    {/* 種別 (両行・左寄せ・トラブル/インシデント) */}
+                                    <div style={{ gridColumn: 4, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
+                                        {(() => {
+                                            const meta = RECORD_TYPE_META[item.recordType ?? 'trouble'];
+                                            const RtIcon = meta.Icon;
+                                            return (
+                                                <span style={{
+                                                    display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
+                                                    height: '28px', padding: '0 10px', boxSizing: 'border-box', lineHeight: 1,
+                                                    fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap',
+                                                    color: `rgb(${meta.rgb})`,
+                                                    background: `rgba(${meta.rgb}, 0.14)`,
+                                                    border: `1px solid rgba(${meta.rgb}, 0.4)`,
+                                                    borderRadius: '8px',
+                                                }}>
+                                                    <RtIcon size={12} style={{ flexShrink: 0 }} />
+                                                    {meta.label}
+                                                </span>
+                                            );
+                                        })()}
+                                    </div>
                                     {/* No (両行・左寄せ・28px 高) */}
-                                    <div style={{ gridColumn: 4, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                                    <div style={{ gridColumn: 5, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                                         <span style={{
                                             display: 'inline-flex', alignItems: 'center',
                                             height: '28px', padding: '0 10px', boxSizing: 'border-box',
@@ -358,7 +429,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         </span>
                                     </div>
                                     {/* 区分 (両行・左寄せ・28px 高) */}
-                                    <div style={{ gridColumn: 5, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
+                                    <div style={{ gridColumn: 6, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
                                         {item.category ? (
                                             <span className={`metadata-badge ${getCategoryBadgeClass(item.category)}`} style={{
                                                 height: '28px', padding: '0 12px', boxSizing: 'border-box', lineHeight: 1,
@@ -367,7 +438,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         ) : null}
                                     </div>
                                     {/* 詳細 (両行・左寄せ・28px 高) */}
-                                    <div style={{ gridColumn: 6, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
+                                    <div style={{ gridColumn: 7, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
                                         {item.machine ? (
                                             <span className="metadata-badge badge-machine" style={{
                                                 height: '28px', padding: '0 12px', boxSizing: 'border-box', lineHeight: 1,
@@ -378,7 +449,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
 
                                     {/* タイトル + 編集ボタン (1行目・左寄せ、常に編集可) */}
                                     <div style={{
-                                        gridColumn: 7, gridRow: 1,
+                                        gridColumn: 8, gridRow: 1,
                                         display: 'flex', alignItems: 'center', gap: '8px',
                                         minWidth: 0, overflow: 'hidden',
                                     }}>
@@ -404,7 +475,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     </div>
                                     {/* 2行目・タイトル列: タグ/インシデント/添付 (コンパクト表示時のみ) */}
                                     <div style={{
-                                        gridColumn: 7, gridRow: 2,
+                                        gridColumn: 8, gridRow: 2,
                                         display: 'flex', flexWrap: 'nowrap', overflow: 'hidden',
                                         gap: '6px', alignItems: 'center', minWidth: 0,
                                     }}>
@@ -426,7 +497,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     </div>
 
                                     {/* 投稿者 (両行・左寄せ・中央揃え) */}
-                                    <div style={{ gridColumn: 8, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                                    <div style={{ gridColumn: 9, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                                         <div style={{
                                             display: 'flex', alignItems: 'center', gap: '6px',
                                             fontSize: '0.78rem', color: '#94a3b8',
@@ -443,7 +514,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         </div>
                                     </div>
                                     {/* 日付 (両行・中央揃え、フォント 0.78rem で投稿者と合わせる) */}
-                                    <div style={{ gridColumn: 9, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <div style={{ gridColumn: 10, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <span style={{
                                             display: 'inline-flex', alignItems: 'center',
                                             height: '28px', padding: '0 10px', boxSizing: 'border-box',
@@ -459,7 +530,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     <div
                                         onClick={e => e.stopPropagation()}
                                         style={{
-                                            gridColumn: 10, gridRow: '1 / span 2',
+                                            gridColumn: 11, gridRow: '1 / span 2',
                                             display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center',
                                             height: '28px', padding: '0 10px', boxSizing: 'border-box',
                                             background: 'rgba(255, 255, 255, 0.05)',

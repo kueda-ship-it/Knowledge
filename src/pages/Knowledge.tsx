@@ -56,6 +56,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [filterType, setFilterType] = useState<'all' | 'unsolved' | 'solved' | 'mine'>('all');
+    const [recordTypeFilter, setRecordTypeFilter] = useState<'all' | 'trouble' | 'incident'>('all');
 
     // Editor state
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
@@ -138,6 +139,11 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
             res = res.filter(item => item.author === user.name);
         }
 
+        // 5. 種別フィルタ (トラブル / インシデント)。旧データは recordType 未設定 → trouble 扱い
+        if (recordTypeFilter !== 'all') {
+            res = res.filter(item => (item.recordType ?? 'trouble') === recordTypeFilter);
+        }
+
         // Sort: 作成日の新しい順 (createdAt が無い古い行は updatedAt にフォールバック)
         res.sort((a, b) => {
             const bKey = new Date(b.createdAt ?? b.updatedAt).getTime();
@@ -146,7 +152,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
         });
 
         setFilteredData(res);
-    }, [data, searchKeyword, selectedTags, selectedCategories, filterType, user]);
+    }, [data, searchKeyword, selectedTags, selectedCategories, filterType, recordTypeFilter, user]);
 
     const refreshData = async (silent = false) => {
         if (loading || refreshing) return;
@@ -264,6 +270,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
             phenomenon: initialNewDraft.phenomenon ?? '',
             countermeasure: initialNewDraft.countermeasure ?? '',
             status: initialNewDraft.status ?? 'unsolved',
+            recordType: initialNewDraft.recordType ?? 'trouble',
             updatedAt: new Date().toISOString(),
             author: user.name,
             updatedBy: user.name,
@@ -373,6 +380,8 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                             onReload={refreshData}
                             filterType={filterType}
                             onFilterChange={setFilterType}
+                            recordTypeFilter={recordTypeFilter}
+                            onRecordTypeFilterChange={setRecordTypeFilter}
                             onItemClick={handleEditItem}
                             onToggleReaction={handleToggleReaction}
                             user={user}

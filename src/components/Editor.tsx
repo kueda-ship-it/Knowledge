@@ -158,6 +158,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             phenomenon,
             countermeasure,
             status: formData.status || 'unsolved',
+            recordType: formData.recordType || 'trouble',
             // 既存編集時は元の作成日時を保持。新規時のみ undefined (DB の default で created_at が入る)
             createdAt: item?.createdAt,
             updatedAt: new Date().toISOString(),
@@ -440,6 +441,38 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                                 ))}
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* 種別 (トラブル / インシデント) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 'bold', minWidth: '36px' }}>種別</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        {([
+                            { value: 'trouble', label: 'トラブル', rgb: '245, 158, 11' },
+                            { value: 'incident', label: 'インシデント', rgb: '239, 68, 68' },
+                        ] as const).map(opt => {
+                            const active = (formData.recordType ?? 'trouble') === opt.value;
+                            return (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => setFormData(p => ({ ...p, recordType: opt.value }))}
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                        height: '32px', padding: '0 16px', boxSizing: 'border-box',
+                                        borderRadius: '20px', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1,
+                                        fontWeight: active ? 700 : 500,
+                                        background: active ? `rgba(${opt.rgb}, 0.22)` : 'rgba(255,255,255,0.05)',
+                                        color: active ? `rgb(${opt.rgb})` : 'var(--muted)',
+                                        border: `1px solid ${active ? `rgba(${opt.rgb}, 0.65)` : 'rgba(255,255,255,0.15)'}`,
+                                    }}
+                                >
+                                    {active && <Check size={12} />}
+                                    {opt.label}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 

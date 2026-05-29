@@ -96,6 +96,7 @@ export interface KnowledgeDraft {
     tags?: string[];
     incidents?: string[];
     status?: 'solved' | 'unsolved';
+    recordType?: 'trouble' | 'incident'; // 種別 (トラブル / インシデント)
     content?: string;
 }
 
@@ -134,6 +135,7 @@ export interface KnowledgeItem {
     phenomenon?: string;   // 事象
     countermeasure?: string; // 対処
     status: 'solved' | 'unsolved';
+    recordType: 'trouble' | 'incident'; // 種別 (トラブル / インシデント)。既存=trouble
     createdAt?: string;
     updatedAt: string;
     author: string;       // 投稿者 (作成時に固定、編集では変更しない)

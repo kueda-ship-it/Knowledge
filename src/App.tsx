@@ -14,6 +14,8 @@ import { apiClient } from './api/client';
 import { useAuth } from './contexts/AuthContext';
 import { AppNotification } from './types';
 import { useRealtimeChannel } from './hooks/useRealtimeChannel';
+import { useVersionCheck } from './hooks/useVersionCheck';
+import { UpdateBanner } from './components/UpdateBanner';
 import { searchKnowledge } from './utils/searchUtils';
 
 type Theme = 'light' | 'dark' | 'liquid';
@@ -51,6 +53,9 @@ function App() {
     const [isChatSearching, setIsChatSearching] = useState(false);
     const viewRef = useRef(currentView);
     useEffect(() => { viewRef.current = currentView; }, [currentView]);
+
+    // 新デプロイ検知 (タブ復帰 + 5分毎)。古いタブが壊れた旧版を見続けるのを防ぐ。
+    const { updateAvailable } = useVersionCheck();
 
     const cycleTheme = () => {
         setTheme(prev => {
@@ -308,7 +313,12 @@ function App() {
     }
 
     if (!user) {
-        return <Login />;
+        return (
+            <>
+                <Login />
+                {updateAvailable && <UpdateBanner onReload={() => window.location.reload()} />}
+            </>
+        );
     }
 
     return (
@@ -408,6 +418,8 @@ function App() {
                 onActionConfirm={handleActionConfirm}
                 onActionCancel={handleActionCancel}
             />
+
+            {updateAvailable && <UpdateBanner onReload={() => window.location.reload()} />}
         </div>
     );
 }

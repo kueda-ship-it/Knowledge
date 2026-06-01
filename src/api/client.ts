@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { supabaseRealtime } from '../lib/supabaseRealtime';
 import { supabaseEquipment } from '../lib/supabaseEquipment';
-import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification, KnowledgeGroup, ChatAction } from '../types';
+import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification, KnowledgeGroup, ChatAction, OperationalProposal } from '../types';
 
 // supabase-js の auth ロック待ちを避けるため、localStorage から直接 JWT を取って
 // PostgREST を叩くヘルパー。書き込み系のパスで supabase.from().insert/update/delete が
@@ -652,7 +652,9 @@ export const apiClient = {
         if (!res.ok) throw new Error(`削除に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
     },
 
-    async createProposal(proposal: Partial<any>): Promise<void> {
+    // 作成した行をそのまま返す (return=representation)。
+    // 呼び出し側はこれを一覧へ楽観追加でき、Realtime / refetch の取りこぼしに依存しない。
+    async createProposal(proposal: Partial<any>): Promise<OperationalProposal | null> {
         // source_no が未指定なら種別ごとに自動採番
         const record = { ...proposal };
         if (!record.source_no && record.category) {
@@ -662,9 +664,15 @@ export const apiClient = {
         const res = await rawRest('/rest/v1/operational_proposals', {
             method: 'POST',
             body: record,
-            prefer: 'return=minimal',
+            prefer: 'return=representation',
         });
         if (!res.ok) throw new Error(`作成に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        try {
+            const rows = (await res.json()) as OperationalProposal[];
+            return rows?.[0] ?? null;
+        } catch {
+            return null;
+        }
     },
 
     // Master Data Realtime

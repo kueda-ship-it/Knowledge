@@ -495,8 +495,14 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             const timeoutP = new Promise<never>((_, reject) =>
                 setTimeout(() => reject(new Error('timeout: createProposal (20s)')), 20000),
             );
-            await Promise.race([createP, timeoutP]);
-            // 一覧 refetch は await しない (fetchProposals が詰まるとモーダルが閉じなくなるため)
+            const created = await Promise.race([createP, timeoutP]);
+            // 作成行を即座に一覧へ楽観追加 (Realtime / refetch の取りこぼしに依存しない)。
+            // 重複は id で弾く (Realtime INSERT が後から来ても二重に増えない)。
+            if (created) {
+                setProposals(prev => prev.some(p => p.id === created.id) ? prev : [created, ...prev]);
+                saveCache(PROPOSALS_CACHE_KEY, [created, ...loadProposalCache().filter(p => p.id !== created.id)]);
+            }
+            // 念のため refetch も走らせる (await しない: fetchProposals が詰まってもモーダルは閉じる)
             fetchData().catch(e => console.warn('[handleCreate] refetch failed:', e?.message));
             setShowCreateModal(false);
             setForm({ category: 'Engineer（施工）', title: '', problem: '', proposal: '', author: user?.name ?? '', proposed_at: TODAY, priority: '中', status: '未着手', visible_groups: [], source_knowledge_id: '' });

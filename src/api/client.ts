@@ -560,6 +560,18 @@ export const apiClient = {
         if (error) throw error;
     },
 
+    // 競合検知用: 現在の updated_at を軽量に取得 (rawRest 直叩き)。
+    // 保存前に「開いた時点の updated_at」と照合し、他者更新があれば上書きを止める。
+    async fetchProposalUpdatedAt(id: string): Promise<string | null> {
+        const res = await rawRest(
+            `/rest/v1/operational_proposals?id=eq.${encodeURIComponent(id)}&select=updated_at`,
+            { method: 'GET' },
+        );
+        if (!res.ok) throw new Error(`更新確認に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        const rows = (await res.json()) as Array<{ updated_at: string | null }>;
+        return rows[0]?.updated_at ?? null;
+    },
+
     // 改善提案 / 決定事項などのフィールド更新 (updated_by / updated_at を同時に書く)
     async updateProposalContent(
         id: string,
@@ -588,30 +600,33 @@ export const apiClient = {
         return (await res.json()) as any[];
     },
 
+    // 合議コメントの追記。supabase-js の insert は auth ロックでハングする事例が
+    // あるため rawRest (PostgREST 直叩き) を使う。送信操作なので呼び出し側で
+    // タイムアウトを付ける (開いている間のアイドルにはタイムアウトを付けない)。
     async createProposalComment(proposalId: string, body: string, userId: string): Promise<void> {
-        const { error } = await supabase
-            .from('operational_proposal_comments')
-            .insert({ proposal_id: proposalId, author_id: userId, body });
-
-        if (error) throw error;
+        const res = await rawRest('/rest/v1/operational_proposal_comments', {
+            method: 'POST',
+            body: { proposal_id: proposalId, author_id: userId, body },
+            prefer: 'return=minimal',
+        });
+        if (!res.ok) throw new Error(`合議の追記に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
     },
 
     async updateProposalComment(commentId: string, body: string): Promise<void> {
-        const { error } = await supabase
-            .from('operational_proposal_comments')
-            .update({ body })
-            .eq('id', commentId);
-
-        if (error) throw error;
+        const res = await rawRest(`/rest/v1/operational_proposal_comments?id=eq.${encodeURIComponent(commentId)}`, {
+            method: 'PATCH',
+            body: { body, updated_at: new Date().toISOString() },
+            prefer: 'return=minimal',
+        });
+        if (!res.ok) throw new Error(`合議の更新に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
     },
 
     async deleteProposalComment(commentId: string): Promise<void> {
-        const { error } = await supabase
-            .from('operational_proposal_comments')
-            .delete()
-            .eq('id', commentId);
-
-        if (error) throw error;
+        const res = await rawRest(`/rest/v1/operational_proposal_comments?id=eq.${encodeURIComponent(commentId)}`, {
+            method: 'DELETE',
+            prefer: 'return=minimal',
+        });
+        if (!res.ok) throw new Error(`合議の削除に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
     },
 
     async getNextProposalNo(category: string): Promise<string> {

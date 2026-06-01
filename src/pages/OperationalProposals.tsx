@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle, Clock, AlertCircle, User as UserIcon, Calendar, MessageSquare, Tag, ArrowUpDown, Hash, Plus, ArrowLeft, Edit2, Send, X, Check, Gavel, Trash2 } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle, User as UserIcon, Calendar, MessageSquare, Tag, ArrowUpDown, Hash, Plus, ArrowLeft, Edit2, Send, X, Check, Gavel, Trash2, RotateCcw } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { supabase } from '../lib/supabase';
 import { OperationalProposal, OperationalProposalComment, User, ProposalDraft, NavigateParams } from '../types';
@@ -25,6 +25,17 @@ interface ProposalsProps {
 type SortMode = 'date' | 'number';
 
 const TODAY = new Date().toISOString().split('T')[0];
+
+// 送信操作の無限ハング防止。画面を開いている間のアイドルには付けず、
+// 実際の書き込み呼び出し (合議追記・削除・フィールド保存) のみに付ける。
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+    return Promise.race([
+        p,
+        new Promise<T>((_, reject) =>
+            setTimeout(() => reject(new Error(`timeout: ${label} (${ms}ms)`)), ms),
+        ),
+    ]);
+}
 
 // 保存値（苗字だけ / スペース有無 / メール前半など）から profiles を堅牢に引き当てる。
 // 登録順: exact → email prefix → normalized exact → startsWith → includes（最長優先）
@@ -136,6 +147,11 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const [editingVisibility, setEditingVisibility] = useState(false);
     const [visibilityDraft, setVisibilityDraft] = useState<string[]>([]);
     const [savingField, setSavingField] = useState<'proposal' | 'decision' | 'visibility' | null>(null);
+    // 競合検知: 他者が同じ提議を更新していたら保存を止めて POPUP を出す
+    const [conflictField, setConflictField] = useState<'proposal' | 'decision' | 'visibility' | null>(null);
+    // 編集開始時点の updated_at を固定。Realtime で selectedProposal.updated_at が
+    // 裏で書き換わっても競合判定の基準がブレないように ref で保持する。
+    const editBaselineRef = useRef<string | null>(null);
 
     // 新規作成モーダル
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -336,18 +352,54 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const canEditDecision = !!user && (user.role === 'manager' || user.role === 'master');
     const canAddComment = !!user && user.role !== 'viewer';
 
+    // 保存前の競合チェック。開いた時点の updated_at と DB 現在値を照合し、
+    // 他者が更新していたら true を返す (= 上書き禁止)。確認自体は 15 秒でタイムアウト。
+    const hasRemoteConflict = async (): Promise<boolean> => {
+        if (!selectedProposal) return false;
+        try {
+            const remote = await withTimeout(
+                apiClient.fetchProposalUpdatedAt(selectedProposal.id), 15000, 'fetchProposalUpdatedAt',
+            );
+            // 編集開始時点の updated_at を基準にする (Realtime で書き換わらない ref)
+            const baseline = editBaselineRef.current ?? selectedProposal.updated_at ?? null;
+            // 双方値があり、かつ DB のほうが基準と異なる場合は他者更新 = 競合
+            return !!remote && !!baseline && remote !== baseline;
+        } catch (e) {
+            // 確認自体が失敗したら、安全側に倒さず保存は通す (取得失敗で編集を止めない)
+            console.warn('[hasRemoteConflict] check failed, proceeding:', e);
+            return false;
+        }
+    };
+
+    // 競合時 / 手動で最新を取り込む。編集モードは閉じてドラフトを破棄し、最新値で開き直せる状態にする。
+    const reloadSelectedProposal = async () => {
+        if (!selectedProposal) return;
+        try {
+            const fresh = await withTimeout(apiClient.fetchProposals(), 15000, 'fetchProposals(reload)');
+            const hit = (fresh as OperationalProposal[]).find(p => p.id === selectedProposal.id);
+            if (hit) {
+                setProposals(fresh as OperationalProposal[]);
+                setSelectedProposal(hit);
+            }
+        } catch (e) {
+            console.warn('[reloadSelectedProposal] failed:', e);
+        }
+    };
+
     const handleSaveProposal = async () => {
         if (!selectedProposal || !user?.id) return;
         setSavingField('proposal');
         try {
+            if (await hasRemoteConflict()) { setConflictField('proposal'); return; }
             const body = proposalDraft.trim();
-            await apiClient.updateProposalContent(selectedProposal.id, { proposal: body }, user.id);
+            await withTimeout(apiClient.updateProposalContent(selectedProposal.id, { proposal: body }, user.id), 15000, 'updateProposalContent(proposal)');
             const now = new Date().toISOString();
             setProposals(prev => prev.map(p => p.id === selectedProposal.id ? { ...p, proposal: body, updated_by: user.id, updated_at: now } : p));
             setSelectedProposal(prev => prev ? { ...prev, proposal: body, updated_by: user.id, updated_at: now } : null);
             setEditingProposal(false);
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to save proposal:", e);
+            window.alert(`改善提案の保存に失敗しました。入力内容は残っています。\n${e?.message ?? ''}`);
         } finally {
             setSavingField(null);
         }
@@ -357,14 +409,16 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         if (!selectedProposal || !user?.id) return;
         setSavingField('visibility');
         try {
+            if (await hasRemoteConflict()) { setConflictField('visibility'); return; }
             const vg = visibilityDraft.length > 0 ? visibilityDraft : null;
-            await apiClient.updateProposalContent(selectedProposal.id, { visible_groups: vg }, user.id);
+            await withTimeout(apiClient.updateProposalContent(selectedProposal.id, { visible_groups: vg }, user.id), 15000, 'updateProposalContent(visibility)');
             const now = new Date().toISOString();
             setProposals(prev => prev.map(p => p.id === selectedProposal.id ? { ...p, visible_groups: vg, updated_by: user.id, updated_at: now } : p));
             setSelectedProposal(prev => prev ? { ...prev, visible_groups: vg, updated_by: user.id, updated_at: now } : null);
             setEditingVisibility(false);
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to save visibility:", e);
+            window.alert(`公開先の保存に失敗しました。\n${e?.message ?? ''}`);
         } finally {
             setSavingField(null);
         }
@@ -374,14 +428,16 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         if (!selectedProposal || !user?.id) return;
         setSavingField('decision');
         try {
+            if (await hasRemoteConflict()) { setConflictField('decision'); return; }
             const body = decisionDraft.trim();
-            await apiClient.updateProposalContent(selectedProposal.id, { decision: body }, user.id);
+            await withTimeout(apiClient.updateProposalContent(selectedProposal.id, { decision: body }, user.id), 15000, 'updateProposalContent(decision)');
             const now = new Date().toISOString();
             setProposals(prev => prev.map(p => p.id === selectedProposal.id ? { ...p, decision: body, updated_by: user.id, updated_at: now } : p));
             setSelectedProposal(prev => prev ? { ...prev, decision: body, updated_by: user.id, updated_at: now } : null);
             setEditingDecision(false);
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to save decision:", e);
+            window.alert(`決定事項の保存に失敗しました。入力内容は残っています。\n${e?.message ?? ''}`);
         } finally {
             setSavingField(null);
         }
@@ -393,15 +449,17 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         if (!body) return;
         setCommentBusy(true);
         try {
-            await apiClient.createProposalComment(selectedProposal.id, body, user.id);
+            // 送信操作は 15 秒でタイムアウト (auth ロック / ネットワーク不安定でハングしないように)
+            await withTimeout(apiClient.createProposalComment(selectedProposal.id, body, user.id), 15000, 'createProposalComment');
             setCommentDraft('');
             // Realtime 経由で反映されるが、保険として即時リロード
             const rows = await apiClient.fetchProposalComments(selectedProposal.id);
             const nameById = new Map(usersMaster.map(u => [u.id, u.name]));
             const enriched = (rows as any[]).map(r => ({ ...r, author_name: nameById.get(r.author_id) ?? '' }));
             setComments(enriched as OperationalProposalComment[]);
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to add comment:", e);
+            window.alert(`合議の送信に失敗しました。入力内容は残っています。再試行してください。\n${e?.message ?? ''}`);
         } finally {
             setCommentBusy(false);
         }
@@ -409,10 +467,11 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
 
     const handleDeleteComment = async (commentId: string) => {
         try {
-            await apiClient.deleteProposalComment(commentId);
+            await withTimeout(apiClient.deleteProposalComment(commentId), 15000, 'deleteProposalComment');
             setComments(prev => prev.filter(c => c.id !== commentId));
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to delete comment:", e);
+            window.alert(`合議の削除に失敗しました。再試行してください。\n${e?.message ?? ''}`);
         }
     };
 
@@ -1028,7 +1087,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         <div style={{ ...sectionLabel, color: '#f97316', justifyContent: 'space-between' }}>
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>改善提案</span>
                                             {canEditProposal && !editingProposal && (
-                                                <button style={editIconBtn} onClick={() => { setProposalDraft(selectedProposal.proposal ?? proposalText ?? ''); setEditingProposal(true); }}>
+                                                <button style={editIconBtn} onClick={() => { editBaselineRef.current = selectedProposal.updated_at ?? null; setProposalDraft(selectedProposal.proposal ?? proposalText ?? ''); setEditingProposal(true); }}>
                                                     <Edit2 size={12} />編集
                                                 </button>
                                             )}
@@ -1067,7 +1126,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                     <Gavel size={13} />決定事項
                                                 </span>
                                                 {canEditDecision && !editingDecision && (
-                                                    <button style={editIconBtn} onClick={() => { setDecisionDraft(selectedProposal.decision ?? ''); setEditingDecision(true); }}>
+                                                    <button style={editIconBtn} onClick={() => { editBaselineRef.current = selectedProposal.updated_at ?? null; setDecisionDraft(selectedProposal.decision ?? ''); setEditingDecision(true); }}>
                                                         <Edit2 size={12} />{decisionText ? '編集' : '記録する'}
                                                     </button>
                                                 )}
@@ -1112,6 +1171,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                     </span>
                                                     {canEditProposal && !editingVisibility && (
                                                         <button style={editIconBtn} onClick={() => {
+                                                            editBaselineRef.current = selectedProposal.updated_at ?? null;
                                                             setVisibilityDraft(Array.isArray(vg) ? [...vg] : []);
                                                             setEditingVisibility(true);
                                                         }}>
@@ -1374,6 +1434,64 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                 </button>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* 競合 POPUP: 他者が同じ提議を更新済みのとき、上書きを止めて選択させる */}
+            {conflictField && (
+                <div
+                    onClick={() => setConflictField(null)}
+                    style={{
+                        position: 'fixed', inset: 0, zIndex: 1100,
+                        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                    <div onClick={e => e.stopPropagation()} style={{
+                        width: '92%', maxWidth: '440px', padding: '28px',
+                        borderRadius: '20px', background: 'var(--glass-bg)',
+                        border: '1px solid rgba(251,191,36,0.5)',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 24px rgba(251,191,36,0.2)',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                            <AlertCircle size={22} style={{ color: '#fbbf24', flexShrink: 0 }} />
+                            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
+                                他のユーザーが更新しました
+                            </h3>
+                        </div>
+                        <p style={{ fontSize: '0.9rem', lineHeight: 1.7, color: 'var(--text-dim)', margin: '0 0 22px' }}>
+                            この提議は、あなたが編集している間に別のユーザーによって更新されました。
+                            上書きすると相手の変更が失われます。<br />
+                            <strong style={{ color: 'var(--text)' }}>最新を読み込む</strong>と入力中の内容は破棄され、最新の状態で開き直します。
+                        </p>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => setConflictField(null)}
+                                style={{
+                                    padding: '10px 18px', borderRadius: '12px', cursor: 'pointer',
+                                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)',
+                                    color: 'var(--text)', fontSize: '0.88rem',
+                                }}>
+                                入力を続ける
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    const f = conflictField;
+                                    setConflictField(null);
+                                    if (f === 'proposal') setEditingProposal(false);
+                                    if (f === 'decision') setEditingDecision(false);
+                                    if (f === 'visibility') setEditingVisibility(false);
+                                    await reloadSelectedProposal();
+                                }}
+                                style={{
+                                    padding: '10px 18px', borderRadius: '12px', cursor: 'pointer',
+                                    background: 'rgba(251,191,36,0.85)', border: '1px solid rgba(251,191,36,0.6)',
+                                    color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem',
+                                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                }}>
+                                <RotateCcw size={14} />最新を読み込む
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -7,7 +7,18 @@ type PostgresEvent = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
 // Realtime 基盤不安定時のキルスイッチ。env で無効化可能。
 // 再接続ループが supabase-js の auth ロックを占有して REST 保存を
 // ハングさせる事例が確認されたため、既定で無効化する。
+// (現在は supabaseRealtime が auth 分離クライアントなのでハング根因は解消済み)
 const REALTIME_ENABLED = (import.meta as any).env?.VITE_ENABLE_REALTIME === 'true';
+// 提議関連だけ先行有効化するための個別フラグ。
+// 全体キルスイッチ(VITE_ENABLE_REALTIME)がOFFでも、これがtrueなら提議系は購読する。
+const REALTIME_PROPOSALS_ENABLED = (import.meta as any).env?.VITE_ENABLE_REALTIME_PROPOSALS === 'true';
+
+// 機能単位の有効判定。feature 未指定は全体キルスイッチに従う (従来動作)。
+function isRealtimeEnabled(feature?: 'proposals'): boolean {
+    if (REALTIME_ENABLED) return true;
+    if (feature === 'proposals' && REALTIME_PROPOSALS_ENABLED) return true;
+    return false;
+}
 
 export interface ChannelListener<T extends Record<string, unknown> = Record<string, unknown>> {
     event: PostgresEvent;
@@ -21,6 +32,8 @@ interface Options {
     maxRetries?: number;
     /** 初回リトライ待機時間(ms)。指数バックオフで増加。デフォルト: 2000 */
     baseDelay?: number;
+    /** 機能単位の有効化。'proposals' は VITE_ENABLE_REALTIME_PROPOSALS でも有効になる */
+    feature?: 'proposals';
 }
 
 /**
@@ -32,7 +45,7 @@ export function useRealtimeChannel(
     listeners: ChannelListener[],
     options: Options = {}
 ) {
-    const { maxRetries = 3, baseDelay = 2000 } = options;
+    const { maxRetries = 3, baseDelay = 2000, feature } = options;
 
     const channelRef = useRef<RealtimeChannel | null>(null);
     const retryCountRef = useRef(0);
@@ -55,7 +68,7 @@ export function useRealtimeChannel(
 
     const subscribe = useCallback(() => {
         if (!isMountedRef.current) return;
-        if (!REALTIME_ENABLED) return; // キルスイッチで完全停止
+        if (!isRealtimeEnabled(feature)) return; // キルスイッチ / 機能フラグで停止
 
         // 既存チャンネルを破棄
         if (channelRef.current) {
@@ -108,7 +121,7 @@ export function useRealtimeChannel(
         });
 
         channelRef.current = channel;
-    }, [channelName, maxRetries, baseDelay]);
+    }, [channelName, maxRetries, baseDelay, feature]);
 
     useEffect(() => {
         isMountedRef.current = true;

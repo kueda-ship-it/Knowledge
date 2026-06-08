@@ -234,7 +234,55 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                 setSelectedProposal(prev => prev?.id === deletedId ? null : prev);
             },
         },
-    ]);
+    ], { feature: 'proposals' });
+
+    // 問題点(チェックリスト)の Realtime。開いている提議の項目をライブ同期。
+    useRealtimeChannel(
+        selectedProposal ? `proposal-problems-${selectedProposal.id}` : 'proposal-problems-idle',
+        selectedProposal ? [
+            {
+                event: 'INSERT',
+                table: 'operational_proposal_problems',
+                filter: `proposal_id=eq.${selectedProposal.id}`,
+                callback: (payload) => {
+                    const row = payload.new as unknown as ProposalProblem;
+                    setProblems(prev => {
+                        if (prev.some(p => p.id === row.id)) return prev;
+                        const next = [...prev, row].sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at));
+                        syncProgress(row.proposal_id, next);
+                        return next;
+                    });
+                },
+            },
+            {
+                event: 'UPDATE',
+                table: 'operational_proposal_problems',
+                filter: `proposal_id=eq.${selectedProposal.id}`,
+                callback: (payload) => {
+                    const row = payload.new as unknown as ProposalProblem;
+                    setProblems(prev => {
+                        const next = prev.map(p => p.id === row.id ? { ...p, ...row } : p);
+                        syncProgress(row.proposal_id, next);
+                        return next;
+                    });
+                },
+            },
+            {
+                event: 'DELETE',
+                table: 'operational_proposal_problems',
+                filter: `proposal_id=eq.${selectedProposal.id}`,
+                callback: (payload) => {
+                    const oldId = (payload.old as { id: string }).id;
+                    setProblems(prev => {
+                        const next = prev.filter(p => p.id !== oldId);
+                        if (selectedProposal) syncProgress(selectedProposal.id, next);
+                        return next;
+                    });
+                },
+            },
+        ] : [],
+        { feature: 'proposals' },
+    );
 
     const fetchData = async (silent = true) => {
         const hasCache = loadProposalCache().length > 0;
@@ -373,7 +421,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                 setComments(prev => prev.filter(c => c.id !== id));
             },
         },
-    ] : []);
+    ] : [], { feature: 'proposals' });
 
     const canEditProposal = !!selectedProposal && !!user && (
         user.role === 'manager' || user.role === 'master' ||

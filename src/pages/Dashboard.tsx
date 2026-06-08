@@ -24,10 +24,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
     const filteredData = useMemo(() => {
         const now = new Date();
         return data.filter(item => {
-            // Time filter
+            // Time filter (作成日基準。CLAUDE.md 方針で日付は作成日優先。createdAt 無い旧行は updatedAt)
             if (timeRange !== 'all') {
-                const updatedDate = new Date(item.updatedAt);
-                const diffMs = now.getTime() - updatedDate.getTime();
+                const baseDate = new Date(item.createdAt ?? item.updatedAt);
+                const diffMs = now.getTime() - baseDate.getTime();
                 if (timeRange === 'day' && diffMs > 24 * 60 * 60 * 1000) return false;
                 if (timeRange === 'week' && diffMs > 7 * 24 * 60 * 60 * 1000) return false;
                 if (timeRange === 'month' && diffMs > 30 * 24 * 60 * 60 * 1000) return false;

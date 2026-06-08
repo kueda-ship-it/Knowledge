@@ -85,7 +85,7 @@ function App() {
 
         const fetchKData = async () => {
             try {
-                const data = await withTimeout(apiClient.fetchAll(), 20000, 'fetchAll');
+                const data = await withTimeout(apiClient.fetchAll(user.id), 20000, 'fetchAll');
                 setDashboardData(data);
             } catch (e) {
                 console.error("Failed to fetch dashboard data:", e);
@@ -104,7 +104,7 @@ function App() {
         (async () => {
             try {
                 const [k, p] = await Promise.all([
-                    withTimeout(apiClient.fetchAll(), 20000, 'fetchAll(chat)'),
+                    withTimeout(apiClient.fetchAll(user.id), 20000, 'fetchAll(chat)'),
                     withTimeout(apiClient.fetchProposals(), 20000, 'fetchProposals(chat)').catch(() => []),
                 ]);
                 setDashboardData(prev => (prev.length ? prev : k));
@@ -125,12 +125,12 @@ function App() {
     // 2. リアルタイムサブスクリプション (自動再接続付き)
     const fetchKDataForRealtime = useCallback(async () => {
         try {
-            const data = await withTimeout(apiClient.fetchAll(), 20000, 'fetchAll(realtime)');
+            const data = await withTimeout(apiClient.fetchAll(user?.id), 20000, 'fetchAll(realtime)');
             setDashboardData(data);
         } catch (e) {
             console.error("Failed to fetch dashboard data (Realtime):", e);
         }
-    }, []);
+    }, [user?.id]);
 
     useRealtimeChannel(
         user ? `global-sync-${user.id}` : '',
@@ -175,7 +175,7 @@ function App() {
     const prefetchDashboard = async (showOverlay: boolean) => {
         if (showOverlay) setDashboardLoading(true);
         try {
-            const d = await withTimeout(apiClient.fetchAll(), 20000, 'fetchAll(prefetch)');
+            const d = await withTimeout(apiClient.fetchAll(user?.id), 20000, 'fetchAll(prefetch)');
             setDashboardData(d);
         } catch (e) {
             console.error(e);

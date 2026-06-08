@@ -218,9 +218,12 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         // 先にUIを更新して体感速度を上げる
         if (onSave) onSave(newItem, false);
 
-        // バックグラウンドでサーバー更新
+        // バックグラウンドでサーバー更新 (15秒タイムアウトでハング防止)
         try {
-            await apiClient.toggleReaction(item.id, userId, type, comment);
+            await Promise.race([
+                apiClient.toggleReaction(item.id, userId, type, comment),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 15000)),
+            ]);
         } catch (e) {
             console.error("Reaction failed:", e);
             alert("リアクションの同期に失敗しました。再試行してください。");

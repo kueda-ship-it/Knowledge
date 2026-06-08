@@ -185,7 +185,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
         // ナレッジ一覧とマスタ取得
         const fetchKnowledge = async () => {
             try {
-                const raw = await apiClient.fetchAll();
+                const raw = await apiClient.fetchAll((user as any).id);
                 const kData = sortByCreatedDesc(raw);
                 setData(kData);
                 saveCache(CACHE_KEY, kData);
@@ -319,7 +319,11 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
         setData(prev => prev.map(i => i.id === next.id ? next : i));
 
         try {
-            await apiClient.toggleReaction(item.id, userId, type);
+            // 15秒でタイムアウト (auth ロック / ネットワーク不安定でハングしないように)
+            await Promise.race([
+                apiClient.toggleReaction(item.id, userId, type),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 15000)),
+            ]);
         } catch (e) {
             console.error('[handleToggleReaction] sync failed:', e);
             setData(prev => prev.map(i => i.id === original.id ? original : i));

@@ -278,45 +278,60 @@ export const apiClient = {
         }
     },
 
+    // リアクション (いいね / だめだね) のトグル。supabase-js の write は auth ロックで
+    // ハングする事例があるため rawRest (PostgREST 直叩き) を使う。呼び出し側でタイムアウトを付ける。
+    // 通知 (profiles 結合・FDW で遅い) は本処理の後に fire-and-forget で実行し、
+    // 通知が詰まってもリアクション自体は完了させる。
     async toggleReaction(knowledgeId: string, userId: string, type: 'like' | 'wrong', comment?: string): Promise<void> {
-        // Check if exists
-        const { data: existing } = await supabase
-            .from('knowledge_reactions')
-            .select('*')
-            .eq('knowledge_id', knowledgeId)
-            .eq('user_id', userId)
-            .eq('type', type)
-            .maybeSingle();
+        // 既存判定
+        const existRes = await rawRest(
+            `/rest/v1/knowledge_reactions?knowledge_id=eq.${encodeURIComponent(knowledgeId)}&user_id=eq.${encodeURIComponent(userId)}&type=eq.${type}&select=id`,
+            { method: 'GET' },
+        );
+        if (!existRes.ok) throw new Error(`リアクション確認に失敗 (${existRes.status}): ${await existRes.text().catch(() => '')}`);
+        const existing = (await existRes.json()) as Array<{ id: string }>;
 
-        if (existing) {
-            // Delete
-            const { error: delErr } = await supabase.from('knowledge_reactions').delete().eq('id', existing.id);
-            if (delErr) throw delErr;
-        } else {
-            // Remove other types of reactions from this user for this item first (exclusive choice)
-            const { error: clearErr } = await supabase.from('knowledge_reactions').delete().eq('knowledge_id', knowledgeId).eq('user_id', userId);
-            if (clearErr) throw clearErr;
-
-            // Insert
-            const { error } = await supabase.from('knowledge_reactions').insert({
-                knowledge_id: knowledgeId,
-                user_id: userId,
-                type: type,
-                comment: comment
-            });
-            if (error) throw error;
-
-            // Notify author if someone else reacted
-            const { data: knl } = await supabase.from('knowledge').select('author').eq('id', knowledgeId).maybeSingle();
-            if (knl?.author) {
-                const { data: authorProf } = await supabase.from('profiles').select('id').eq('display_name', knl.author).maybeSingle();
-                if (authorProf?.id && authorProf.id !== userId) {
-                    // Fetch sender name
-                    const { data: me } = await supabase.from('profiles').select('display_name').eq('id', userId).maybeSingle();
-                    await this.createNotification(authorProf.id, me?.display_name || 'Someone', type, knowledgeId);
-                }
-            }
+        if (existing.length > 0) {
+            // 同じ種別を再度押した → 取り消し (削除)
+            const delRes = await rawRest(
+                `/rest/v1/knowledge_reactions?knowledge_id=eq.${encodeURIComponent(knowledgeId)}&user_id=eq.${encodeURIComponent(userId)}&type=eq.${type}`,
+                { method: 'DELETE', prefer: 'return=minimal' },
+            );
+            if (!delRes.ok) throw new Error(`リアクション削除に失敗 (${delRes.status}): ${await delRes.text().catch(() => '')}`);
+            return;
         }
+
+        // 別種別が付いていれば先に消す (排他選択)
+        const clearRes = await rawRest(
+            `/rest/v1/knowledge_reactions?knowledge_id=eq.${encodeURIComponent(knowledgeId)}&user_id=eq.${encodeURIComponent(userId)}`,
+            { method: 'DELETE', prefer: 'return=minimal' },
+        );
+        if (!clearRes.ok) throw new Error(`リアクション整理に失敗 (${clearRes.status}): ${await clearRes.text().catch(() => '')}`);
+
+        // 追加
+        const insRes = await rawRest('/rest/v1/knowledge_reactions', {
+            method: 'POST',
+            body: { knowledge_id: knowledgeId, user_id: userId, type, comment },
+            prefer: 'return=minimal',
+        });
+        if (!insRes.ok) throw new Error(`リアクション登録に失敗 (${insRes.status}): ${await insRes.text().catch(() => '')}`);
+
+        // 投稿者への通知は背景で (profiles FDW が遅い / 詰まってもリアクションは成立済み)
+        const self = this;
+        (async () => {
+            try {
+                const { data: knl } = await supabase.from('knowledge').select('author').eq('id', knowledgeId).maybeSingle();
+                if (knl?.author) {
+                    const { data: authorProf } = await supabase.from('profiles').select('id').eq('display_name', knl.author).maybeSingle();
+                    if (authorProf?.id && authorProf.id !== userId) {
+                        const { data: me } = await supabase.from('profiles').select('display_name').eq('id', userId).maybeSingle();
+                        await self.createNotification(authorProf.id, me?.display_name || 'Someone', type, knowledgeId);
+                    }
+                }
+            } catch (e) {
+                console.warn('[toggleReaction/bg] 通知に失敗 (リアクションは成功済み):', e);
+            }
+        })();
     },
 
     async fetchHistory(knowledgeId: string): Promise<EditHistory[]> {

@@ -1062,6 +1062,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                 background: 'rgba(255,255,255,0.02)', padding: '24px 28px', borderRadius: '20px',
                                 border: '1px solid rgba(255,255,255,0.05)', lineHeight: 1.8, fontSize: '1rem',
                                 whiteSpace: 'pre-wrap', color: 'var(--text)',
+                                // 改行できない長い URL 等もモーダル幅で折り返す (はみ出し防止)
+                                overflowWrap: 'anywhere', wordBreak: 'break-word', minWidth: 0,
                             };
                             const sectionLabel: React.CSSProperties = {
                                 fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em',
@@ -1334,7 +1336,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div style={{ fontSize: '0.9rem', lineHeight: 1.7, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>
+                                                <div style={{ fontSize: '0.9rem', lineHeight: 1.7, color: 'var(--text)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                                                     {c.body}
                                                 </div>
                                             </div>

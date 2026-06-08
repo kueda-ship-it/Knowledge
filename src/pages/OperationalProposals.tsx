@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle, Clock, AlertCircle, User as UserIcon, Calendar, MessageSquare, Tag, ArrowUpDown, Hash, Plus, ArrowLeft, Edit2, Send, X, Check, Gavel, Trash2, RotateCcw } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle, User as UserIcon, Calendar, MessageSquare, Tag, ArrowUpDown, Hash, Plus, ArrowLeft, Edit2, Send, X, Check, Gavel, Trash2, RotateCcw, CheckSquare, Square, ListChecks } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { supabase } from '../lib/supabase';
-import { OperationalProposal, OperationalProposalComment, User, ProposalDraft, NavigateParams } from '../types';
+import { OperationalProposal, OperationalProposalComment, User, ProposalDraft, NavigateParams, ProposalProblem } from '../types';
 import { BackButton } from '../components/common/BackButton';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
 import { loadCache, saveCache } from '../utils/cache';
@@ -140,6 +140,13 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const [commentsLoading, setCommentsLoading] = useState(false);
     const [commentDraft, setCommentDraft] = useState('');
     const [commentBusy, setCommentBusy] = useState(false);
+    // 問題点の項目 (進捗管理)
+    const [problems, setProblems] = useState<ProposalProblem[]>([]);
+    const [problemsLoading, setProblemsLoading] = useState(false);
+    const [problemDraft, setProblemDraft] = useState('');
+    const [problemBusy, setProblemBusy] = useState(false);
+    // 提議ごとの進捗サマリ (一覧カード用): proposal_id -> { done, total }
+    const [progressById, setProgressById] = useState<Record<string, { done: number; total: number }>>({});
     const [editingProposal, setEditingProposal] = useState(false);
     const [proposalDraft, setProposalDraft] = useState('');
     const [editingDecision, setEditingDecision] = useState(false);
@@ -174,6 +181,15 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
 
     useEffect(() => {
         fetchData();
+    }, []);
+
+    // 一覧カードの進捗バッジ用に全提議の問題点進捗を一括ロード (失敗しても一覧は表示)
+    useEffect(() => {
+        let cancelled = false;
+        apiClient.fetchAllProblemProgress()
+            .then(map => { if (!cancelled) setProgressById(map); })
+            .catch(e => console.warn('[OperationalProposals] fetchAllProblemProgress failed:', e?.message));
+        return () => { cancelled = true; };
     }, []);
 
     // profiles は proposals と独立して取得（失敗しても proposals 表示は継続）
@@ -287,6 +303,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             setProposalDraft('');
             setEditingDecision(false);
             setDecisionDraft('');
+            setProblems([]);
+            setProblemDraft('');
             return;
         }
         setProposalDraft(selectedProposal.proposal ?? '');
@@ -296,6 +314,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         setEditingDecision(false);
         setEditingVisibility(false);
         setCommentDraft('');
+        setProblemDraft('');
 
         let cancelled = false;
         setCommentsLoading(true);
@@ -309,6 +328,17 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             })
             .catch(e => console.warn('[OperationalProposals] fetchProposalComments failed:', e?.message))
             .finally(() => { if (!cancelled) setCommentsLoading(false); });
+
+        // 問題点の項目もロード
+        setProblemsLoading(true);
+        apiClient.fetchProposalProblems(selectedProposal.id)
+            .then(rows => {
+                if (cancelled) return;
+                setProblems(rows);
+                setProgressById(prev => ({ ...prev, [selectedProposal.id]: { done: rows.filter(r => r.done).length, total: rows.length } }));
+            })
+            .catch(e => console.warn('[OperationalProposals] fetchProposalProblems failed:', e?.message))
+            .finally(() => { if (!cancelled) setProblemsLoading(false); });
         return () => { cancelled = true; };
     }, [selectedProposal?.id, usersMaster]);
 
@@ -472,6 +502,67 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         } catch (e: any) {
             console.error("Failed to delete comment:", e);
             window.alert(`合議の削除に失敗しました。再試行してください。\n${e?.message ?? ''}`);
+        }
+    };
+
+    // ---- 問題点の項目 (進捗管理) ----
+    const syncProgress = (pid: string, items: ProposalProblem[]) => {
+        setProgressById(prev => ({ ...prev, [pid]: { done: items.filter(i => i.done).length, total: items.length } }));
+    };
+
+    const handleAddProblem = async () => {
+        if (!selectedProposal || !user?.id) return;
+        const body = problemDraft.trim();
+        if (!body) return;
+        setProblemBusy(true);
+        try {
+            const nextOrder = problems.length > 0 ? Math.max(...problems.map(p => p.sort_order)) + 1 : 0;
+            const created = await withTimeout(
+                apiClient.createProposalProblem(selectedProposal.id, body, nextOrder, user.id), 15000, 'createProposalProblem',
+            );
+            if (created) {
+                const next = [...problems, created];
+                setProblems(next);
+                syncProgress(selectedProposal.id, next);
+            }
+            setProblemDraft('');
+        } catch (e: any) {
+            console.error('Failed to add problem:', e);
+            window.alert(`問題点の追加に失敗しました。入力内容は残っています。\n${e?.message ?? ''}`);
+        } finally {
+            setProblemBusy(false);
+        }
+    };
+
+    const handleToggleProblem = async (problem: ProposalProblem) => {
+        if (!selectedProposal) return;
+        const nextDone = !problem.done;
+        // 楽観更新
+        const optimistic = problems.map(p => p.id === problem.id ? { ...p, done: nextDone } : p);
+        setProblems(optimistic);
+        syncProgress(selectedProposal.id, optimistic);
+        try {
+            await withTimeout(apiClient.updateProposalProblem(problem.id, { done: nextDone }), 15000, 'updateProposalProblem');
+        } catch (e: any) {
+            console.error('Failed to toggle problem:', e);
+            // ロールバック
+            const rolled = problems.map(p => p.id === problem.id ? { ...p, done: problem.done } : p);
+            setProblems(rolled);
+            syncProgress(selectedProposal.id, rolled);
+            window.alert(`進捗の更新に失敗しました。\n${e?.message ?? ''}`);
+        }
+    };
+
+    const handleDeleteProblem = async (problemId: string) => {
+        if (!selectedProposal) return;
+        try {
+            await withTimeout(apiClient.deleteProposalProblem(problemId), 15000, 'deleteProposalProblem');
+            const next = problems.filter(p => p.id !== problemId);
+            setProblems(next);
+            syncProgress(selectedProposal.id, next);
+        } catch (e: any) {
+            console.error('Failed to delete problem:', e);
+            window.alert(`問題点の削除に失敗しました。\n${e?.message ?? ''}`);
         }
     };
 
@@ -891,8 +982,12 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                             || (idx >= 0 ? desc.slice(0, idx).trim() : desc.trim())
                                             || (proposal as any).proposal
                                             || '';
+                                        const prog = progressById[proposal.id];
+                                        const hasProgress = !!prog && prog.total > 0;
+                                        const progPct = hasProgress ? Math.round((prog.done / prog.total) * 100) : 0;
                                         const hasPreview = !!preview;
-                                        const spanRows = hasPreview ? '1 / span 2' : '1';
+                                        const hasRow2 = hasPreview || hasProgress;
+                                        const spanRows = hasRow2 ? '1 / span 2' : '1';
                                         return (
                                             <>
                                                 {/* 種別 (全行・左寄せ・垂直中央) */}
@@ -933,16 +1028,36 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 <h3 style={{ gridColumn: '4', gridRow: '1', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, textAlign: 'left' }}>
                                                     {proposal.title}
                                                 </h3>
-                                                {/* 問題点プレビュー (2行目・タイトル列) */}
-                                                {hasPreview && (
-                                                    <p style={{
+                                                {/* 2行目・タイトル列: 問題点プレビュー + 進捗チップ */}
+                                                {hasRow2 && (
+                                                    <div style={{
                                                         gridColumn: '4', gridRow: '2',
-                                                        fontSize: '0.85rem', color: 'var(--text-dim)', lineHeight: 1.5,
-                                                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                                        margin: 0, minWidth: 0, textAlign: 'left',
+                                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                                        minWidth: 0, textAlign: 'left',
                                                     }}>
-                                                        {preview}
-                                                    </p>
+                                                        {hasProgress && (
+                                                            <span style={{
+                                                                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                                                height: '20px', padding: '0 8px', boxSizing: 'border-box',
+                                                                borderRadius: '10px', fontSize: '0.7rem', fontWeight: 700, lineHeight: 1,
+                                                                flexShrink: 0, whiteSpace: 'nowrap',
+                                                                background: progPct === 100 ? 'rgba(52,211,153,0.15)' : 'rgba(167,139,250,0.15)',
+                                                                color: progPct === 100 ? '#34d399' : '#c4b5fd',
+                                                                border: '1px solid ' + (progPct === 100 ? 'rgba(52,211,153,0.4)' : 'rgba(167,139,250,0.4)'),
+                                                            }}>
+                                                                <ListChecks size={11} />{prog.done}/{prog.total}（{progPct}%）
+                                                            </span>
+                                                        )}
+                                                        {hasPreview && (
+                                                            <span style={{
+                                                                fontSize: '0.85rem', color: 'var(--text-dim)', lineHeight: 1.5,
+                                                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                                minWidth: 0,
+                                                            }}>
+                                                                {preview}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 )}
                                                 {/* 投稿者 (全行・左寄せ・1行固定) */}
                                                 <div style={{ gridColumn: '5', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden' }}>
@@ -1084,11 +1199,112 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
 
                             return (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
-                                    {/* 問題点 */}
+                                    {/* 問題点 (概要) */}
                                     <div>
-                                        <span style={sectionLabel}>問題点</span>
+                                        <span style={sectionLabel}>問題点（概要）</span>
                                         <div style={blockStyle}>{problemText || <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>未入力</span>}</div>
                                     </div>
+
+                                    {/* 問題点の項目 (チェックリスト + 進捗) */}
+                                    {(() => {
+                                        const total = problems.length;
+                                        const done = problems.filter(p => p.done).length;
+                                        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+                                        return (
+                                            <div>
+                                                <div style={{ ...sectionLabel, color: '#a78bfa', justifyContent: 'space-between' }}>
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                                                        <ListChecks size={14} /> 問題点チェックリスト
+                                                    </span>
+                                                    {total > 0 && (
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: pct === 100 ? '#34d399' : 'var(--text-dim)' }}>
+                                                            {done}/{total} 完了（{pct}%）
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {/* 進捗バー */}
+                                                {total > 0 && (
+                                                    <div style={{ height: '6px', borderRadius: '4px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: '12px' }}>
+                                                        <div style={{ width: `${pct}%`, height: '100%', background: pct === 100 ? '#34d399' : '#a78bfa', transition: 'width 0.3s' }} />
+                                                    </div>
+                                                )}
+                                                {problemsLoading ? (
+                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>読み込み中…</div>
+                                                ) : (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        {problems.map(p => (
+                                                            <div key={p.id} style={{
+                                                                display: 'flex', alignItems: 'flex-start', gap: '10px',
+                                                                padding: '10px 12px', borderRadius: '12px',
+                                                                background: p.done ? 'rgba(52,211,153,0.06)' : 'rgba(255,255,255,0.03)',
+                                                                border: '1px solid ' + (p.done ? 'rgba(52,211,153,0.25)' : 'rgba(255,255,255,0.06)'),
+                                                            }}>
+                                                                <button
+                                                                    onClick={() => canAddComment && handleToggleProblem(p)}
+                                                                    disabled={!canAddComment}
+                                                                    title={canAddComment ? (p.done ? '未完了に戻す' : '完了にする') : '権限がありません'}
+                                                                    style={{
+                                                                        background: 'transparent', border: 'none', padding: 0, marginTop: '1px',
+                                                                        cursor: canAddComment ? 'pointer' : 'default', flexShrink: 0,
+                                                                        color: p.done ? '#34d399' : 'var(--text-dim)', display: 'inline-flex',
+                                                                    }}>
+                                                                    {p.done ? <CheckSquare size={18} /> : <Square size={18} />}
+                                                                </button>
+                                                                <span style={{
+                                                                    flex: 1, fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text)',
+                                                                    whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', wordBreak: 'break-word',
+                                                                    textDecoration: p.done ? 'line-through' : 'none',
+                                                                    opacity: p.done ? 0.6 : 1,
+                                                                }}>{p.body}</span>
+                                                                {canAddComment && (
+                                                                    <button onClick={() => handleDeleteProblem(p.id)} title="削除"
+                                                                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '2px', flexShrink: 0, display: 'inline-flex' }}>
+                                                                        <Trash2 size={13} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                        {total === 0 && (
+                                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
+                                                                問題点を項目に分けて登録すると、項目ごとに進捗を管理できます。
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {/* 追加フォーム */}
+                                                {canAddComment && (
+                                                    <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                                        <input
+                                                            value={problemDraft}
+                                                            onChange={e => setProblemDraft(e.target.value)}
+                                                            placeholder="問題点を項目で追加 (Enter で追加)"
+                                                            onKeyDown={e => {
+                                                                if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
+                                                                if (e.key === 'Enter') { e.preventDefault(); handleAddProblem(); }
+                                                            }}
+                                                            style={{
+                                                                flex: 1, padding: '10px 14px', borderRadius: '12px',
+                                                                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)',
+                                                                color: 'var(--text)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box',
+                                                            }}
+                                                        />
+                                                        <button onClick={handleAddProblem} disabled={problemBusy || !problemDraft.trim()}
+                                                            style={{
+                                                                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                                                padding: '8px 16px', borderRadius: '12px',
+                                                                background: problemDraft.trim() ? 'rgba(167,139,250,0.22)' : 'rgba(255,255,255,0.05)',
+                                                                border: '1px solid ' + (problemDraft.trim() ? 'rgba(167,139,250,0.55)' : 'rgba(255,255,255,0.1)'),
+                                                                color: problemDraft.trim() ? '#c4b5fd' : 'var(--text-dim)',
+                                                                cursor: problemDraft.trim() && !problemBusy ? 'pointer' : 'not-allowed',
+                                                                fontSize: '0.85rem', whiteSpace: 'nowrap',
+                                                            }}>
+                                                            <Plus size={14} />{problemBusy ? '追加中…' : '追加'}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
 
                                     {/* 改善提案 (編集可) */}
                                     <div>

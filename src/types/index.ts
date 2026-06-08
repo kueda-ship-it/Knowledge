@@ -185,6 +185,18 @@ export interface OperationalProposal {
     updated_at: string;
 }
 
+// 運用提議の「問題点」を項目分割して進捗管理する単位
+export interface ProposalProblem {
+    id: string;
+    proposal_id: string;
+    body: string;
+    done: boolean;
+    sort_order: number;
+    created_by?: string;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface OperationalProposalComment {
     id: string;
     proposal_id: string;

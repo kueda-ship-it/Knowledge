@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { supabaseRealtime } from '../lib/supabaseRealtime';
 import { supabaseEquipment } from '../lib/supabaseEquipment';
-import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification, KnowledgeGroup, ChatAction, OperationalProposal } from '../types';
+import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification, KnowledgeGroup, ChatAction, OperationalProposal, ProposalProblem } from '../types';
 
 // supabase-js の auth ロック待ちを避けるため、localStorage から直接 JWT を取って
 // PostgREST を叩くヘルパー。書き込み系のパスで supabase.from().insert/update/delete が
@@ -642,6 +642,70 @@ export const apiClient = {
             prefer: 'return=minimal',
         });
         if (!res.ok) throw new Error(`合議の削除に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+    },
+
+    // ---- 問題点の項目 (進捗管理) ----
+    // 書き込みは全て rawRest (supabase-js の auth ロックハング回避)。呼び出し側で TO を付ける。
+    async fetchProposalProblems(proposalId: string): Promise<ProposalProblem[]> {
+        const path = `/rest/v1/operational_proposal_problems?proposal_id=eq.${encodeURIComponent(proposalId)}&select=id,proposal_id,body,done,sort_order,created_by,created_at,updated_at&order=sort_order.asc,created_at.asc`;
+        const res = await rawRest(path, { method: 'GET' });
+        if (!res.ok) throw new Error(`問題点の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        return (await res.json()) as ProposalProblem[];
+    },
+
+    // 作成行を返す (return=representation)。一覧へ楽観追加するため。
+    async createProposalProblem(proposalId: string, body: string, sortOrder: number, userId?: string): Promise<ProposalProblem | null> {
+        const res = await rawRest('/rest/v1/operational_proposal_problems', {
+            method: 'POST',
+            body: { proposal_id: proposalId, body, sort_order: sortOrder, created_by: userId ?? null },
+            prefer: 'return=representation',
+        });
+        if (!res.ok) throw new Error(`問題点の追加に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        try {
+            const rows = (await res.json()) as ProposalProblem[];
+            return rows?.[0] ?? null;
+        } catch {
+            return null;
+        }
+    },
+
+    async updateProposalProblem(
+        id: string,
+        patch: Partial<{ body: string; done: boolean; sort_order: number }>,
+    ): Promise<void> {
+        const res = await rawRest(`/rest/v1/operational_proposal_problems?id=eq.${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            body: { ...patch, updated_at: new Date().toISOString() },
+            prefer: 'return=minimal',
+        });
+        if (!res.ok) throw new Error(`問題点の更新に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+    },
+
+    async deleteProposalProblem(id: string): Promise<void> {
+        const res = await rawRest(`/rest/v1/operational_proposal_problems?id=eq.${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            prefer: 'return=minimal',
+        });
+        if (!res.ok) throw new Error(`問題点の削除に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+    },
+
+    // 一覧カードの進捗バッジ用: 全提議の問題点を一括取得し proposal_id ごとに集計。
+    // 件数が多くなければ十分軽量 (proposal_id, done のみ取得)。
+    async fetchAllProblemProgress(): Promise<Record<string, { done: number; total: number }>> {
+        const res = await rawRest(
+            `/rest/v1/operational_proposal_problems?select=proposal_id,done`,
+            { method: 'GET' },
+        );
+        if (!res.ok) throw new Error(`進捗の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        const rows = (await res.json()) as Array<{ proposal_id: string; done: boolean }>;
+        const map: Record<string, { done: number; total: number }> = {};
+        for (const r of rows) {
+            const e = map[r.proposal_id] ?? { done: 0, total: 0 };
+            e.total += 1;
+            if (r.done) e.done += 1;
+            map[r.proposal_id] = e;
+        }
+        return map;
     },
 
     async getNextProposalNo(category: string): Promise<string> {

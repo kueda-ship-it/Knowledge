@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { User, AppNotification } from '../types';
-import { LogOut, Moon, Sun, Bell, AlertTriangle, Edit3, ThumbsUp, Droplet } from 'lucide-react';
+import { LogOut, Moon, Sun, Bell, Droplet } from 'lucide-react';
 import { roleColor } from '../constants/roles';
+import { describeNotification } from '../constants/notifications';
 
 interface HeaderProps {
     user: User | null;
@@ -119,9 +120,11 @@ export const Header: React.FC<HeaderProps> = ({
                                 {unreadCount > 0 && <span style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>未読 {unreadCount}件</span>}
                             </div>
                             <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                                {notifications.length > 0 ? notifications.map(note => (
-                                    <div 
-                                        key={note.id} 
+                                {notifications.length > 0 ? notifications.map(note => {
+                                    const meta = describeNotification(note);
+                                    return (
+                                    <div
+                                        key={note.id}
                                         onClick={() => {
                                             if (!note.is_read && onReadNotification) onReadNotification(note.id);
                                             setShowNotifications(false);
@@ -136,27 +139,20 @@ export const Header: React.FC<HeaderProps> = ({
                                             gap: '12px'
                                         }}
                                     >
-                                        <div style={{ 
-                                            color: note.type === 'like' ? 'var(--primary)' : note.type === 'wrong' ? '#ef4444' : '#10b981',
-                                            marginTop: '2px'
-                                        }}>
-                                            {note.type === 'like' && <ThumbsUp size={16} />}
-                                            {note.type === 'wrong' && <AlertTriangle size={16} />}
-                                            {note.type === 'edited' && <Edit3 size={16} />}
+                                        <div style={{ color: meta.color, marginTop: '2px' }}>
+                                            <meta.Icon size={16} />
                                         </div>
                                         <div>
                                             <div style={{ fontSize: '0.85rem', marginBottom: '4px', color: note.is_read ? 'var(--muted)' : 'var(--text)' }}>
-                                                <strong>{note.sender_name}</strong> が
-                                                {note.type === 'like' ? ' いいね！しました' : 
-                                                 note.type === 'wrong' ? ' 違うよ！と指摘しました' : 
-                                                 ' ナレッジを編集しました'}
+                                                {meta.text}
                                             </div>
                                             <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                                                 {new Date(note.created_at).toLocaleString()}
                                             </div>
                                         </div>
                                     </div>
-                                )) : (
+                                    );
+                                }) : (
                                     <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: '0.9rem' }}>
                                         通知はありません。
                                     </div>

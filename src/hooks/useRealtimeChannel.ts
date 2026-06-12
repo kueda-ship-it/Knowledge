@@ -12,11 +12,22 @@ const REALTIME_ENABLED = (import.meta as any).env?.VITE_ENABLE_REALTIME === 'tru
 // 提議関連だけ先行有効化するための個別フラグ。
 // 全体キルスイッチ(VITE_ENABLE_REALTIME)がOFFでも、これがtrueなら提議系は購読する。
 const REALTIME_PROPOSALS_ENABLED = (import.meta as any).env?.VITE_ENABLE_REALTIME_PROPOSALS === 'true';
+// SNS 系 (通知トースト / ナレッジコメント / アクティビティフィード) の個別フラグ。
+const REALTIME_SOCIAL_ENABLED = (import.meta as any).env?.VITE_ENABLE_REALTIME_SOCIAL === 'true';
+
+export type RealtimeFeature = 'proposals' | 'social';
+
+// デプロイ後に環境変数 (Vercel の VITE_ENABLE_REALTIME_*) が効いているか
+// ブラウザコンソールで確認できるよう、起動時に 1 回だけフラグを出力する
+console.info(
+    `[Realtime] flags: all=${REALTIME_ENABLED} proposals=${REALTIME_PROPOSALS_ENABLED} social=${REALTIME_SOCIAL_ENABLED}`,
+);
 
 // 機能単位の有効判定。feature 未指定は全体キルスイッチに従う (従来動作)。
-function isRealtimeEnabled(feature?: 'proposals'): boolean {
+function isRealtimeEnabled(feature?: RealtimeFeature): boolean {
     if (REALTIME_ENABLED) return true;
     if (feature === 'proposals' && REALTIME_PROPOSALS_ENABLED) return true;
+    if (feature === 'social' && REALTIME_SOCIAL_ENABLED) return true;
     return false;
 }
 
@@ -32,8 +43,8 @@ interface Options {
     maxRetries?: number;
     /** 初回リトライ待機時間(ms)。指数バックオフで増加。デフォルト: 2000 */
     baseDelay?: number;
-    /** 機能単位の有効化。'proposals' は VITE_ENABLE_REALTIME_PROPOSALS でも有効になる */
-    feature?: 'proposals';
+    /** 機能単位の有効化。'proposals'/'social' は個別 env フラグでも有効になる */
+    feature?: RealtimeFeature;
 }
 
 /**

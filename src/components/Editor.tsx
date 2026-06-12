@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { KnowledgeItem, MasterData, Attachment, ProposalDraft } from '../types';
-import { Trash2, X, RotateCcw, Check, Paperclip, ExternalLink, FileText, Image, ShieldCheck, ShieldAlert, ThumbsUp, AlertTriangle, Clock, History, MessageSquare, AlertOctagon, Send } from 'lucide-react';
+import { KnowledgeItem, MasterData, Attachment, ProposalDraft, ReactionType } from '../types';
+import { Trash2, X, RotateCcw, Check, Paperclip, ExternalLink, FileText, Image, ShieldCheck, ShieldAlert, AlertTriangle, Clock, History, MessageSquare, AlertOctagon, Send } from 'lucide-react';
+import { ReactionBar } from './ReactionBar';
+import { KnowledgeComments } from './KnowledgeComments';
+import { applyReactionToggle, reactionCountsOf, reactionUsersOf } from '../constants/reactions';
 import { apiClient } from '../api/client';
 import { useOneDriveUpload } from '../hooks/useOneDriveUpload';
 import { EditHistory } from '../types';
@@ -189,31 +192,14 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         }
     };
 
-    const handleReaction = async (type: 'like' | 'wrong', comment?: string) => {
+    const handleReaction = async (type: ReactionType, comment?: string) => {
         if (!item || !user.name) return;
         const userId = (user as any).id;
         if (!userId) return alert("ユーザーIDが見つかりません");
 
-        // --- 楽観的UI更新 (Optimistic Update) ---
-        const newItem = { ...item };
-        const isRemoving = newItem.myReaction === type;
-        
-        // 元の状態を保存（エラー時のロールバック用）
+        // --- 楽観的UI更新 (Optimistic Update)。元の状態はロールバック用に保持 ---
         const originalItem = { ...item };
-
-        if (isRemoving) {
-            newItem.myReaction = null;
-            if (type === 'like') newItem.likeCount = Math.max(0, (newItem.likeCount || 0) - 1);
-            else newItem.wrongCount = Math.max(0, (newItem.wrongCount || 0) - 1);
-        } else {
-            // 別のリアクションがあった場合はそれを減らす
-            if (newItem.myReaction === 'like') newItem.likeCount = Math.max(0, (newItem.likeCount || 0) - 1);
-            if (newItem.myReaction === 'wrong') newItem.wrongCount = Math.max(0, (newItem.wrongCount || 0) - 1);
-            
-            newItem.myReaction = type;
-            if (type === 'like') newItem.likeCount = (newItem.likeCount || 0) + 1;
-            else newItem.wrongCount = (newItem.wrongCount || 0) + 1;
-        }
+        const newItem = applyReactionToggle(item, type, userId);
 
         // 先にUIを更新して体感速度を上げる
         if (onSave) onSave(newItem, false);
@@ -302,39 +288,22 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                     marginBottom: '25px',
                     boxShadow: 'inset 0 0 20px rgba(0,0,0,0.2)'
                 }}>
-                    <button 
-                        type="button"
-                        onClick={() => handleReaction('like')}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '10px',
-                            padding: '12px 28px', borderRadius: '40px', border: '1px solid var(--primary)',
-                            background: item.myReaction === 'like' ? 'var(--primary)' : 'transparent',
-                            color: item.myReaction === 'like' ? 'white' : 'var(--primary)',
-                            cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s ease',
-                            boxShadow: item.myReaction === 'like' ? '0 0 15px var(--primary)' : 'none',
+                    <ReactionBar
+                        variant="full"
+                        counts={reactionCountsOf(item)}
+                        users={reactionUsersOf(item)}
+                        myReaction={item.myReaction}
+                        usersMaster={masters.users}
+                        onToggle={(type) => {
+                            // 「違うよ」は指摘内容の入力ダイアログを挟む (取り消しは即時)
+                            if (type === 'wrong' && item.myReaction !== 'wrong') {
+                                setShowWrongDialog(true);
+                                return;
+                            }
+                            handleReaction(type);
                         }}
-                        className="reaction-btn"
-                    >
-                        <ThumbsUp size={22} fill={item.myReaction === 'like' ? 'white' : 'transparent'} /> 
-                        いいね！ <span style={{ fontSize: '1.2rem', marginLeft: '4px' }}>{item.likeCount || 0}</span>
-                    </button>
-                    <button 
-                        type="button"
-                        onClick={() => setShowWrongDialog(true)}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '10px',
-                            padding: '12px 28px', borderRadius: '40px', border: '1px solid #ef4444',
-                            background: item.myReaction === 'wrong' ? '#ef4444' : 'transparent',
-                            color: item.myReaction === 'wrong' ? 'white' : '#ef4444',
-                            cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s ease',
-                            boxShadow: item.myReaction === 'wrong' ? '0 0 15px #ef4444' : 'none',
-                        }}
-                        className="reaction-btn"
-                    >
-                        <AlertTriangle size={22} fill={item.myReaction === 'wrong' ? 'white' : 'transparent'} /> 
-                        違うよ！ <span style={{ fontSize: '1.2rem', marginLeft: '4px' }}>{item.wrongCount || 0}</span>
-                    </button>
-                    <button 
+                    />
+                    <button
                         type="button"
                         onClick={() => setShowHistory(!showHistory)}
                         className="secondary-btn"
@@ -342,6 +311,13 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                     >
                         <History size={18} /> {showHistory ? '詳細を隠す' : '履歴を表示'}
                     </button>
+                </div>
+            )}
+
+            {/* コメントスレッド (既存ナレッジのみ) */}
+            {item && item.id && (
+                <div style={{ marginBottom: '25px' }}>
+                    <KnowledgeComments knowledgeId={item.id} user={user} usersMaster={masters.users} />
                 </div>
             )}
 

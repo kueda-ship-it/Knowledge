@@ -9,6 +9,7 @@ import { Admin } from './pages/Admin';
 import { FileList } from './pages/FileList';
 import { Evaluation } from './pages/Evaluation';
 import { OperationalProposals } from './pages/OperationalProposals';
+import { Activity } from './pages/Activity';
 import { AIChatPopover } from './components/AIChatPopover';
 import { apiClient } from './api/client';
 import { useAuth } from './contexts/AuthContext';
@@ -16,6 +17,7 @@ import { AppNotification } from './types';
 import { useRealtimeChannel } from './hooks/useRealtimeChannel';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import { UpdateBanner } from './components/UpdateBanner';
+import { ToastStack } from './components/ToastStack';
 import { searchKnowledge } from './utils/searchUtils';
 
 type Theme = 'light' | 'dark' | 'liquid';
@@ -42,6 +44,8 @@ function App() {
     });
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    // Realtime で届いた通知の即時トースト (右下、自動退場)
+    const [toasts, setToasts] = useState<AppNotification[]>([]);
     const [pendingEdit, setPendingEdit] = useState<KnowledgeItem | null>(null);
     const [pendingProposalId, setPendingProposalId] = useState<string | null>(null);
     // AI チャットからの一括連携
@@ -132,8 +136,10 @@ function App() {
         }
     }, [user?.id]);
 
+    // 通知の購読は global-sync から切り出し、'social' フラグで先行有効化できる専用チャンネルにする。
+    // 受信したらヘッダーの通知リスト更新 + 右下トーストで即時に知らせる (報酬の即時化)。
     useRealtimeChannel(
-        user ? `global-sync-${user.id}` : '',
+        user ? `social-notify-${user.id}` : '',
         user ? [
             {
                 event: 'INSERT',
@@ -143,8 +149,16 @@ function App() {
                     const newNote = payload.new as AppNotification;
                     setNotifications(prev => [newNote, ...prev].slice(0, 20));
                     setUnreadCount(prev => prev + 1);
+                    setToasts(prev => [...prev, newNote].slice(-4));
                 },
             },
+        ] : [],
+        { feature: 'social' },
+    );
+
+    useRealtimeChannel(
+        user ? `global-sync-${user.id}` : '',
+        user ? [
             {
                 event: '*',
                 table: 'knowledge',
@@ -372,6 +386,19 @@ function App() {
                     <Admin user={user} onBack={() => navigate('menu')} />
                 )}
 
+                {currentView === 'activity' && (
+                    <Activity
+                        onBack={() => navigate('menu')}
+                        onOpenKnowledge={(knowledgeId) => {
+                            // フィードのイベントクリックで該当ナレッジを開く (提議の onOpenKnowledge と同じ流儀)
+                            const hit = dashboardData.find(k => k.id === knowledgeId);
+                            if (hit) setPendingEdit(hit);
+                            else setPendingEdit({ id: knowledgeId } as KnowledgeItem);
+                            navigate('knowledge');
+                        }}
+                    />
+                )}
+
                 {currentView === 'evaluation' && (
                     <Evaluation
                         data={dashboardData}
@@ -408,6 +435,23 @@ function App() {
                     <div style={{ color: 'var(--text)' }}>Loading...</div>
                 </div>
             )}
+
+            <ToastStack
+                toasts={toasts}
+                onDismiss={(id) => setToasts(prev => prev.filter(t => t.id !== id))}
+                onOpen={async (note) => {
+                    setToasts(prev => prev.filter(t => t.id !== note.id));
+                    if (!note.is_read) {
+                        try {
+                            await apiClient.markNotificationAsRead(note.id);
+                            setNotifications(prev => prev.map(n => n.id === note.id ? { ...n, is_read: true } : n));
+                            setUnreadCount(prev => Math.max(0, prev - 1));
+                        } catch (e) {
+                            console.warn('[toast] 既読化に失敗:', e);
+                        }
+                    }
+                }}
+            />
 
             <AIChatPopover
                 chatMessages={chatMessages}

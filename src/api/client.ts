@@ -1,11 +1,53 @@
 import { supabase } from '../lib/supabase';
 import { supabaseRealtime } from '../lib/supabaseRealtime';
 import { supabaseEquipment } from '../lib/supabaseEquipment';
-import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification, KnowledgeGroup, ChatAction, OperationalProposal, ProposalProblem } from '../types';
+import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification, KnowledgeGroup, ChatAction, OperationalProposal, ProposalProblem, ReactionType, KnowledgeComment, ActivityEvent } from '../types';
+
+// localStorage から JWT を直接読む (supabase-js の auth ロック待ち回避)
+function readStoredAccessToken(): string | null {
+    const url = (import.meta as any).env.VITE_SUPABASE_URL as string;
+    try {
+        const ref = url.match(/https?:\/\/([^.]+)\./)?.[1];
+        if (ref) {
+            const raw = localStorage.getItem(`sb-${ref}-auth-token`);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                return parsed?.access_token || parsed?.currentSession?.access_token || null;
+            }
+        }
+    } catch {
+        /* fall through */
+    }
+    return null;
+}
+
+// 期限切れトークンの強制リフレッシュ。端末時計がズレていると supabase-js の
+// 自動リフレッシュ (expires_at をローカル時計と比較) が動かず、サーバー側だけが
+// 「JWT expired (PGRST303)」で 401 を返し続ける事例があるため、401 を見てから
+// 後追いで refresh_token による更新を行う。auth ロックで詰まる可能性があるので
+// タイムアウト付き + 同時多発時は 1 回のリフレッシュに相乗りする (single-flight)。
+let refreshInFlight: Promise<string | null> | null = null;
+async function refreshAccessToken(timeoutMs = 5000): Promise<string | null> {
+    if (!refreshInFlight) {
+        refreshInFlight = (async () => {
+            try {
+                const { data } = await supabase.auth.refreshSession();
+                return data.session?.access_token ?? null;
+            } catch {
+                return null;
+            } finally {
+                refreshInFlight = null;
+            }
+        })();
+    }
+    const timeoutP = new Promise<null>(resolve => setTimeout(() => resolve(null), timeoutMs));
+    return Promise.race([refreshInFlight, timeoutP]);
+}
 
 // supabase-js の auth ロック待ちを避けるため、localStorage から直接 JWT を取って
 // PostgREST を叩くヘルパー。書き込み系のパスで supabase.from().insert/update/delete が
 // ハングする事例があるため、writeRest を使う。
+// 401 (JWT expired 等) が返った場合は強制リフレッシュして 1 回だけ再試行する。
 async function rawRest(
     path: string,
     init: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: unknown; prefer?: string }
@@ -13,33 +55,29 @@ async function rawRest(
     const url = (import.meta as any).env.VITE_SUPABASE_URL as string;
     const anonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY as string;
 
-    let accessToken: string | null = null;
-    try {
-        const ref = url.match(/https?:\/\/([^.]+)\./)?.[1];
-        if (ref) {
-            const raw = localStorage.getItem(`sb-${ref}-auth-token`);
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                accessToken = parsed?.access_token || parsed?.currentSession?.access_token || null;
-            }
-        }
-    } catch {
-        /* fall through */
-    }
-    if (!accessToken) accessToken = anonKey;
-
-    const headers: Record<string, string> = {
-        'apikey': anonKey,
-        'Authorization': `Bearer ${accessToken}`,
+    const doFetch = (token: string) => {
+        const headers: Record<string, string> = {
+            'apikey': anonKey,
+            'Authorization': `Bearer ${token}`,
+        };
+        if (init.body !== undefined) headers['Content-Type'] = 'application/json';
+        if (init.prefer) headers['Prefer'] = init.prefer;
+        return fetch(`${url}${path}`, {
+            method: init.method,
+            headers,
+            body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+        });
     };
-    if (init.body !== undefined) headers['Content-Type'] = 'application/json';
-    if (init.prefer) headers['Prefer'] = init.prefer;
 
-    return fetch(`${url}${path}`, {
-        method: init.method,
-        headers,
-        body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
-    });
+    let res = await doFetch(readStoredAccessToken() ?? anonKey);
+    if (res.status === 401) {
+        const fresh = await refreshAccessToken();
+        if (fresh) {
+            console.info('[rawRest] 401 → トークンをリフレッシュして再試行:', path.split('?')[0]);
+            res = await doFetch(fresh);
+        }
+    }
+    return res;
 }
 
 // DB行 → KnowledgeItem の変換
@@ -71,6 +109,31 @@ export function toItem(row: Record<string, unknown>): KnowledgeItem {
     };
 }
 
+// knowledge_reactions の埋め込み行から種別ごとの集計フィールドを item に書き込む。
+// 旧フィールド (likeCount 等) は Evaluation 等の互換のため併産する。
+function applyReactionAggregates(
+    item: KnowledgeItem,
+    reactions: Array<{ type: ReactionType; user_id: string }>,
+    currentUserId?: string,
+): void {
+    const counts: Partial<Record<ReactionType, number>> = {};
+    const users: Partial<Record<ReactionType, string[]>> = {};
+    for (const r of reactions) {
+        counts[r.type] = (counts[r.type] ?? 0) + 1;
+        (users[r.type] ??= []).push(r.user_id);
+    }
+    item.reactionCounts = counts;
+    item.reactionUsers = users;
+    item.likeCount = counts.like ?? 0;
+    item.wrongCount = counts.wrong ?? 0;
+    item.likeUsers = users.like ?? [];
+    item.wrongUsers = users.wrong ?? [];
+    if (currentUserId) {
+        const my = reactions.find(r => r.user_id === currentUserId);
+        item.myReaction = my ? my.type : null;
+    }
+}
+
 export const apiClient = {
     async fetchAll(currentUserId?: string): Promise<KnowledgeItem[]> {
         // Fetch items and their reaction counts
@@ -87,16 +150,7 @@ export const apiClient = {
         
         return (data ?? []).map(row => {
             const item = toItem(row);
-            const reactions = (row.knowledge_reactions as any[]) || [];
-            item.likeCount = reactions.filter(r => r.type === 'like').length;
-            item.wrongCount = reactions.filter(r => r.type === 'wrong').length;
-            item.likeUsers = reactions.filter(r => r.type === 'like').map(r => r.user_id);
-            item.wrongUsers = reactions.filter(r => r.type === 'wrong').map(r => r.user_id);
-
-            if (currentUserId) {
-                const my = reactions.find(r => r.user_id === currentUserId);
-                item.myReaction = my ? my.type : null;
-            }
+            applyReactionAggregates(item, (row.knowledge_reactions as any[]) || [], currentUserId);
             return item;
         });
     },
@@ -116,15 +170,7 @@ export const apiClient = {
         if (!data) return null;
 
         const item = toItem(data);
-        const reactions = (data.knowledge_reactions as any[]) || [];
-        item.likeCount = reactions.filter(r => r.type === 'like').length;
-        item.wrongCount = reactions.filter(r => r.type === 'wrong').length;
-        item.likeUsers = reactions.filter(r => r.type === 'like').map(r => r.user_id);
-        item.wrongUsers = reactions.filter(r => r.type === 'wrong').map(r => r.user_id);
-        if (currentUserId) {
-            const my = reactions.find(r => r.user_id === currentUserId);
-            item.myReaction = my ? my.type : null;
-        }
+        applyReactionAggregates(item, (data.knowledge_reactions as any[]) || [], currentUserId);
         return item;
     },
 
@@ -190,43 +236,13 @@ export const apiClient = {
             attachments: item.attachments ?? [],
         };
 
-        const url = (import.meta as any).env.VITE_SUPABASE_URL as string;
-        const anonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY as string;
-
-        // localStorage から JWT を直接取得 (supabase-js の getSession ロック待ちを回避)
-        let accessToken: string | null = null;
-        try {
-            const ref = url.match(/https?:\/\/([^.]+)\./)?.[1];
-            if (ref) {
-                const raw = localStorage.getItem(`sb-${ref}-auth-token`);
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    accessToken = parsed?.access_token || parsed?.currentSession?.access_token || null;
-                }
-            }
-        } catch (e) {
-            console.warn('[save] token 取得失敗, supabase-js 経由にフォールバック:', e);
-        }
-
-        // フォールバック: supabase-js 経由 (ロック待ちの可能性あり)
-        if (!accessToken) {
-            const { data } = await supabase.auth.getSession();
-            accessToken = data.session?.access_token || anonKey;
-        }
-
-        const headers: Record<string, string> = {
-            'apikey': anonKey,
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal',
-        };
-
+        // rawRest 経由 (localStorage の JWT 直読み + 401 時の強制リフレッシュ再試行)
         if (oldItem) {
             // 既存更新: PATCH
-            const res = await fetch(`${url}/rest/v1/knowledge?id=eq.${encodeURIComponent(item.id)}`, {
+            const res = await rawRest(`/rest/v1/knowledge?id=eq.${encodeURIComponent(item.id)}`, {
                 method: 'PATCH',
-                headers,
-                body: JSON.stringify(row),
+                body: row,
+                prefer: 'return=minimal',
             });
             if (!res.ok) {
                 const text = await res.text().catch(() => '');
@@ -234,10 +250,10 @@ export const apiClient = {
             }
         } else {
             // 新規: POST
-            const res = await fetch(`${url}/rest/v1/knowledge`, {
+            const res = await rawRest('/rest/v1/knowledge', {
                 method: 'POST',
-                headers,
-                body: JSON.stringify(row),
+                body: row,
+                prefer: 'return=minimal',
             });
             if (!res.ok) {
                 const text = await res.text().catch(() => '');
@@ -278,11 +294,12 @@ export const apiClient = {
         }
     },
 
-    // リアクション (いいね / だめだね) のトグル。supabase-js の write は auth ロックで
-    // ハングする事例があるため rawRest (PostgREST 直叩き) を使う。呼び出し側でタイムアウトを付ける。
+    // リアクション (いいね / 助かった / なるほど / すごい / 違うよ) のトグル。
+    // supabase-js の write は auth ロックでハングする事例があるため rawRest (PostgREST 直叩き) を使う。
+    // 呼び出し側でタイムアウトを付ける。1人1種の排他選択。
     // 通知 (profiles 結合・FDW で遅い) は本処理の後に fire-and-forget で実行し、
     // 通知が詰まってもリアクション自体は完了させる。
-    async toggleReaction(knowledgeId: string, userId: string, type: 'like' | 'wrong', comment?: string): Promise<void> {
+    async toggleReaction(knowledgeId: string, userId: string, type: ReactionType, comment?: string): Promise<void> {
         // 既存判定
         const existRes = await rawRest(
             `/rest/v1/knowledge_reactions?knowledge_id=eq.${encodeURIComponent(knowledgeId)}&user_id=eq.${encodeURIComponent(userId)}&type=eq.${type}&select=id`,
@@ -332,6 +349,166 @@ export const apiClient = {
                 console.warn('[toggleReaction/bg] 通知に失敗 (リアクションは成功済み):', e);
             }
         })();
+    },
+
+    // ---- ナレッジのコメント (SNS 化) ----
+    // 書き込みは全て rawRest (supabase-js の auth ロックハング回避)。呼び出し側でタイムアウトを付ける。
+    // 表示用の名前解決はページ側の usersMaster で行う (profiles FDW を叩かない)。
+    async fetchKnowledgeComments(knowledgeId: string): Promise<KnowledgeComment[]> {
+        const path = `/rest/v1/knowledge_comments?knowledge_id=eq.${encodeURIComponent(knowledgeId)}&select=id,knowledge_id,author_id,body,created_at,updated_at&order=created_at.asc`;
+        const res = await rawRest(path, { method: 'GET' });
+        if (!res.ok) throw new Error(`コメントの取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        return (await res.json()) as KnowledgeComment[];
+    },
+
+    // 一覧カードのコメント数バッジ用: 全コメントを knowledge_id ごとに集計 (id のみ取得で軽量)
+    async fetchAllCommentCounts(): Promise<Record<string, number>> {
+        const res = await rawRest(`/rest/v1/knowledge_comments?select=knowledge_id`, { method: 'GET' });
+        if (!res.ok) throw new Error(`コメント数の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        const rows = (await res.json()) as Array<{ knowledge_id: string }>;
+        const map: Record<string, number> = {};
+        for (const r of rows) map[r.knowledge_id] = (map[r.knowledge_id] ?? 0) + 1;
+        return map;
+    },
+
+    async createKnowledgeComment(knowledgeId: string, body: string, userId: string, userName?: string): Promise<void> {
+        const res = await rawRest('/rest/v1/knowledge_comments', {
+            method: 'POST',
+            body: { knowledge_id: knowledgeId, author_id: userId, body },
+            prefer: 'return=minimal',
+        });
+        if (!res.ok) throw new Error(`コメントの送信に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+
+        // 投稿者への通知は背景で (profiles FDW が遅い / 詰まってもコメントは成立済み)
+        const self = this;
+        (async () => {
+            try {
+                const { data: knl } = await supabase.from('knowledge').select('author').eq('id', knowledgeId).maybeSingle();
+                if (knl?.author) {
+                    // FDW profiles は遅いので 3秒でタイムアウト
+                    const lookupP = supabase.from('profiles').select('id').eq('display_name', knl.author).maybeSingle();
+                    const timeoutP = new Promise<{ data: null }>(resolve => setTimeout(() => resolve({ data: null }), 3000));
+                    const { data: authorProf } = await Promise.race([lookupP, timeoutP]) as any;
+                    if (authorProf?.id && authorProf.id !== userId) {
+                        await self.createNotification(authorProf.id, userName || 'Someone', 'comment', knowledgeId);
+                    }
+                }
+            } catch (e) {
+                console.warn('[createKnowledgeComment/bg] 通知に失敗 (コメントは成功済み):', e);
+            }
+        })();
+    },
+
+    async updateKnowledgeComment(commentId: string, body: string): Promise<void> {
+        const res = await rawRest(`/rest/v1/knowledge_comments?id=eq.${encodeURIComponent(commentId)}`, {
+            method: 'PATCH',
+            body: { body, updated_at: new Date().toISOString() },
+            prefer: 'return=minimal',
+        });
+        if (!res.ok) throw new Error(`コメントの更新に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+    },
+
+    async deleteKnowledgeComment(commentId: string): Promise<void> {
+        const res = await rawRest(`/rest/v1/knowledge_comments?id=eq.${encodeURIComponent(commentId)}`, {
+            method: 'DELETE',
+            prefer: 'return=minimal',
+        });
+        if (!res.ok) throw new Error(`コメントの削除に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+    },
+
+    // ---- 閲覧記録 (knowledge_views) ----
+    // 同一ユーザー・同一日の重複は PK + ignore-duplicates で黙殺。呼び出し側は fire-and-forget。
+    // 延べ閲覧が節目 (10/30/50/100 回) に達したら投稿者へ milestone 通知を背景で送る。
+    // 重複時はカウントが増えないので milestone 判定をスキップ → 同じ節目で二重通知しない。
+    async recordView(knowledgeId: string, userId: string): Promise<void> {
+        const res = await rawRest(`/rest/v1/knowledge_views?on_conflict=knowledge_id,user_id,viewed_on`, {
+            method: 'POST',
+            body: { knowledge_id: knowledgeId, user_id: userId },
+            prefer: 'resolution=ignore-duplicates,return=representation',
+        });
+        if (!res.ok) throw new Error(`閲覧記録に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        let insertedRows: unknown[] = [];
+        try { insertedRows = await res.json(); } catch { /* 空ボディ */ }
+        if (!Array.isArray(insertedRows) || insertedRows.length === 0) return;
+
+        const self = this;
+        (async () => {
+            try {
+                const cntRes = await rawRest(
+                    `/rest/v1/knowledge_view_counts?knowledge_id=eq.${encodeURIComponent(knowledgeId)}&select=total_views`,
+                    { method: 'GET' },
+                );
+                if (!cntRes.ok) return;
+                const rows = (await cntRes.json()) as Array<{ total_views: number }>;
+                const total = rows[0]?.total_views ?? 0;
+                if (![10, 30, 50, 100].includes(total)) return;
+                const { data: knl } = await supabase.from('knowledge').select('author').eq('id', knowledgeId).maybeSingle();
+                if (!knl?.author) return;
+                // FDW profiles は遅いので 3秒でタイムアウト
+                const lookupP = supabase.from('profiles').select('id').eq('display_name', knl.author).maybeSingle();
+                const timeoutP = new Promise<{ data: null }>(resolve => setTimeout(() => resolve({ data: null }), 3000));
+                const { data: authorProf } = await Promise.race([lookupP, timeoutP]) as any;
+                if (authorProf?.id) {
+                    await self.createNotification(authorProf.id, `延べ${total}回`, 'viewed_milestone', knowledgeId);
+                }
+            } catch (e) {
+                console.warn('[recordView/bg] milestone 通知に失敗 (記録は成功済み):', e);
+            }
+        })();
+    },
+
+    // ---- アクティビティフィード ----
+    // 専用テーブルは持たず、既存 3 テーブルの直近行を rawRest 並列 GET してマージする。
+    // 片方が失敗しても残りで描画できるよう、失敗テーブルは黙ってスキップ。
+    async fetchRecentActivity(limit = 30): Promise<ActivityEvent[]> {
+        const [postRes, reactRes, commentRes] = await Promise.all([
+            rawRest(`/rest/v1/knowledge?select=id,title,author,created_at&order=created_at.desc.nullslast&limit=${limit}`, { method: 'GET' }).catch(() => null),
+            rawRest(`/rest/v1/knowledge_reactions?select=id,knowledge_id,user_id,type,created_at&order=created_at.desc&limit=${limit}`, { method: 'GET' }).catch(() => null),
+            rawRest(`/rest/v1/knowledge_comments?select=id,knowledge_id,author_id,body,created_at&order=created_at.desc&limit=${limit}`, { method: 'GET' }).catch(() => null),
+        ]);
+
+        const events: ActivityEvent[] = [];
+        if (postRes?.ok) {
+            const rows = (await postRes.json()) as Array<{ id: string; title: string; author: string; created_at: string | null }>;
+            for (const r of rows) {
+                if (!r.created_at) continue;
+                events.push({ kind: 'post', id: `post-${r.id}`, knowledgeId: r.id, title: r.title, actorName: r.author, createdAt: r.created_at });
+            }
+        }
+        if (reactRes?.ok) {
+            const rows = (await reactRes.json()) as Array<{ id: string; knowledge_id: string; user_id: string; type: ReactionType; created_at: string }>;
+            for (const r of rows) {
+                events.push({ kind: 'reaction', id: `react-${r.id}`, knowledgeId: r.knowledge_id, actorId: r.user_id, reactionType: r.type, createdAt: r.created_at });
+            }
+        }
+        if (commentRes?.ok) {
+            const rows = (await commentRes.json()) as Array<{ id: string; knowledge_id: string; author_id: string; body: string; created_at: string }>;
+            for (const r of rows) {
+                events.push({ kind: 'comment', id: `comment-${r.id}`, knowledgeId: r.knowledge_id, actorId: r.author_id, body: r.body, createdAt: r.created_at });
+            }
+        }
+        events.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        return events.slice(0, limit * 2);
+    },
+
+    // フィードのタイトル解決用: 全ナレッジの id / title / author だけ軽量取得
+    async fetchKnowledgeTitles(): Promise<Record<string, { title: string; author: string }>> {
+        const res = await rawRest(`/rest/v1/knowledge?select=id,title,author`, { method: 'GET' });
+        if (!res.ok) throw new Error(`タイトルの取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        const rows = (await res.json()) as Array<{ id: string; title: string; author: string }>;
+        const map: Record<string, { title: string; author: string }> = {};
+        for (const r of rows) map[r.id] = { title: r.title, author: r.author };
+        return map;
+    },
+
+    // 全ナレッジの延べ閲覧数 (knowledge_id → total_views)
+    async fetchViewCounts(): Promise<Record<string, number>> {
+        const res = await rawRest(`/rest/v1/knowledge_view_counts?select=knowledge_id,total_views`, { method: 'GET' });
+        if (!res.ok) throw new Error(`閲覧数の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        const rows = (await res.json()) as Array<{ knowledge_id: string; total_views: number }>;
+        const map: Record<string, number> = {};
+        for (const r of rows) map[r.knowledge_id] = r.total_views;
+        return map;
     },
 
     async fetchHistory(knowledgeId: string): Promise<EditHistory[]> {

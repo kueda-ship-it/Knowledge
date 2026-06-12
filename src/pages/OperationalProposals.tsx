@@ -1034,7 +1034,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         const hasProgress = !!prog && prog.total > 0;
                                         const progPct = hasProgress ? Math.round((prog.done / prog.total) * 100) : 0;
                                         const hasPreview = !!preview;
-                                        const hasRow2 = hasPreview || hasProgress;
+                                        const hasRow2 = hasPreview;
                                         const spanRows = hasRow2 ? '1 / span 2' : '1';
                                         return (
                                             <>
@@ -1076,35 +1076,20 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 <h3 style={{ gridColumn: '4', gridRow: '1', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, textAlign: 'left' }}>
                                                     {proposal.title}
                                                 </h3>
-                                                {/* 2行目・タイトル列: 問題点プレビュー + 進捗チップ */}
+                                                {/* 2行目・タイトル列: 問題点プレビュー */}
                                                 {hasRow2 && (
                                                     <div style={{
                                                         gridColumn: '4', gridRow: '2',
                                                         display: 'flex', alignItems: 'center', gap: '8px',
                                                         minWidth: 0, textAlign: 'left',
                                                     }}>
-                                                        {hasProgress && (
-                                                            <span style={{
-                                                                display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                                                height: '20px', padding: '0 8px', boxSizing: 'border-box',
-                                                                borderRadius: '10px', fontSize: '0.7rem', fontWeight: 700, lineHeight: 1,
-                                                                flexShrink: 0, whiteSpace: 'nowrap',
-                                                                background: progPct === 100 ? 'rgba(52,211,153,0.15)' : 'rgba(167,139,250,0.15)',
-                                                                color: progPct === 100 ? '#34d399' : '#c4b5fd',
-                                                                border: '1px solid ' + (progPct === 100 ? 'rgba(52,211,153,0.4)' : 'rgba(167,139,250,0.4)'),
-                                                            }}>
-                                                                <ListChecks size={11} />{prog.done}/{prog.total}（{progPct}%）
-                                                            </span>
-                                                        )}
-                                                        {hasPreview && (
-                                                            <span style={{
-                                                                fontSize: '0.85rem', color: 'var(--text-dim)', lineHeight: 1.5,
-                                                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                                                minWidth: 0,
-                                                            }}>
-                                                                {preview}
-                                                            </span>
-                                                        )}
+                                                        <span style={{
+                                                            fontSize: '0.85rem', color: 'var(--text-dim)', lineHeight: 1.5,
+                                                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                            minWidth: 0,
+                                                        }}>
+                                                            {preview}
+                                                        </span>
                                                     </div>
                                                 )}
                                                 {/* 投稿者 (全行・左寄せ・1行固定) */}
@@ -1136,6 +1121,33 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                         }}
                                                     />
                                                 </div>
+                                                {/* 問題点の進捗バー (チケット下部・全列スパン。詳細モーダルのバーと同配色) */}
+                                                {hasProgress && (
+                                                    <div
+                                                        title={`問題点 ${prog.done}/${prog.total} 完了（${progPct}%）`}
+                                                        style={{
+                                                            gridColumn: '1 / -1', gridRow: hasRow2 ? '3' : '2',
+                                                            display: 'flex', alignItems: 'center', gap: '10px',
+                                                            marginTop: '6px', minWidth: 0,
+                                                        }}>
+                                                        <div style={{ flex: 1, height: '6px', borderRadius: '4px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                                                            <div style={{
+                                                                width: `${progPct}%`, height: '100%',
+                                                                background: progPct === 100 ? '#34d399' : '#a78bfa',
+                                                                boxShadow: progPct === 100 ? '0 0 8px rgba(52,211,153,0.5)' : '0 0 8px rgba(167,139,250,0.45)',
+                                                                transition: 'width 0.3s',
+                                                            }} />
+                                                        </div>
+                                                        <span style={{
+                                                            display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                                            fontSize: '0.7rem', fontWeight: 700, lineHeight: 1,
+                                                            flexShrink: 0, whiteSpace: 'nowrap',
+                                                            color: progPct === 100 ? '#34d399' : '#c4b5fd',
+                                                        }}>
+                                                            <ListChecks size={11} />{prog.done}/{prog.total}（{progPct}%）
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </>
                                         );
                                     })()}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, PieChart, Settings, MessageSquare, Paperclip, Star } from 'lucide-react';
+import { BookOpen, PieChart, Settings, MessageSquare, Paperclip, Star, Radio } from 'lucide-react';
 
 interface MenuProps {
     onNavigate: (view: string) => void;
@@ -44,6 +44,7 @@ export const Menu: React.FC<MenuProps> = ({ onNavigate, role }) => {
                     <GlassCard onClick={() => onNavigate('filelist')} color="#fbbf24" icon={<Paperclip size={48} />} label="添付ファイル一覧" />
                     <GlassCard onClick={() => onNavigate('evaluation')} color="#a78bfa" icon={<Star size={48} />} label="評価の確認" />
                     <GlassCard onClick={() => onNavigate('proposals')} color="#f97316" icon={<MessageSquare size={48} />} label="運用提議" />
+                    <GlassCard onClick={() => onNavigate('activity')} color="#34d399" icon={<Radio size={48} />} label="アクティビティ" />
                     {isAdmin && (
                         <GlassCard onClick={() => onNavigate('admin')} color="#f87171" icon={<Settings size={48} />} label="マスタ管理" isAdminCard />
                     )}

@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { KnowledgeList } from '../components/KnowledgeList';
 import { Editor } from '../components/Editor';
-import { KnowledgeItem, User, MasterData, KnowledgeDraft, NavigateParams, ProposalDraft } from '../types';
+import { UserProfileModal } from '../components/UserProfileModal';
+import { KnowledgeItem, User, MasterData, KnowledgeDraft, NavigateParams, ProposalDraft, ReactionType } from '../types';
 import { apiClient, toItem } from '../api/client';
+import { applyReactionToggle } from '../constants/reactions';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
 import { loadCache, saveCache } from '../utils/cache';
 import { aggregateTags } from '../utils/tagUtils';
@@ -60,6 +62,27 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
 
     // Editor state
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
+
+    // コメント数 (knowledge_id → 件数)。一覧カードのバッジ表示用
+    const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+    // 延べ閲覧数 (knowledge_id → total_views)
+    const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
+
+    // プロフィールモーダル (アバタークリックで開く)。masterData に居ない旧投稿者は名前だけで表示
+    const [profileUserName, setProfileUserName] = useState<string | null>(null);
+    const profileUser = profileUserName
+        ? masterData.users.find(u => u.name === profileUserName)
+            ?? { id: '', name: profileUserName, role: 'user' as const, categories: [] }
+        : null;
+
+    // 閲覧記録 (fire-and-forget)。自分の投稿は数えない。失敗しても UI は止めない。
+    const recordViewSafe = (item: KnowledgeItem) => {
+        const userId = (user as any).id as string | undefined;
+        if (!userId || !item.id || item.author === user.name) return;
+        apiClient.recordView(item.id, userId)
+            .then(() => setViewCounts(prev => ({ ...prev, [item.id]: (prev[item.id] ?? 0) + 1 })))
+            .catch(e => console.warn('[recordView] failed:', e?.message));
+    };
 
     // 既存タグの集計 (Editor のオートコンプリートに渡す)。data 変化時のみ再計算。
     const existingTagStats = useMemo(() => aggregateTags(data), [data]);
@@ -206,9 +229,25 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
             }
         };
 
+        const fetchCommentCounts = async () => {
+            try {
+                setCommentCounts(await apiClient.fetchAllCommentCounts());
+            } catch (e) {
+                console.warn("Comment counts load failed:", e);
+            }
+        };
+
+        const fetchViewCounts = async () => {
+            try {
+                setViewCounts(await apiClient.fetchViewCounts());
+            } catch (e) {
+                console.warn("View counts load failed:", e);
+            }
+        };
+
         try {
             // 片方が失敗してももう片方を活かすため並列実行
-            await Promise.allSettled([fetchKnowledge(), fetchMasters()]);
+            await Promise.allSettled([fetchKnowledge(), fetchMasters(), fetchCommentCounts(), fetchViewCounts()]);
             
             clearTimers();
             setLoading(false);
@@ -234,6 +273,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
         // fetchAll で全フィールド取得済みのため、キャッシュを即座に表示
         setEditingItem(item);
         setView('editor');
+        recordViewSafe(item);
         // バックグラウンドで最新詳細を取得し、取得できたら更新（失敗してもキャッシュ表示のまま）
         try {
             const full = await apiClient.fetchOne(item.id, (user as any).id);
@@ -295,26 +335,14 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialNavParams]);
 
-    // 一覧カードの展開ビューから呼ばれるリアクション (いいね / だめだね) トグル。
+    // 一覧カードの展開ビューから呼ばれるリアクション (1人1種の排他トグル)。
     // Optimistic UI + バックグラウンド同期。失敗時はロールバック。
-    const handleToggleReaction = async (item: KnowledgeItem, type: 'like' | 'wrong') => {
+    const handleToggleReaction = async (item: KnowledgeItem, type: ReactionType) => {
         const userId = (user as any).id as string | undefined;
         if (!userId) return alert('ユーザーIDが見つかりません');
 
         const original = data.find(d => d.id === item.id) ?? item;
-        const next: KnowledgeItem = { ...original };
-        const isRemoving = next.myReaction === type;
-        if (isRemoving) {
-            next.myReaction = null;
-            if (type === 'like') next.likeCount = Math.max(0, (next.likeCount || 0) - 1);
-            else next.wrongCount = Math.max(0, (next.wrongCount || 0) - 1);
-        } else {
-            if (next.myReaction === 'like') next.likeCount = Math.max(0, (next.likeCount || 0) - 1);
-            if (next.myReaction === 'wrong') next.wrongCount = Math.max(0, (next.wrongCount || 0) - 1);
-            next.myReaction = type;
-            if (type === 'like') next.likeCount = (next.likeCount || 0) + 1;
-            else next.wrongCount = (next.wrongCount || 0) + 1;
-        }
+        const next = applyReactionToggle(original, type, userId);
 
         setData(prev => prev.map(i => i.id === next.id ? next : i));
 
@@ -388,6 +416,11 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                             onRecordTypeFilterChange={setRecordTypeFilter}
                             onItemClick={handleEditItem}
                             onToggleReaction={handleToggleReaction}
+                            commentCounts={commentCounts}
+                            onCommentCountChange={(id, n) => setCommentCounts(prev => (prev[id] === n ? prev : { ...prev, [id]: n }))}
+                            viewCounts={viewCounts}
+                            onExpandItem={recordViewSafe}
+                            onAuthorClick={setProfileUserName}
                             user={user}
                             categories={masterData.categories}
                             selectedCategories={selectedCategories}
@@ -419,6 +452,18 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                     )}
                 </main>
             </div>
+
+            <UserProfileModal
+                open={!!profileUser}
+                onClose={() => setProfileUserName(null)}
+                profileUser={profileUser}
+                items={data}
+                viewCounts={viewCounts}
+                onItemClick={(item) => {
+                    setProfileUserName(null);
+                    handleEditItem(item);
+                }}
+            />
         </div>
     );
 };

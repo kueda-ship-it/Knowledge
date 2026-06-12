@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { KnowledgeItem, User } from '../types';
-import { RotateCcw, Check, Paperclip, ThumbsUp, AlertTriangle, AlertCircle, ChevronDown, ChevronUp, Edit3, AlertOctagon, Wrench, Siren } from 'lucide-react';
+import { KnowledgeItem, User, ReactionType } from '../types';
+import { RotateCcw, Check, Paperclip, AlertCircle, ChevronDown, ChevronUp, Edit3, AlertOctagon, Wrench, Siren, MessageSquare, Eye } from 'lucide-react';
+import { ReactionBar } from './ReactionBar';
+import { KnowledgeComments } from './KnowledgeComments';
+import { reactionCountsOf, reactionUsersOf } from '../constants/reactions';
 
 // 種別 (トラブル / インシデント) の表示メタ
 const RECORD_TYPE_META: Record<'trouble' | 'incident', { label: string; rgb: string; Icon: typeof Wrench }> = {
@@ -19,7 +21,16 @@ interface KnowledgeListProps {
     onRecordTypeFilterChange: (type: 'all' | 'trouble' | 'incident') => void;
     onItemClick: (item: KnowledgeItem) => void;
     // 展開時のみ押せるリアクション切替 (楽観的 UI + バックグラウンド同期)
-    onToggleReaction?: (item: KnowledgeItem, type: 'like' | 'wrong') => void;
+    onToggleReaction?: (item: KnowledgeItem, type: ReactionType) => void;
+    // コメント数 (knowledge_id → 件数)。折りたたみカードのバッジに使う
+    commentCounts?: Record<string, number>;
+    onCommentCountChange?: (knowledgeId: string, count: number) => void;
+    // 延べ閲覧数 (knowledge_id → total_views)
+    viewCounts?: Record<string, number>;
+    // カード展開時のフック (閲覧記録など)
+    onExpandItem?: (item: KnowledgeItem) => void;
+    // 投稿者アバタークリックでプロフィールを開く
+    onAuthorClick?: (authorName: string) => void;
     user: User;
     categories: string[];
     selectedCategories: string[];
@@ -39,6 +50,12 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
     onRecordTypeFilterChange,
     onItemClick,
     onToggleReaction,
+    commentCounts,
+    onCommentCountChange,
+    viewCounts,
+    onExpandItem,
+    onAuthorClick,
+    user,
     categories,
     selectedCategories,
     onCategoryToggle,
@@ -65,84 +82,13 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
 
     const getInitial = (name: string) => name.charAt(0).toUpperCase();
 
-    const [hoveredPill, setHoveredPill] = useState<{ key: string; rect: DOMRect; placement: 'top' | 'bottom' } | null>(null);
     // カードの展開状態 (展開すると事象・対処が読み取り専用で見える)
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
-    const handlePillEnter = (key: string, el: HTMLElement) => {
-        const rect = el.getBoundingClientRect();
-        const midY = window.innerHeight / 2;
-        // ピルが画面上半分にある → 下に表示、下半分にある → 上に表示
-        const placement: 'top' | 'bottom' = rect.top < midY ? 'bottom' : 'top';
-        setHoveredPill({ key, rect, placement });
-    };
-
-    const renderPopover = (userIds: string[] | undefined, label: string, key: string) => {
-        if (!hoveredPill || hoveredPill.key !== key) return null;
-        if (!userIds || userIds.length === 0) return null;
-        const { rect, placement } = hoveredPill;
-        const positionStyle: React.CSSProperties = placement === 'bottom'
-            ? { top: rect.bottom + 10, right: window.innerWidth - rect.right }
-            : { bottom: window.innerHeight - rect.top + 10, right: window.innerWidth - rect.right };
-        const node = (
-            <div
-                style={{
-                    position: 'fixed',
-                    ...positionStyle,
-                    minWidth: 220,
-                    maxWidth: 320,
-                    padding: '10px 8px 8px',
-                    borderRadius: 14,
-                    zIndex: 99999,
-                    background: 'rgba(24, 28, 40, 0.92)',
-                    backdropFilter: 'blur(28px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    boxShadow: '0 2px 0 0 rgba(255,255,255,0.08) inset, 0 16px 48px 0 rgba(0,0,0,0.45), 0 4px 12px 0 rgba(0,0,0,0.25)',
-                    overflow: 'hidden',
-                    pointerEvents: 'none',
-                }}
-            >
-                <div style={{
-                    padding: '4px 8px 8px',
-                    fontSize: '0.75rem',
-                    color: 'rgba(255,255,255,0.7)',
-                    borderBottom: '1px solid rgba(255,255,255,0.1)',
-                    marginBottom: 4,
-                }}>{label}・{userIds.length}人</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {userIds.map(uid => {
-                        const u = users.find(x => x.id === uid);
-                        const name = u?.name || '不明';
-                        return (
-                            <div key={uid} style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 10,
-                                padding: '6px 8px',
-                                borderRadius: 8,
-                                fontSize: '0.85rem',
-                                color: 'rgba(255,255,255,0.95)',
-                            }}>
-                                {u?.avatarUrl ? (
-                                    <img
-                                        src={u.avatarUrl}
-                                        alt=""
-                                        style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                                    />
-                                ) : (
-                                    <div className="user-avatar-fallback" style={{ width: 24, height: 24, fontSize: '0.7rem' }}>
-                                        {getInitial(name)}
-                                    </div>
-                                )}
-                                <span>{name}</span>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-        );
-        return createPortal(node, document.body);
+    const toggleExpand = (item: KnowledgeItem) => {
+        const next = expandedId === item.id ? null : item.id;
+        setExpandedId(next);
+        if (next) onExpandItem?.(item);
     };
 
     const statusOptions: { value: 'all' | 'unsolved' | 'solved' | 'mine'; label: string }[] = [
@@ -307,12 +253,13 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 ) : (
                     data.map((item, index) => {
                         const isExpanded = expandedId === item.id;
-                        const hasSubRow = (item.tags && item.tags.length > 0) || (item.attachments && item.attachments.length > 0) || (item.incidents && item.incidents.length > 0);
+                        const commentCount = commentCounts?.[item.id] ?? 0;
+                        const hasSubRow = (item.tags && item.tags.length > 0) || (item.attachments && item.attachments.length > 0) || (item.incidents && item.incidents.length > 0) || commentCount > 0;
                         const catTone = getCategoryColorRgb(item.category || '');
                         return (
                             <div
                                 key={item.id}
-                                onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                                onClick={() => toggleExpand(item)}
                                 className={`knowledge-card ${item.status}`}
                                 style={{
                                     cursor: 'pointer', padding: '10px 14px', marginBottom: 0,
@@ -330,7 +277,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     col2 はクレームバッジ専用 (claim_level=0 のときは空、width は保持して全カードの列を揃える) */}
                                 <div style={{
                                     display: 'grid',
-                                    gridTemplateColumns: '28px 92px 74px 96px 90px 130px 90px minmax(0,1fr) 130px 110px 100px',
+                                    gridTemplateColumns: '28px 92px 74px 96px 90px 130px 90px minmax(0,1fr) 130px 110px 140px',
                                     gridTemplateRows: 'auto auto',
                                     alignItems: 'center',
                                     columnGap: '10px',
@@ -338,7 +285,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                 }}>
                                     {/* Col 1: 開閉 chevron (両行・カード垂直中央) */}
                                     <button
-                                        onClick={e => { e.stopPropagation(); setExpandedId(isExpanded ? null : item.id); }}
+                                        onClick={e => { e.stopPropagation(); toggleExpand(item); }}
                                         style={{
                                             gridColumn: 1, gridRow: '1 / span 2',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -492,17 +439,37 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                                         <Paperclip size={11} /> {item.attachments.length}
                                                     </span>
                                                 )}
+                                                {commentCount > 0 && (
+                                                    <span style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                        fontSize: '0.72rem', color: '#38bdf8', whiteSpace: 'nowrap', lineHeight: 1,
+                                                    }}>
+                                                        <MessageSquare size={11} /> {commentCount}
+                                                    </span>
+                                                )}
+                                                {(viewCounts?.[item.id] ?? 0) > 0 && (
+                                                    <span title={`延べ ${viewCounts?.[item.id]} 回閲覧`} style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                        fontSize: '0.72rem', color: 'var(--muted)', whiteSpace: 'nowrap', lineHeight: 1,
+                                                    }}>
+                                                        <Eye size={11} /> {viewCounts?.[item.id]}
+                                                    </span>
+                                                )}
                                             </>
                                         )}
                                     </div>
 
-                                    {/* 投稿者 (両行・左寄せ・中央揃え) */}
+                                    {/* 投稿者 (両行・左寄せ・中央揃え。クリックでプロフィール) */}
                                     <div style={{ gridColumn: 9, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
-                                        <div style={{
-                                            display: 'flex', alignItems: 'center', gap: '6px',
-                                            fontSize: '0.78rem', color: '#94a3b8',
-                                            minWidth: 0, overflow: 'hidden',
-                                        }}>
+                                        <div
+                                            onClick={e => { if (onAuthorClick) { e.stopPropagation(); onAuthorClick(item.author); } }}
+                                            title={onAuthorClick ? `${item.author} のプロフィールを見る` : undefined}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                fontSize: '0.78rem', color: '#94a3b8',
+                                                minWidth: 0, overflow: 'hidden',
+                                                cursor: onAuthorClick ? 'pointer' : 'default',
+                                            }}>
                                             {getAuthorAvatar(item.author) ? (
                                                 <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                                             ) : (
@@ -526,54 +493,20 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                             {new Date(item.createdAt ?? item.updatedAt).toLocaleDateString()}
                                         </span>
                                     </div>
-                                    {/* 👍⚠ (両行・中央揃え。展開時のみクリックでトグル) */}
+                                    {/* リアクション集計 (両行・中央揃え。非ゼロの種別のみ表示、押下は展開ビューの ReactionBar で) */}
                                     <div
                                         onClick={e => e.stopPropagation()}
                                         style={{
                                             gridColumn: 11, gridRow: '1 / span 2',
-                                            display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center',
-                                            height: '28px', padding: '0 10px', boxSizing: 'border-box',
-                                            background: 'rgba(255, 255, 255, 0.05)',
-                                            borderRadius: '20px', border: '1px solid var(--glass-border)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}>
-                                        <span
-                                            onClick={e => { if (isExpanded && onToggleReaction) { e.stopPropagation(); onToggleReaction(item, 'like'); } }}
-                                            onMouseEnter={e => (item.likeCount || 0) > 0 && handlePillEnter(`${item.id}-like`, e.currentTarget)}
-                                            onMouseLeave={() => setHoveredPill(null)}
-                                            title={isExpanded ? 'いいね！をトグル' : '展開してから押せます'}
-                                            style={{
-                                                position: 'relative', fontSize: '0.78rem',
-                                                color: item.myReaction === 'like' ? 'var(--primary)' : (item.likeCount || 0) > 0 ? 'var(--primary)' : 'var(--muted)',
-                                                display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 700,
-                                                height: '16px', lineHeight: 1,
-                                                cursor: isExpanded ? 'pointer' : 'default',
-                                                opacity: isExpanded ? 1 : 0.9,
-                                            }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', flexShrink: 0 }}>
-                                                <ThumbsUp size={12} style={{ display: 'block' }} fill={item.myReaction === 'like' ? 'var(--primary)' : (item.likeCount || 0) > 0 ? 'var(--primary)' : 'transparent'} />
-                                            </span>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '16px', minWidth: '8px' }}>{item.likeCount || 0}</span>
-                                            {renderPopover(item.likeUsers, '👍 いいね！', `${item.id}-like`)}
-                                        </span>
-                                        <span
-                                            onClick={e => { if (isExpanded && onToggleReaction) { e.stopPropagation(); onToggleReaction(item, 'wrong'); } }}
-                                            onMouseEnter={e => (item.wrongCount || 0) > 0 && handlePillEnter(`${item.id}-wrong`, e.currentTarget)}
-                                            onMouseLeave={() => setHoveredPill(null)}
-                                            title={isExpanded ? 'だめだねをトグル' : '展開してから押せます'}
-                                            style={{
-                                                position: 'relative', fontSize: '0.78rem',
-                                                color: item.myReaction === 'wrong' ? '#ef4444' : (item.wrongCount || 0) > 0 ? '#ef4444' : 'var(--muted)',
-                                                display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 700,
-                                                height: '16px', lineHeight: 1,
-                                                cursor: isExpanded ? 'pointer' : 'default',
-                                                opacity: isExpanded ? 1 : 0.9,
-                                            }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', flexShrink: 0 }}>
-                                                <AlertCircle size={12} style={{ display: 'block' }} fill={item.myReaction === 'wrong' ? '#ef4444' : (item.wrongCount || 0) > 0 ? '#ef4444' : 'transparent'} />
-                                            </span>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '16px', minWidth: '8px' }}>{item.wrongCount || 0}</span>
-                                            {renderPopover(item.wrongUsers, '⚠ 違うよ！', `${item.id}-wrong`)}
-                                        </span>
+                                        <ReactionBar
+                                            variant="summary"
+                                            counts={reactionCountsOf(item)}
+                                            users={reactionUsersOf(item)}
+                                            myReaction={item.myReaction}
+                                            usersMaster={users}
+                                        />
                                     </div>
                                 </div>
 
@@ -642,6 +575,22 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                                 <div style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{item.countermeasure}</div>
                                             </div>
                                         )}
+                                        {/* リアクション (展開時のみ押下可。1人1種の排他トグル) */}
+                                        <ReactionBar
+                                            variant="full"
+                                            counts={reactionCountsOf(item)}
+                                            users={reactionUsersOf(item)}
+                                            myReaction={item.myReaction}
+                                            usersMaster={users}
+                                            onToggle={onToggleReaction ? (type) => onToggleReaction(item, type) : undefined}
+                                        />
+                                        {/* コメントスレッド */}
+                                        <KnowledgeComments
+                                            knowledgeId={item.id}
+                                            user={user}
+                                            usersMaster={users}
+                                            onCountChange={(n) => onCommentCountChange?.(item.id, n)}
+                                        />
                                         {/* 編集はタイトル右のボタンに集約しているのでここでは出さない */}
                                     </div>
                                 )}

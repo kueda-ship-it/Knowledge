@@ -7,10 +7,13 @@ export interface User {
     categories: string[]; // 所属グループ名 (profile_categories.category の配列、複数所属可)
 }
 
+// リアクション種別 (SNS 風)。like/wrong は旧来の2種、それ以外は 2026-06 拡張分。
+export type ReactionType = 'like' | 'wrong' | 'helpful' | 'insight' | 'awesome';
+
 export interface Reaction {
     knowledgeId: string;
     userId: string;
-    type: 'like' | 'wrong';
+    type: ReactionType;
     comment?: string; // Added for pointing out mistakes
     userName?: string;
 }
@@ -25,11 +28,13 @@ export interface EditHistory {
     updatedAt: string;
 }
 
+export type NotificationType = ReactionType | 'edited' | 'comment' | 'viewed_milestone';
+
 export interface AppNotification {
     id: string;
     recipient_id: string;
     sender_name: string;
-    type: 'like' | 'wrong' | 'edited';
+    type: NotificationType;
     knowledge_id: string;
     is_read: boolean;
     created_at: string;
@@ -147,7 +152,29 @@ export interface KnowledgeItem {
     wrongCount?: number;
     likeUsers?: string[];
     wrongUsers?: string[];
-    myReaction?: 'like' | 'wrong' | null;
+    myReaction?: ReactionType | null;
+    // 種別ごとのリアクション集計 (likeCount/wrongCount の一般化。旧フィールドは互換のため併存)
+    reactionCounts?: Partial<Record<ReactionType, number>>;
+    reactionUsers?: Partial<Record<ReactionType, string[]>>;
+    // 被参照数 (knowledge_views 集計、P3)
+    viewCount?: number;
+}
+
+// アクティビティフィードの 1 イベント。専用テーブルは持たず、
+// knowledge / knowledge_reactions / knowledge_comments の直近行から合成する。
+export type ActivityEvent =
+    | { kind: 'post'; id: string; knowledgeId: string; title: string; actorName: string; createdAt: string }
+    | { kind: 'reaction'; id: string; knowledgeId: string; actorId: string; reactionType: ReactionType; createdAt: string }
+    | { kind: 'comment'; id: string; knowledgeId: string; actorId: string; body: string; createdAt: string };
+
+export interface KnowledgeComment {
+    id: string;
+    knowledge_id: string;
+    author_id: string;
+    author_name?: string; // usersMaster から解決して入れる (profiles FDW は叩かない)
+    body: string;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface MasterData {

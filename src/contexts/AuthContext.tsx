@@ -175,6 +175,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // セッションを「新鮮」に保つ。タブを開いた/復帰した時点で access token が
+  // 期限切れ/間近なら先回りで更新しておく。これにより「最初に開いて最初の保存」で
+  // 期限切れトークンを送って PostgREST が 401 を返す窓 (= 最初に開くと提議が保存できない)
+  // を塞ぐ。rawRest 側の 401 リトライに頼り切らず、操作前にトークンを整えておくのが狙い。
+  useEffect(() => {
+    let running = false
+    const keepSessionFresh = async () => {
+      if (running) return
+      running = true
+      try {
+        const { data } = await supabase.auth.getSession()
+        const s = data.session
+        if (!s) return
+        const expMs = (s.expires_at ?? 0) * 1000
+        // 期限まで 2 分未満なら先回りで更新 (頻発防止のため near-expiry のときだけ)
+        if (expMs && expMs < Date.now() + 120_000) {
+          await supabase.auth.refreshSession()
+        }
+      } catch (e) {
+        console.warn('[Auth] keepSessionFresh failed:', e)
+      } finally {
+        running = false
+      }
+    }
+
+    // 初回マウント + タブ復帰 (visibility) + ウィンドウフォーカス時に整える
+    keepSessionFresh()
+    const onVisible = () => { if (document.visibilityState === 'visible') keepSessionFresh() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', keepSessionFresh)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', keepSessionFresh)
+    }
+  }, [])
+
   const signInWithMicrosoft = () => {
     supabase.auth.signInWithOAuth({
       provider: 'azure',

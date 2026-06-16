@@ -167,6 +167,9 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     // 担当者の割当編集
     const [editingAssignee, setEditingAssignee] = useState(false);
     const [assigneeDraft, setAssigneeDraft] = useState<string>(''); // profiles.id or '' (未割当)
+    // 問題点項目の本文インライン編集
+    const [editingProblemId, setEditingProblemId] = useState<string | null>(null);
+    const [problemEditDraft, setProblemEditDraft] = useState('');
     // 競合検知: 他者が同じ提議を更新していたら保存を止めて POPUP を出す
     const [conflictField, setConflictField] = useState<'proposal' | 'decision' | 'visibility' | null>(null);
     // 編集開始時点の updated_at を固定。Realtime で selectedProposal.updated_at が
@@ -742,6 +745,28 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         } catch (e: any) {
             setProblems(prev);
             window.alert(`項目の担当者保存に失敗しました。\n${e?.message ?? ''}`);
+        }
+    };
+
+    // 問題点項目の操作権限: 管理者(master/manager)は全項目。それ以外は自分が作成 or 担当の項目のみ。
+    const canManageProblem = (p: ProposalProblem): boolean => {
+        if (!user) return false;
+        if (user.role === 'master' || user.role === 'manager') return true;
+        return p.created_by === user.id || p.assignee_id === user.id;
+    };
+
+    // 問題点項目の本文を保存 (楽観更新 + ロールバック)
+    const handleSaveProblemBody = async (problem: ProposalProblem, body: string) => {
+        const text = body.trim();
+        if (!text) return;
+        const prev = problems;
+        setProblems(prev.map(p => p.id === problem.id ? { ...p, body: text } : p));
+        setEditingProblemId(null);
+        try {
+            await withTimeout(apiClient.updateProposalProblem(problem.id, { body: text }), 15000, 'updateProposalProblem(body)');
+        } catch (e: any) {
+            setProblems(prev);
+            window.alert(`項目の編集保存に失敗しました。\n${e?.message ?? ''}`);
         }
     };
 
@@ -1438,22 +1463,39 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                                 border: '1px solid ' + (p.done ? 'rgba(52,211,153,0.25)' : 'rgba(255,255,255,0.06)'),
                                                             }}>
                                                                 <button
-                                                                    onClick={() => canAddComment && handleToggleProblem(p)}
-                                                                    disabled={!canAddComment}
-                                                                    title={canAddComment ? (p.done ? '未完了に戻す' : '完了にする') : '権限がありません'}
+                                                                    onClick={() => canManageProblem(p) && handleToggleProblem(p)}
+                                                                    disabled={!canManageProblem(p)}
+                                                                    title={canManageProblem(p) ? (p.done ? '未完了に戻す' : '完了にする') : '自分の項目または管理者のみ操作できます'}
                                                                     style={{
                                                                         background: 'transparent', border: 'none', padding: 0, marginTop: '1px',
-                                                                        cursor: canAddComment ? 'pointer' : 'default', flexShrink: 0,
+                                                                        cursor: canManageProblem(p) ? 'pointer' : 'default', flexShrink: 0,
                                                                         color: p.done ? '#34d399' : 'var(--text-dim)', display: 'inline-flex',
                                                                     }}>
                                                                     {p.done ? <CheckSquare size={18} /> : <Square size={18} />}
                                                                 </button>
-                                                                <span style={{
-                                                                    flex: 1, fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text)',
-                                                                    whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', wordBreak: 'break-word',
-                                                                    textDecoration: p.done ? 'line-through' : 'none',
-                                                                    opacity: p.done ? 0.6 : 1,
-                                                                }}>{p.body}</span>
+                                                                {editingProblemId === p.id ? (
+                                                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
+                                                                        <textarea
+                                                                            value={problemEditDraft}
+                                                                            onChange={e => setProblemEditDraft(e.target.value)}
+                                                                            rows={2}
+                                                                            autoFocus
+                                                                            onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleSaveProblemBody(p, problemEditDraft); } }}
+                                                                            style={{ width: '100%', resize: 'vertical', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: '0.9rem', lineHeight: 1.5, boxSizing: 'border-box' }}
+                                                                        />
+                                                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                                            <button onClick={() => setEditingProblemId(null)} style={{ ...editIconBtn, padding: '6px 12px' }}><X size={13} />取消</button>
+                                                                            <button onClick={() => handleSaveProblemBody(p, problemEditDraft)} style={{ ...editIconBtn, padding: '6px 12px', color: '#34d399', borderColor: 'rgba(52,211,153,0.5)', background: 'rgba(52,211,153,0.12)' }}><Check size={13} />保存</button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span style={{
+                                                                        flex: 1, fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text)',
+                                                                        whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', wordBreak: 'break-word',
+                                                                        textDecoration: p.done ? 'line-through' : 'none',
+                                                                        opacity: p.done ? 0.6 : 1,
+                                                                    }}>{p.body}</span>
+                                                                )}
                                                                 {/* 項目ごとの担当者 (manager は候補プール / 起案者は自分のみ。それ以外は表示のみ) */}
                                                                 {canEditProposal ? (
                                                                     <div style={{ minWidth: 140, flexShrink: 0, border: '1px solid var(--input-border)', borderRadius: 8, background: 'var(--input-bg)' }}>
@@ -1464,7 +1506,15 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                                         <UserIdentity name={usersMaster.find(u => u.id === p.assignee_id)?.name ?? ''} size={20} />
                                                                     </div>
                                                                 ) : null}
-                                                                {canAddComment && (
+                                                                {/* 編集 (自分の項目 or 管理者) */}
+                                                                {canManageProblem(p) && editingProblemId !== p.id && (
+                                                                    <button onClick={() => { setProblemEditDraft(p.body); setEditingProblemId(p.id); }} title="編集"
+                                                                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '2px', flexShrink: 0, display: 'inline-flex' }}>
+                                                                        <Edit2 size={13} />
+                                                                    </button>
+                                                                )}
+                                                                {/* 削除 (自分の項目 or 管理者) */}
+                                                                {canManageProblem(p) && (
                                                                     <button onClick={() => handleDeleteProblem(p.id)} title="削除"
                                                                         style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '2px', flexShrink: 0, display: 'inline-flex' }}>
                                                                         <Trash2 size={13} />

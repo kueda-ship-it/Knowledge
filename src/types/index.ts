@@ -5,6 +5,8 @@ export interface User {
     avatarUrl?: string; // profiles.avatar_url
     role: 'viewer' | 'user' | 'manager' | 'master';  // profiles.knl_role
     categories: string[]; // 所属グループ名 (profile_categories.category の配列、複数所属可)
+    group?: string;    // profiles.group (人事上の課/グループ: After Maintenance / Construction / Construction Manager / Dispatcher 等)
+    leader?: string;   // profiles.leader (役職: 主任 / 主査 / 係長代理 / 係長 / 課長 / 次長 / 専務 等)
 }
 
 // リアクション種別 (SNS 風)。like/wrong は旧来の2種、それ以外は 2026-06 拡張分。
@@ -208,6 +210,8 @@ export interface OperationalProposal {
     updated_by?: string; // profiles.id (最終更新者)
     visible_groups?: string[] | null; // 公開先グループ (NULL/空 = 全員公開)。decision があれば常に全員公開
     source_knowledge_id?: string; // 元クレームナレッジ id (「提議に展開」で起票された場合に set)
+    assignee_id?: string | null;  // 担当者 (profiles.id)。未割当 = null
+    assigned_at?: string | null;  // 担当割当日時。督促 (割当後N日未着手) の起点
     created_at: string;
     updated_at: string;
 }

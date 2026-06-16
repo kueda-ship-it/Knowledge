@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle, Clock, AlertCircle, User as UserIcon, Calendar, MessageSquare, Tag, ArrowUpDown, Hash, Plus, ArrowLeft, Edit2, Send, X, Check, Gavel, Trash2, RotateCcw, CheckSquare, Square, ListChecks } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle, User as UserIcon, Calendar, MessageSquare, Tag, ArrowUpDown, Hash, Plus, ArrowLeft, Edit2, Send, X, Check, Gavel, Trash2, RotateCcw, CheckSquare, Square, ListChecks, UserCheck } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { supabase } from '../lib/supabase';
 import { OperationalProposal, OperationalProposalComment, User, ProposalDraft, NavigateParams, ProposalProblem } from '../types';
 import { BackButton } from '../components/common/BackButton';
+import { GlassSelect } from '../components/common/GlassSelect';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
 import { loadCache, saveCache } from '../utils/cache';
 
@@ -25,6 +26,11 @@ interface ProposalsProps {
 type SortMode = 'date' | 'number';
 
 const TODAY = new Date().toISOString().split('T')[0];
+
+// 担当者候補を絞る役職 (係長以上)。profiles.leader の実値で判定。「代理」は含めない。
+const SENIOR_RANKS = ['係長', '課長', '次長', '専務'];
+// 担当割当後にこの日数を超えても「未着手」なら督促 (点滅)
+const ASSIGNEE_STALE_DAYS = 7;
 
 // 送信操作の無限ハング防止。画面を開いている間のアイドルには付けず、
 // 実際の書き込み呼び出し (合議追記・削除・フィールド保存) のみに付ける。
@@ -153,7 +159,10 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const [decisionDraft, setDecisionDraft] = useState('');
     const [editingVisibility, setEditingVisibility] = useState(false);
     const [visibilityDraft, setVisibilityDraft] = useState<string[]>([]);
-    const [savingField, setSavingField] = useState<'proposal' | 'decision' | 'visibility' | null>(null);
+    const [savingField, setSavingField] = useState<'proposal' | 'decision' | 'visibility' | 'assignee' | null>(null);
+    // 担当者の割当編集
+    const [editingAssignee, setEditingAssignee] = useState(false);
+    const [assigneeDraft, setAssigneeDraft] = useState<string>(''); // profiles.id or '' (未割当)
     // 競合検知: 他者が同じ提議を更新していたら保存を止めて POPUP を出す
     const [conflictField, setConflictField] = useState<'proposal' | 'decision' | 'visibility' | null>(null);
     // 編集開始時点の updated_at を固定。Realtime で selectedProposal.updated_at が
@@ -667,6 +676,50 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         return 'その他';
     };
 
+    // 提議の区分に応じた担当者候補。
+    // Engineer(障害/施工): After Maintenance + Construction の全員(役職問わず)。
+    // 施工管理 / 設置管理: 2課内勤 = Construction Manager の係長以上のみ(全員は出さない)。
+    // その他: 制限なし。
+    const assigneeCandidates = (category: string | undefined): User[] => {
+        const norm = getNormalizedCategory(category);
+        if (norm === 'Engineer（障害）' || norm === 'Engineer（施工）') {
+            return usersMaster.filter(u => u.group === 'After Maintenance' || u.group === 'Construction');
+        }
+        if (norm === '施工管理' || norm === '設置管理') {
+            return usersMaster.filter(u => u.group === 'Construction Manager' && SENIOR_RANKS.includes((u.leader || '').trim()));
+        }
+        return usersMaster;
+    };
+
+    // 担当割当後 ASSIGNEE_STALE_DAYS 超で未着手 = 督促対象 (点滅)
+    const isAssigneeStale = (p: OperationalProposal): boolean =>
+        !!p.assignee_id && p.status === '未着手' && !!p.assigned_at &&
+        (Date.now() - new Date(p.assigned_at).getTime()) > ASSIGNEE_STALE_DAYS * 86400000;
+
+    const handleSaveAssignee = async (assigneeId: string) => {
+        if (!selectedProposal || !user?.id) return;
+        setSavingField('assignee');
+        try {
+            if (await hasRemoteConflict()) { setConflictField('proposal'); return; }
+            const newId = assigneeId || null;
+            const now = new Date().toISOString();
+            // 担当を変更/新規割当したら督促の起点 assigned_at を更新。未割当に戻すと null。
+            const assignedAt = newId ? now : null;
+            await withTimeout(
+                apiClient.updateProposalContent(selectedProposal.id, { assignee_id: newId, assigned_at: assignedAt }, user.id),
+                15000, 'updateProposalContent(assignee)',
+            );
+            setProposals(prev => prev.map(p => p.id === selectedProposal.id ? { ...p, assignee_id: newId, assigned_at: assignedAt, updated_by: user.id, updated_at: now } : p));
+            setSelectedProposal(prev => prev ? { ...prev, assignee_id: newId, assigned_at: assignedAt, updated_by: user.id, updated_at: now } : null);
+            setEditingAssignee(false);
+        } catch (e: any) {
+            console.error('Failed to save assignee:', e);
+            window.alert(`担当者の保存に失敗しました。\n${e?.message ?? ''}`);
+        } finally {
+            setSavingField(null);
+        }
+    };
+
     const filteredProposals = (() => {
         let filtered = activeCategory === '全て'
             ? proposals
@@ -790,6 +843,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
 
     return (
         <div className="view active flex-column" style={{ background: 'var(--bg)', minHeight: '100%', overflow: 'hidden' }}>
+            <style>{`@keyframes proposalStaleBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
             {/* Header */}
             <div className="glass-header" style={{
                 padding: '20px 40px',
@@ -1013,7 +1067,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                     style={{
                                         cursor: 'pointer', padding: '16px 24px',
                                         display: 'grid',
-                                        gridTemplateColumns: '150px 70px 90px minmax(0, 1fr) 150px 120px 32px',
+                                        gridTemplateColumns: '150px 70px 90px minmax(0, 1fr) 150px 140px 120px 32px',
                                         gridTemplateRows: 'auto auto',
                                         columnGap: '12px',
                                         rowGap: '4px',
@@ -1099,8 +1153,35 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 <div style={{ gridColumn: '5', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden' }}>
                                                     <UserIdentity name={proposal.author} size={18} />
                                                 </div>
+                                                {/* 担当者 (全行・左寄せ。割当後7日 未着手で点滅して督促) */}
+                                                <div style={{ gridColumn: '6', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                                                    {proposal.assignee_id ? (() => {
+                                                        const a = usersMaster.find(u => u.id === proposal.assignee_id);
+                                                        const stale = isAssigneeStale(proposal);
+                                                        return (
+                                                            <div
+                                                                title={stale ? '担当割当後7日以上「未着手」です' : (a?.name ?? '')}
+                                                                style={{
+                                                                    display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden',
+                                                                    ...(stale ? { animation: 'proposalStaleBlink 1.1s ease-in-out infinite' } : {}),
+                                                                }}>
+                                                                {a?.avatarUrl ? (
+                                                                    <img src={a.avatarUrl} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: stale ? '2px solid #f59e0b' : '1px solid var(--glass-border)' }} />
+                                                                ) : (
+                                                                    <div className="user-avatar-fallback" style={{ width: 22, height: 22, fontSize: '0.65rem', flexShrink: 0, border: stale ? '2px solid #f59e0b' : undefined }}>
+                                                                        {(a?.name ?? '?').charAt(0)}
+                                                                    </div>
+                                                                )}
+                                                                <span style={{ fontSize: '0.78rem', color: stale ? '#fbbf24' : 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a?.name ?? '不明'}</span>
+                                                                {stale && <AlertCircle size={12} style={{ color: '#f59e0b', flexShrink: 0 }} />}
+                                                            </div>
+                                                        );
+                                                    })() : (
+                                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', opacity: 0.5 }}>未割当</span>
+                                                    )}
+                                                </div>
                                                 {/* 日付バッジ (全行・中央揃え) */}
-                                                <div style={{ gridColumn: '6', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <div style={{ gridColumn: '7', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                     <div style={{
                                                         display: 'inline-flex', alignItems: 'center', gap: '6px',
                                                         height: '28px', padding: '0 10px', boxSizing: 'border-box',
@@ -1113,7 +1194,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                     </div>
                                                 </div>
                                                 {/* 優先度ドット (全行・中央揃え・テキスト無し) */}
-                                                <div style={{ gridColumn: '7', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <div style={{ gridColumn: '8', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                     <span
                                                         title={`優先度: ${proposal.priority}`}
                                                         style={{
@@ -1444,6 +1525,68 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                             )}
                                         </div>
                                     )}
+
+                                    {/* 担当者 (区分に応じた候補から割当。割当後7日未着手で一覧カードが点滅) */}
+                                    {(() => {
+                                        const assignee = selectedProposal.assignee_id
+                                            ? usersMaster.find(u => u.id === selectedProposal.assignee_id)
+                                            : undefined;
+                                        const candidates = assigneeCandidates(selectedProposal.category);
+                                        return (
+                                            <div>
+                                                <div style={{ ...sectionLabel, color: '#34d399', justifyContent: 'space-between' }}>
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                                                        <UserCheck size={14} /> 担当者
+                                                    </span>
+                                                    {canEditProposal && !editingAssignee && (
+                                                        <button style={editIconBtn} onClick={() => {
+                                                            editBaselineRef.current = selectedProposal.updated_at ?? null;
+                                                            setAssigneeDraft(selectedProposal.assignee_id || '');
+                                                            setEditingAssignee(true);
+                                                        }}>
+                                                            <Edit2 size={12} />{selectedProposal.assignee_id ? '変更' : '割当'}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {editingAssignee ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                        <div style={{ border: '1px solid var(--input-border)', borderRadius: 8, background: 'var(--input-bg)' }}>
+                                                            <GlassSelect
+                                                                value={assigneeDraft}
+                                                                onChange={setAssigneeDraft}
+                                                                options={[
+                                                                    { value: '', label: '未割当' },
+                                                                    ...candidates.map(u => ({ value: u.id, label: u.leader ? `${u.name}（${u.leader}）` : u.name })),
+                                                                ]}
+                                                            />
+                                                        </div>
+                                                        {candidates.length === 0 && (
+                                                            <div style={{ fontSize: '0.74rem', color: '#fbbf24' }}>
+                                                                この区分の担当候補（条件に合う人）が見つかりません。
+                                                            </div>
+                                                        )}
+                                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                            <button onClick={() => setEditingAssignee(false)} style={{ ...editIconBtn, padding: '8px 14px' }}>
+                                                                <X size={14} />キャンセル
+                                                            </button>
+                                                            <button onClick={() => handleSaveAssignee(assigneeDraft)} disabled={savingField === 'assignee'}
+                                                                style={{ ...editIconBtn, padding: '8px 14px', color: '#34d399', borderColor: 'rgba(52,211,153,0.5)', background: 'rgba(52,211,153,0.12)' }}>
+                                                                <Check size={14} />{savingField === 'assignee' ? '保存中…' : '保存'}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ ...blockStyle, border: '1px solid rgba(52,211,153,0.25)', background: 'rgba(52,211,153,0.05)', padding: '10px 14px' }}>
+                                                        {assignee ? (
+                                                            <UserIdentity name={assignee.name} size={24} />
+                                                        ) : (
+                                                            <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>未割当</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
 
                                     {/* 公開先グループ (可視性) */}
                                     {(() => {

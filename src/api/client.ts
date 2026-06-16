@@ -214,7 +214,7 @@ export const apiClient = {
         const [incRes, catRes, profRes, profCatRes] = await Promise.all([
             supabase.from('master_incidents').select('name').order('name'),
             supabase.from('master_categories').select('name').order('name'),
-            supabase.from('profiles').select('id, email, display_name, knl_role, avatar_url').order('display_name'),
+            supabase.from('profiles').select('id, email, display_name, knl_role, avatar_url, grp:group, leader').order('display_name'),
             supabase.from('profile_categories').select('user_id, category'),
         ]);
         const firstErr = incRes.error || catRes.error || profRes.error || profCatRes.error;
@@ -242,6 +242,8 @@ export const apiClient = {
                 avatarUrl: p.avatar_url ?? '',
                 role: (p.knl_role as User['role']) ?? 'viewer',
                 categories: catsByUser.get(p.id) ?? [],
+                group: p.grp ?? '',
+                leader: p.leader ?? '',
             })),
         };
     },
@@ -801,7 +803,7 @@ export const apiClient = {
     // 改善提案 / 決定事項などのフィールド更新 (updated_by / updated_at を同時に書く)
     async updateProposalContent(
         id: string,
-        patch: Partial<{ proposal: string; problem: string; decision: string; title: string; priority: string; category: string; visible_groups: string[] | null }>,
+        patch: Partial<{ proposal: string; problem: string; decision: string; title: string; priority: string; category: string; visible_groups: string[] | null; assignee_id: string | null; assigned_at: string | null }>,
         userId?: string,
     ): Promise<void> {
         const payload: Record<string, any> = { ...patch, updated_at: new Date().toISOString() };

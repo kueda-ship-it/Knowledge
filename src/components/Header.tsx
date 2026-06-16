@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, AppNotification } from '../types';
 import { LogOut, Moon, Sun, Bell, Droplet } from 'lucide-react';
-import { roleColor } from '../constants/roles';
+import { roleColor, roleShort } from '../constants/roles';
 import { describeNotification } from '../constants/notifications';
 
 interface HeaderProps {
@@ -72,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
                             textTransform: 'uppercase',
                             marginTop: '2px',
                         }}>
-                            {user.role}
+                            {roleShort(user.role)}
                         </small>
                     </div>
                 </div>

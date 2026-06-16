@@ -21,7 +21,7 @@ export const ROLE_META: Record<Role, RoleMeta> = {
     viewer:  { value: 'viewer',  label: '閲覧者 (VIEWER)',       short: 'VIEWER',  color: '#94a3b8' }, // slate-400
     user:    { value: 'user',    label: '編集者 (USER)',         short: 'USER',    color: '#3b82f6' }, // blue-500
     manager: { value: 'manager', label: '管理者 (MANAGER)',      short: 'MANAGER', color: '#8b5cf6' }, // violet-500
-    master:  { value: 'master',  label: '最上位権限 (MASTER)',    short: 'MASTER',  color: '#f59e0b' }, // amber-500 (a.k.a. "シアンオレンジ")
+    master:  { value: 'master',  label: 'Admin (管理者)',         short: 'ADMIN',   color: '#f59e0b' }, // amber-500。内部 role 値は 'master' のまま、表示のみ Admin
 };
 
 /** セレクト等で並び順固定で使う配列版 */

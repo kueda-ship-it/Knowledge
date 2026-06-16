@@ -748,10 +748,10 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         }
     };
 
-    // 問題点項目の操作権限: 管理者(master/manager)は全項目。それ以外は自分が作成 or 担当の項目のみ。
+    // 問題点項目の操作権限: Admin(master)は全項目。それ以外(manager含む)は自分が作成 or 担当の項目のみ。
     const canManageProblem = (p: ProposalProblem): boolean => {
         if (!user) return false;
-        if (user.role === 'master' || user.role === 'manager') return true;
+        if (user.role === 'master') return true; // Admin は全項目
         return p.created_by === user.id || p.assignee_id === user.id;
     };
 

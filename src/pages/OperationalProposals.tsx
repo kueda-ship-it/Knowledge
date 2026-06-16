@@ -29,6 +29,8 @@ const TODAY = new Date().toISOString().split('T')[0];
 
 // 担当者候補を絞る役職 (係長以上)。profiles.leader の実値で判定。「代理」は含めない。
 const SENIOR_RANKS = ['係長', '課長', '次長', '専務'];
+// 次長以上 (取締役は別途除外)。課(group)が設定されていなくても候補に出す。
+const EXEC_RANKS = ['次長', '部長', '常務', '専務'];
 // 担当割当後にこの日数を超えても「未着手」なら督促 (点滅)
 const ASSIGNEE_STALE_DAYS = 7;
 
@@ -688,10 +690,14 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             return usersMaster.filter(u => ENG_ALL_GROUPS.includes(u.group || ''));
         }
         if (norm === '施工管理' || norm === '設置管理') {
-            return usersMaster.filter(u =>
-                u.group === 'Construction Manager' // 2課内勤は全員
-                || ((u.group === 'Dispatcher' || u.group === 'After Maintenance') && SENIOR_RANKS.includes((u.leader || '').trim())), // 1課は係長以上
-            );
+            return usersMaster.filter(u => {
+                const lead = (u.leader || '').trim();
+                if (lead.includes('取締役')) return false; // 取締役は除外
+                if (EXEC_RANKS.includes(lead)) return true; // 次長以上は課(group)が無くても表示
+                if (u.group === 'Construction Manager') return true; // 2課内勤は全員
+                if ((u.group === 'Dispatcher' || u.group === 'After Maintenance') && SENIOR_RANKS.includes(lead)) return true; // 1課は係長以上
+                return false;
+            });
         }
         return usersMaster;
     };

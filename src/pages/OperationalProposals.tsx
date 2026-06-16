@@ -180,7 +180,10 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const categories = ['全て', ...masterCategories, 'その他'];
 
     useEffect(() => {
-        fetchData();
+        // 初回は非サイレントで取得。キャッシュが空の初回ロード中に
+        // 「該当するチケットはありません／全 0 件」を誤表示せず、スピナーを出すため。
+        // (キャッシュがある場合は fetchData 内で loading を立てないので即キャッシュ表示)
+        fetchData(false);
     }, []);
 
     // 一覧カードの進捗バッジ用に全提議の問題点進捗を一括ロード (失敗しても一覧は表示)

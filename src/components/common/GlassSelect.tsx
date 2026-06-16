@@ -6,6 +6,7 @@ export interface GlassSelectOption {
     value: string;
     label: string;
     color?: string;
+    icon?: React.ReactNode; // 任意。ラベル左に表示 (アバター等)
 }
 
 interface Props {
@@ -82,8 +83,9 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
                     textAlign: 'left',
                 }}
             >
-                <span style={{ color: selected?.color || 'var(--text)', fontWeight: 500 }}>
-                    {selected?.label || '選択...'}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, color: selected?.color || 'var(--text)', fontWeight: 500 }}>
+                    {selected?.icon}
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected?.label || '選択...'}</span>
                 </span>
                 <ChevronDown size={14} style={{ opacity: 0.6, transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none', flexShrink: 0 }} />
             </button>
@@ -142,7 +144,10 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
                                 onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
                                 onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}
                             >
-                                <span>{opt.label}</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                                    {opt.icon}
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opt.label}</span>
+                                </span>
                                 {isSel && <Check size={14} style={{ flexShrink: 0, opacity: 0.9 }} />}
                             </div>
                         );

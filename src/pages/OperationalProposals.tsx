@@ -4,7 +4,7 @@ import { apiClient } from '../api/client';
 import { supabase } from '../lib/supabase';
 import { OperationalProposal, OperationalProposalComment, User, ProposalDraft, NavigateParams, ProposalProblem } from '../types';
 import { BackButton } from '../components/common/BackButton';
-import { GlassSelect } from '../components/common/GlassSelect';
+import { GlassSelect, GlassSelectOption } from '../components/common/GlassSelect';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
 import { loadCache, saveCache } from '../utils/cache';
 
@@ -708,14 +708,27 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const canAssignAny = user?.role === 'manager' || user?.role === 'master';
     const isProposalAuthor = !!user && !!selectedProposal && (selectedProposal.author?.trim() === user.name?.trim());
 
-    // 担当プルダウンの選択肢。manager は候補プール、起案者本人は自分のみ。
-    const assigneeSelectOptions = (category: string | undefined): { value: string; label: string }[] => {
-        const base = [{ value: '', label: '未割当' }];
+    // プルダウン用のアバターノード (画像 or 頭文字フォールバック)
+    const userAvatarNode = (u: User | undefined, size = 20): React.ReactNode => {
+        if (!u) return null;
+        return u.avatarUrl
+            ? <img src={u.avatarUrl} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            : <div className="user-avatar-fallback" style={{ width: size, height: size, fontSize: size * 0.45, flexShrink: 0 }}>{(u.name || '?').charAt(0)}</div>;
+    };
+
+    // 担当プルダウンの選択肢 (アバター付き)。manager は候補プール、起案者本人は自分のみ。
+    const assigneeSelectOptions = (category: string | undefined): GlassSelectOption[] => {
+        const base: GlassSelectOption[] = [{ value: '', label: '未割当' }];
+        const toOpt = (u: User): GlassSelectOption => ({
+            value: u.id,
+            label: u.leader ? `${u.name}（${u.leader}）` : u.name,
+            icon: userAvatarNode(u, 20),
+        });
         if (canAssignAny) {
-            return [...base, ...assigneeCandidates(category).map(u => ({ value: u.id, label: u.leader ? `${u.name}（${u.leader}）` : u.name }))];
+            return [...base, ...assigneeCandidates(category).map(toOpt)];
         }
         const self = usersMaster.find(u => u.id === user?.id);
-        if (self) return [...base, { value: self.id, label: self.leader ? `${self.name}（${self.leader}）` : self.name }];
+        if (self) return [...base, toOpt(self)];
         return base;
     };
 

@@ -677,18 +677,20 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     };
 
     // 提議の区分に応じた担当者候補。
-    // Engineer(障害/施工): After Maintenance + Construction の全員(役職問わず)。
-    // 施工管理 / 設置管理: 2課内勤(Construction Manager) + 1課全体(Dispatcher/After Maintenance) の係長以上のみ。
+    // 1課 = Dispatcher(内勤) + After Maintenance(外勤) / 2課 = Construction Manager(内勤) + Construction(外勤)。
+    // Engineer(障害/施工): 1課+2課の全員(内勤外勤・役職問わず)。
+    // 施工管理 / 設置管理: 2課内勤(Construction Manager)は全員 + 1課(Dispatcher/After Maintenance)の係長以上。
     // その他: 制限なし。
+    const ENG_ALL_GROUPS = ['After Maintenance', 'Construction', 'Construction Manager', 'Dispatcher'];
     const assigneeCandidates = (category: string | undefined): User[] => {
         const norm = getNormalizedCategory(category);
         if (norm === 'Engineer（障害）' || norm === 'Engineer（施工）') {
-            return usersMaster.filter(u => u.group === 'After Maintenance' || u.group === 'Construction');
+            return usersMaster.filter(u => ENG_ALL_GROUPS.includes(u.group || ''));
         }
         if (norm === '施工管理' || norm === '設置管理') {
             return usersMaster.filter(u =>
-                SENIOR_RANKS.includes((u.leader || '').trim()) &&
-                (u.group === 'Construction Manager' || u.group === 'Dispatcher' || u.group === 'After Maintenance'),
+                u.group === 'Construction Manager' // 2課内勤は全員
+                || ((u.group === 'Dispatcher' || u.group === 'After Maintenance') && SENIOR_RANKS.includes((u.leader || '').trim())), // 1課は係長以上
             );
         }
         return usersMaster;

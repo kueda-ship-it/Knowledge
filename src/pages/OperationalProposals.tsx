@@ -1539,7 +1539,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                             );
                         })()}
 
-                        <div style={{ display: 'flex', gap: '40px', marginBottom: '48px', color: 'var(--text-dim)', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '40px', marginBottom: '48px', color: 'var(--text-dim)', flexWrap: 'wrap' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <span style={{ fontSize: '0.75rem' }}>起案者</span>

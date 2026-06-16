@@ -860,7 +860,7 @@ export const apiClient = {
     // ---- 問題点の項目 (進捗管理) ----
     // 書き込みは全て rawRest (supabase-js の auth ロックハング回避)。呼び出し側で TO を付ける。
     async fetchProposalProblems(proposalId: string): Promise<ProposalProblem[]> {
-        const path = `/rest/v1/operational_proposal_problems?proposal_id=eq.${encodeURIComponent(proposalId)}&select=id,proposal_id,body,done,sort_order,created_by,created_at,updated_at&order=sort_order.asc,created_at.asc`;
+        const path = `/rest/v1/operational_proposal_problems?proposal_id=eq.${encodeURIComponent(proposalId)}&select=id,proposal_id,body,done,sort_order,created_by,assignee_id,created_at,updated_at&order=sort_order.asc,created_at.asc`;
         const res = await rawRest(path, { method: 'GET' });
         if (!res.ok) throw new Error(`問題点の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
         return (await res.json()) as ProposalProblem[];
@@ -884,7 +884,7 @@ export const apiClient = {
 
     async updateProposalProblem(
         id: string,
-        patch: Partial<{ body: string; done: boolean; sort_order: number }>,
+        patch: Partial<{ body: string; done: boolean; sort_order: number; assignee_id: string | null }>,
     ): Promise<void> {
         const res = await rawRest(`/rest/v1/operational_proposal_problems?id=eq.${encodeURIComponent(id)}`, {
             method: 'PATCH',

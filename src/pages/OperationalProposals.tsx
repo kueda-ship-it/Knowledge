@@ -678,7 +678,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
 
     // 提議の区分に応じた担当者候補。
     // Engineer(障害/施工): After Maintenance + Construction の全員(役職問わず)。
-    // 施工管理 / 設置管理: 2課内勤 = Construction Manager の係長以上のみ(全員は出さない)。
+    // 施工管理 / 設置管理: 2課内勤(Construction Manager) + 1課全体(Dispatcher/After Maintenance) の係長以上のみ。
     // その他: 制限なし。
     const assigneeCandidates = (category: string | undefined): User[] => {
         const norm = getNormalizedCategory(category);
@@ -686,9 +686,40 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             return usersMaster.filter(u => u.group === 'After Maintenance' || u.group === 'Construction');
         }
         if (norm === '施工管理' || norm === '設置管理') {
-            return usersMaster.filter(u => u.group === 'Construction Manager' && SENIOR_RANKS.includes((u.leader || '').trim()));
+            return usersMaster.filter(u =>
+                SENIOR_RANKS.includes((u.leader || '').trim()) &&
+                (u.group === 'Construction Manager' || u.group === 'Dispatcher' || u.group === 'After Maintenance'),
+            );
         }
         return usersMaster;
+    };
+
+    // 割当権限: manager/master は候補から誰でも割当可。起案者は「自分自身」だけ割当可。
+    const canAssignAny = user?.role === 'manager' || user?.role === 'master';
+    const isProposalAuthor = !!user && !!selectedProposal && (selectedProposal.author?.trim() === user.name?.trim());
+
+    // 担当プルダウンの選択肢。manager は候補プール、起案者本人は自分のみ。
+    const assigneeSelectOptions = (category: string | undefined): { value: string; label: string }[] => {
+        const base = [{ value: '', label: '未割当' }];
+        if (canAssignAny) {
+            return [...base, ...assigneeCandidates(category).map(u => ({ value: u.id, label: u.leader ? `${u.name}（${u.leader}）` : u.name }))];
+        }
+        const self = usersMaster.find(u => u.id === user?.id);
+        if (self) return [...base, { value: self.id, label: self.leader ? `${self.name}（${self.leader}）` : self.name }];
+        return base;
+    };
+
+    // 問題点の項目ごとの担当者割当 (楽観更新 + ロールバック)
+    const handleAssignProblem = async (problem: ProposalProblem, assigneeId: string) => {
+        const prev = problems;
+        const newId = assigneeId || null;
+        setProblems(prev.map(p => p.id === problem.id ? { ...p, assignee_id: newId } : p));
+        try {
+            await withTimeout(apiClient.updateProposalProblem(problem.id, { assignee_id: newId }), 15000, 'updateProposalProblem(assignee)');
+        } catch (e: any) {
+            setProblems(prev);
+            window.alert(`項目の担当者保存に失敗しました。\n${e?.message ?? ''}`);
+        }
     };
 
     // 担当割当後 ASSIGNEE_STALE_DAYS 超で未着手 = 督促対象 (点滅)
@@ -1400,6 +1431,16 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                                     textDecoration: p.done ? 'line-through' : 'none',
                                                                     opacity: p.done ? 0.6 : 1,
                                                                 }}>{p.body}</span>
+                                                                {/* 項目ごとの担当者 (manager は候補プール / 起案者は自分のみ。それ以外は表示のみ) */}
+                                                                {canEditProposal ? (
+                                                                    <div style={{ minWidth: 140, flexShrink: 0, border: '1px solid var(--input-border)', borderRadius: 8, background: 'var(--input-bg)' }}>
+                                                                        <GlassSelect compact value={p.assignee_id || ''} onChange={(v) => handleAssignProblem(p, v)} options={assigneeSelectOptions(selectedProposal.category)} />
+                                                                    </div>
+                                                                ) : p.assignee_id ? (
+                                                                    <div style={{ flexShrink: 0 }}>
+                                                                        <UserIdentity name={usersMaster.find(u => u.id === p.assignee_id)?.name ?? ''} size={20} />
+                                                                    </div>
+                                                                ) : null}
                                                                 {canAddComment && (
                                                                     <button onClick={() => handleDeleteProblem(p.id)} title="削除"
                                                                         style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '2px', flexShrink: 0, display: 'inline-flex' }}>
@@ -1554,15 +1595,17 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                             <GlassSelect
                                                                 value={assigneeDraft}
                                                                 onChange={setAssigneeDraft}
-                                                                options={[
-                                                                    { value: '', label: '未割当' },
-                                                                    ...candidates.map(u => ({ value: u.id, label: u.leader ? `${u.name}（${u.leader}）` : u.name })),
-                                                                ]}
+                                                                options={assigneeSelectOptions(selectedProposal.category)}
                                                             />
                                                         </div>
-                                                        {candidates.length === 0 && (
+                                                        {canAssignAny && candidates.length === 0 && (
                                                             <div style={{ fontSize: '0.74rem', color: '#fbbf24' }}>
                                                                 この区分の担当候補（条件に合う人）が見つかりません。
+                                                            </div>
+                                                        )}
+                                                        {!canAssignAny && isProposalAuthor && (
+                                                            <div style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
+                                                                起案者は自分自身のみ担当に設定できます。
                                                             </div>
                                                         )}
                                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>

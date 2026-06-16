@@ -224,6 +224,7 @@ export interface ProposalProblem {
     done: boolean;
     sort_order: number;
     created_by?: string;
+    assignee_id?: string | null; // 項目ごとの担当者 (profiles.id)。未割当 = null
     created_at: string;
     updated_at: string;
 }

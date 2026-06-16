@@ -6,7 +6,7 @@ import { BackButton } from '../components/common/BackButton';
 import { GroupsManager } from '../components/GroupsManager';
 import { GlassModal } from '../components/common/GlassModal';
 import { GlassSelect } from '../components/common/GlassSelect';
-import { ROLE_OPTIONS, ROLE_META } from '../constants/roles';
+import { ROLE_OPTIONS, ROLE_META, isManagerOrAbove } from '../constants/roles';
 import { loadCache, saveCache } from '../utils/cache';
 
 interface AdminProps {
@@ -74,7 +74,7 @@ const UserRow = React.memo(function UserRow({ user: u, index: i, onChangeName, o
 });
 
 export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
-    const isFullAdmin = ['master', 'manager'].includes(user.role);
+    const isFullAdmin = isManagerOrAbove(user.role);
     const [masterData, setMasterData] = useState<MasterData>(() =>
         loadCache<MasterData>(MASTERS_CACHE_KEY, { incidents: [], categories: [], users: [] })
     );

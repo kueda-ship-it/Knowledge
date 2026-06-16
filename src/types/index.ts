@@ -3,7 +3,7 @@ export interface User {
     name: string;      // profiles.full_name
     email?: string;    // profiles.email
     avatarUrl?: string; // profiles.avatar_url
-    role: 'viewer' | 'user' | 'manager' | 'master';  // profiles.knl_role
+    role: 'viewer' | 'user' | 'manager' | 'admin' | 'master';  // profiles.knl_role ('admin' が正規値、'master' は旧称)
     categories: string[]; // 所属グループ名 (profile_categories.category の配列、複数所属可)
     group?: string;    // profiles.group (人事上の課/グループ: After Maintenance / Construction / Construction Manager / Dispatcher 等)
     leader?: string;   // profiles.leader (役職: 主任 / 主査 / 係長代理 / 係長 / 課長 / 次長 / 専務 等)

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { OperationalProposal, OperationalProposalComment, User, ProposalDraft, NavigateParams, ProposalProblem } from '../types';
 import { BackButton } from '../components/common/BackButton';
 import { GlassSelect, GlassSelectOption } from '../components/common/GlassSelect';
+import { isAdminRole, isManagerOrAbove } from '../constants/roles';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
 import { loadCache, saveCache } from '../utils/cache';
 
@@ -443,10 +444,10 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     ] : [], { feature: 'proposals' });
 
     const canEditProposal = !!selectedProposal && !!user && (
-        user.role === 'manager' || user.role === 'master' ||
+        isManagerOrAbove(user.role) ||
         (!!selectedProposal.author && selectedProposal.author.trim() === user.name?.trim())
     );
-    const canEditDecision = !!user && (user.role === 'manager' || user.role === 'master');
+    const canEditDecision = !!user && isManagerOrAbove(user.role);
     const canAddComment = !!user && user.role !== 'viewer';
 
     // 保存前の競合チェック。開いた時点の updated_at と DB 現在値を照合し、
@@ -708,7 +709,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     };
 
     // 割当権限: manager/master は候補から誰でも割当可。起案者は「自分自身」だけ割当可。
-    const canAssignAny = user?.role === 'manager' || user?.role === 'master';
+    const canAssignAny = isManagerOrAbove(user?.role);
     const isProposalAuthor = !!user && !!selectedProposal && (selectedProposal.author?.trim() === user.name?.trim());
 
     // プルダウン用のアバターノード (画像 or 頭文字フォールバック)
@@ -751,7 +752,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     // 問題点項目の操作権限: Admin(master)は全項目。それ以外(manager含む)は自分が作成 or 担当の項目のみ。
     const canManageProblem = (p: ProposalProblem): boolean => {
         if (!user) return false;
-        if (user.role === 'master') return true; // Admin は全項目
+        if (isAdminRole(user.role)) return true; // Admin は全項目
         return p.created_by === user.id || p.assignee_id === user.id;
     };
 
@@ -1849,7 +1850,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {comments.map(c => {
                                         const isOwn = c.author_id === user?.id;
-                                        const canDelete = isOwn || user?.role === 'manager' || user?.role === 'master';
+                                        const canDelete = isOwn || isManagerOrAbove(user?.role);
                                         const when = new Date(c.created_at);
                                         return (
                                             <div key={c.id} style={{

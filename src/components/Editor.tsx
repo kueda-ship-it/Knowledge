@@ -8,6 +8,7 @@ import { apiClient } from '../api/client';
 import { useOneDriveUpload } from '../hooks/useOneDriveUpload';
 import { EditHistory } from '../types';
 import { GlassSelect } from './common/GlassSelect';
+import { isManagerOrAbove } from '../constants/roles';
 import { TagInput } from './common/TagInput';
 import { TagStat } from '../utils/tagUtils';
 
@@ -75,8 +76,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
     }, [item]);
 
     const canEdit = !item ||
-        user.role === 'master' ||
-        user.role === 'manager' ||
+        isManagerOrAbove(user.role) ||
         (user.role === 'user' && item.author === user.name);
 
     useEffect(() => {

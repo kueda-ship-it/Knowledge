@@ -3,6 +3,7 @@ import { MessageSquare, Send, Trash2 } from 'lucide-react';
 import { KnowledgeComment, User } from '../types';
 import { apiClient } from '../api/client';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
+import { isManagerOrAbove } from '../constants/roles';
 
 // ナレッジのコメントスレッド (自己完結)。一覧カードの展開ビューと Editor の双方から使う。
 // 提議の合議コメント (OperationalProposals) と同じ実装方針:
@@ -39,7 +40,7 @@ export const KnowledgeComments: React.FC<KnowledgeCommentsProps> = ({ knowledgeI
     const avatarOf = (authorId: string) => usersMaster.find(u => u.id === authorId)?.avatarUrl;
     const canComment = user.role !== 'viewer';
     const canDelete = (c: KnowledgeComment) =>
-        c.author_id === user.id || user.role === 'manager' || user.role === 'master';
+        c.author_id === user.id || isManagerOrAbove(user.role);
 
     useEffect(() => {
         let cancelled = false;

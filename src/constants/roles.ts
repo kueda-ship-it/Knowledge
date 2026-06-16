@@ -30,15 +30,15 @@ export const ROLE_META: Record<Role, RoleMeta> = {
 };
 
 /**
- * セレクトで選べるロール。最上位は表示「Admin」だが、保存値は profiles(外部テーブル=employee-master)
- * の CHECK 制約に通る 'master' を使う。employee-master 側で制約に 'admin' が追加されたら
- * ここを ROLE_META.admin に差し替える。
+ * セレクトで選べるロール。最上位は 'admin' を保存値とする（共通語彙に統一）。
+ * DB 側は 20260616_knl_role_admin_normalize.sql で CHECK 制約に 'admin' を追加済み。
+ * 旧称 'master' は ROLE_META / isAdminRole に残し、既存値の表示・判定は後方互換で動く。
  */
 export const ROLE_OPTIONS: RoleMeta[] = [
     ROLE_META.viewer,
     ROLE_META.user,
     ROLE_META.manager,
-    ROLE_META.master, // 表示は「Admin」、保存値は 'master' (制約互換)
+    ROLE_META.admin, // 保存値 'admin'（master は後方互換として判定のみ残す）
 ];
 
 export const roleColor = (role: Role): string => (ROLE_META[role] ?? ROLE_META.user).color;

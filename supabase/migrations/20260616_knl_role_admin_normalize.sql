@@ -84,7 +84,9 @@ create policy knowledge_comments_delete
     )
   );
 
--- 2c) operational_proposals: SELECT（可視性。後勝ち = proposal_visibility 版を踏襲）
+-- 2c) operational_proposals: SELECT（可視性）
+--     ※本番の現行ポリシーは profile_categories ベース。可視性が壊れないよう現行構造を踏襲し admin を追加。
+--       (実適用は 20260616_rls_allow_admin_role.sql で実施済み。本ファイルの本節はその内容に合わせてある。)
 drop policy if exists op_proposals_select on public.operational_proposals;
 create policy op_proposals_select
   on public.operational_proposals
@@ -93,14 +95,10 @@ create policy op_proposals_select
     visible_groups is null
     or array_length(visible_groups, 1) is null
     or decision is not null
-    or exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid()
-        and (
-          p.category = any(visible_groups)
-          or coalesce(p.knl_role, 'viewer') in ('manager','master','admin')
-        )
-    )
+    or exists (select 1 from public.profile_categories pc
+                 where pc.user_id = auth.uid() and pc.category = any (operational_proposals.visible_groups))
+    or exists (select 1 from public.profiles p
+                 where p.id = auth.uid() and coalesce(p.knl_role,'viewer') = any (array['manager','master','admin']))
   );
 
 -- 3) 既存データを master → admin に移行

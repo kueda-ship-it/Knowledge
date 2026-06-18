@@ -313,7 +313,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         setFetchError(null);
 
         try {
-            const data = await apiClient.fetchProposals();
+            // タイムアウトを付けてスピナーが永久に固まらないようにする (Realtime 再接続中のハング対策)
+            const data = await withTimeout(apiClient.fetchProposals(), 20000, 'fetchProposals');
             const result = data || [];
             setProposals(result);
             saveCache(PROPOSALS_CACHE_KEY, result);

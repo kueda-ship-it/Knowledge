@@ -566,15 +566,13 @@ export const apiClient = {
         }));
     },
 
+    // 通知取得。Realtime 再接続ストーム中に supabase-js の auth ロックでハングするため
+    // rawRest (PostgREST 直叩き) を使い、auth ロックを回避する。
     async fetchNotifications(userId: string): Promise<AppNotification[]> {
-        const { data, error } = await supabase
-            .from('notifications')
-            .select('*')
-            .eq('recipient_id', userId)
-            .order('created_at', { ascending: false })
-            .limit(20);
-        
-        if (error) throw error;
+        const path = `/rest/v1/notifications?select=*&recipient_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=20`;
+        const res = await rawRest(path, { method: 'GET' });
+        if (!res.ok) throw new Error(`通知の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        const data = (await res.json()) as any[];
         return (data ?? []).map(row => ({
             id: row.id,
             recipient_id: row.recipient_id,
@@ -729,27 +727,18 @@ export const apiClient = {
     },
 
     // Operational Proposals (運用提議)
+    // Realtime 再接続ストーム中に supabase-js の auth ロックでハング (スピナー固まり) する事例が
+    // あるため rawRest (PostgREST 直叩き) を使う。proposed_at 列が無ければ created_at にフォールバック。
     async fetchProposals(): Promise<any[]> {
-        let { data, error } = await supabase
-            .from('operational_proposals')
-            .select('*')
-            .order('proposed_at', { ascending: false });
-
-        // proposed_at カラムがない場合は created_at でフォールバック
-        if (error && error.message?.includes('proposed_at')) {
-            console.warn('[fetchProposals] proposed_at column missing, falling back to created_at');
-            const result = await supabase
-                .from('operational_proposals')
-                .select('*')
-                .order('created_at', { ascending: false });
-            data = result.data;
-            error = result.error;
+        let res = await rawRest('/rest/v1/operational_proposals?select=*&order=proposed_at.desc.nullslast', { method: 'GET' });
+        if (!res.ok) {
+            console.warn('[fetchProposals] proposed_at 順で失敗、created_at でフォールバック:', res.status);
+            res = await rawRest('/rest/v1/operational_proposals?select=*&order=created_at.desc.nullslast', { method: 'GET' });
         }
-
-        if (error) {
-            console.error('[fetchProposals] error:', error.message, error.details, error.hint);
-            throw error;
+        if (!res.ok) {
+            throw new Error(`提議の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
         }
+        const data = (await res.json()) as any[];
         console.log('[fetchProposals] loaded:', data?.length ?? 0, 'proposals');
         return data ?? [];
     },

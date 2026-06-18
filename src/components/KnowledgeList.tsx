@@ -273,11 +273,11 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         : undefined,
                                 }}
                             >
-                                {/* Grid: バッジ類は両行をまたいで垂直中央揃え。タイトルは1行目、タグ/展開ボタンは2行目
-                                    col2 はクレームバッジ専用 (claim_level=0 のときは空、width は保持して全カードの列を揃える) */}
+                                {/* Grid: バッジ類は両行をまたいで垂直中央揃え。タイトルは1行目、タグ/展開ボタンは2行目。
+                                    クレームは専用列を廃止し、出る時だけタイトル左にコンパクト表示 (空列で幅を浪費しない) */}
                                 <div style={{
                                     display: 'grid',
-                                    gridTemplateColumns: '28px 92px 74px 96px 90px 130px 90px minmax(0,1fr) 130px 110px 140px',
+                                    gridTemplateColumns: '28px 74px 96px 90px 130px 90px minmax(0,1fr) 130px 110px 140px',
                                     gridTemplateRows: 'auto auto',
                                     alignItems: 'center',
                                     columnGap: '10px',
@@ -296,34 +296,8 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                     </button>
 
-                                    {/* クレームバッジ (col 2、両行・左寄せ、claim_level > 0 のときのみ描画。
-                                        強度が上がるほど色が濃くシャドウも強くなる。0 のときは空セル (幅は保持)) */}
-                                    <div style={{ gridColumn: 2, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                                        {(item.claimLevel ?? 0) > 0 && (() => {
-                                            const lv = item.claimLevel ?? 0;
-                                            const intensity = lv / 10;
-                                            return (
-                                                <span
-                                                    title={`クレーム強度 ${lv}/10`}
-                                                    style={{
-                                                        display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                                        height: '28px', padding: '0 10px', boxSizing: 'border-box', lineHeight: 1,
-                                                        fontSize: '0.78rem', fontWeight: 800,
-                                                        background: `rgba(239, 68, 68, ${0.18 + 0.05 * lv})`,
-                                                        color: '#fff',
-                                                        border: `1px solid rgba(239, 68, 68, ${0.55 + 0.04 * lv})`,
-                                                        borderRadius: '10px', whiteSpace: 'nowrap',
-                                                        boxShadow: `0 0 ${6 + 14 * intensity}px rgba(239, 68, 68, ${0.25 + 0.4 * intensity})`,
-                                                        textShadow: '0 1px 1px rgba(0,0,0,0.4)',
-                                                    }}>
-                                                    <AlertOctagon size={12} style={{ flexShrink: 0 }} />
-                                                    <span>クレーム {lv}</span>
-                                                </span>
-                                            );
-                                        })()}
-                                    </div>
                                     {/* ステータス (両行・左寄せ、アイコン + テキストで列揃え) */}
-                                    <div style={{ gridColumn: 3, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                                    <div style={{ gridColumn: 2, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                                         <span style={{
                                             display: 'inline-flex', alignItems: 'center', gap: '5px',
                                             height: '16px',
@@ -343,7 +317,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         </span>
                                     </div>
                                     {/* 種別 (両行・左寄せ・トラブル/インシデント) */}
-                                    <div style={{ gridColumn: 4, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
+                                    <div style={{ gridColumn: 3, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
                                         {(() => {
                                             const meta = RECORD_TYPE_META[item.recordType ?? 'trouble'];
                                             const RtIcon = meta.Icon;
@@ -364,7 +338,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         })()}
                                     </div>
                                     {/* No (両行・左寄せ・28px 高) */}
-                                    <div style={{ gridColumn: 5, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                                    <div style={{ gridColumn: 4, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                                         <span style={{
                                             display: 'inline-flex', alignItems: 'center',
                                             height: '28px', padding: '0 10px', boxSizing: 'border-box',
@@ -376,7 +350,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         </span>
                                     </div>
                                     {/* 区分 (両行・左寄せ・28px 高) */}
-                                    <div style={{ gridColumn: 6, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
+                                    <div style={{ gridColumn: 5, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
                                         {item.category ? (
                                             <span className={`metadata-badge ${getCategoryBadgeClass(item.category)}`} style={{
                                                 height: '28px', padding: '0 12px', boxSizing: 'border-box', lineHeight: 1,
@@ -385,7 +359,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         ) : null}
                                     </div>
                                     {/* 詳細 (両行・左寄せ・28px 高) */}
-                                    <div style={{ gridColumn: 7, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
+                                    <div style={{ gridColumn: 6, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
                                         {item.machine ? (
                                             <span className="metadata-badge badge-machine" style={{
                                                 height: '28px', padding: '0 12px', boxSizing: 'border-box', lineHeight: 1,
@@ -394,12 +368,26 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         ) : null}
                                     </div>
 
-                                    {/* タイトル + 編集ボタン (1行目・左寄せ、常に編集可) */}
+                                    {/* タイトル + 編集ボタン (1行目・左寄せ、常に編集可)。クレームは出る時だけ左にコンパクト表示 */}
                                     <div style={{
-                                        gridColumn: 8, gridRow: 1,
+                                        gridColumn: 7, gridRow: 1,
                                         display: 'flex', alignItems: 'center', gap: '8px',
                                         minWidth: 0, overflow: 'hidden',
                                     }}>
+                                        {(item.claimLevel ?? 0) > 0 && (
+                                            <span
+                                                title={`クレーム強度 ${item.claimLevel}/10`}
+                                                style={{
+                                                    display: 'inline-flex', alignItems: 'center', gap: '3px', flexShrink: 0,
+                                                    height: '20px', padding: '0 7px', boxSizing: 'border-box', lineHeight: 1,
+                                                    fontSize: '0.72rem', fontWeight: 800, color: '#fff',
+                                                    background: `rgba(239, 68, 68, ${0.2 + 0.05 * (item.claimLevel ?? 0)})`,
+                                                    border: '1px solid rgba(239, 68, 68, 0.6)', borderRadius: '8px', whiteSpace: 'nowrap',
+                                                    boxShadow: '0 0 8px rgba(239, 68, 68, 0.4)', textShadow: '0 1px 1px rgba(0,0,0,0.4)',
+                                                }}>
+                                                <AlertOctagon size={11} style={{ flexShrink: 0 }} />{item.claimLevel}
+                                            </span>
+                                        )}
                                         <div style={{
                                             fontSize: '1rem', fontWeight: 700, color: 'var(--text)',
                                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -422,7 +410,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     </div>
                                     {/* 2行目・タイトル列: タグ/インシデント/添付 (コンパクト表示時のみ) */}
                                     <div style={{
-                                        gridColumn: 8, gridRow: 2,
+                                        gridColumn: 7, gridRow: 2,
                                         display: 'flex', flexWrap: 'nowrap', overflow: 'hidden',
                                         gap: '6px', alignItems: 'center', minWidth: 0,
                                     }}>
@@ -460,7 +448,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     </div>
 
                                     {/* 投稿者 (両行・左寄せ・中央揃え。クリックでプロフィール) */}
-                                    <div style={{ gridColumn: 9, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                                    <div style={{ gridColumn: 8, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                                         <div
                                             onClick={e => { if (onAuthorClick) { e.stopPropagation(); onAuthorClick(item.author); } }}
                                             title={onAuthorClick ? `${item.author} のプロフィールを見る` : undefined}
@@ -481,7 +469,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         </div>
                                     </div>
                                     {/* 日付 (両行・中央揃え、フォント 0.78rem で投稿者と合わせる) */}
-                                    <div style={{ gridColumn: 10, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <div style={{ gridColumn: 9, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <span style={{
                                             display: 'inline-flex', alignItems: 'center',
                                             height: '28px', padding: '0 10px', boxSizing: 'border-box',
@@ -497,7 +485,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                     <div
                                         onClick={e => e.stopPropagation()}
                                         style={{
-                                            gridColumn: 11, gridRow: '1 / span 2',
+                                            gridColumn: 10, gridRow: '1 / span 2',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}>
                                         <ReactionBar

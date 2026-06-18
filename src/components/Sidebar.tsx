@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Tags, MessageSquare, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { Plus, Search, Tags, MessageSquare, Send, CheckCircle, AlertCircle, List, ChevronDown, X } from 'lucide-react';
 import { User, KnowledgeItem, ChatMessage } from '../types';
 import { Button } from './common/Button';
 import { BackButton } from './common/BackButton';
+import { GlassSelect } from './common/GlassSelect';
 
 interface SidebarProps {
     user: User;
@@ -27,6 +28,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
     // Generate unique tags
     const allTags = Array.from(new Set(data.flatMap(d => d.tags || [])));
+
+    // タグの検索キーワードと表示モード (一覧 / プルダウン)
+    const [tagQuery, setTagQuery] = useState('');
+    const [tagMode, setTagMode] = useState<'list' | 'dropdown'>('list');
+    const filteredTags = allTags.filter(t => t.toLowerCase().includes(tagQuery.toLowerCase()));
 
 
     return (
@@ -78,28 +84,105 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* 2. Tags Area */}
             <div className="sidebar-section" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--muted)', fontSize: '0.8rem' }}>
-                    <Tags size={14} /> タグ
-                </h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', overflowY: 'auto' }}>
-                    <span
-                        onClick={onClearTags}
-                        className={`sidebar-tag ${selectedTags.length === 0 ? 'active' : ''}`}
-                        style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-                    >
-                        全て
-                    </span>
-                    {allTags.map(tag => (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, color: 'var(--muted)', fontSize: '0.8rem' }}>
+                        <Tags size={14} /> タグ
+                    </h4>
+                    {/* 一覧 / プルダウン 切替 */}
+                    <div style={{ display: 'flex', gap: '2px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '2px' }}>
+                        {([
+                            { mode: 'list' as const, Icon: List, title: '一覧' },
+                            { mode: 'dropdown' as const, Icon: ChevronDown, title: 'プルダウン' },
+                        ]).map(({ mode, Icon, title }) => (
+                            <button
+                                key={mode}
+                                onClick={() => setTagMode(mode)}
+                                title={title}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    width: '26px', height: '22px', padding: 0, borderRadius: '6px', cursor: 'pointer', border: 'none',
+                                    background: tagMode === mode ? 'color-mix(in oklab, var(--primary) 40%, transparent)' : 'transparent',
+                                    color: tagMode === mode ? '#fff' : 'var(--muted)',
+                                }}>
+                                <Icon size={13} />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* タグ検索 */}
+                <div style={{ position: 'relative', marginBottom: '8px', flexShrink: 0 }}>
+                    <input
+                        type="text"
+                        value={tagQuery}
+                        onChange={(e) => setTagQuery(e.target.value)}
+                        placeholder="タグを検索..."
+                        className="glass-input"
+                        style={{
+                            width: '100%', padding: '6px 8px 6px 26px',
+                            border: '1px solid var(--glass-border)', borderRadius: '8px',
+                            fontSize: '0.8rem', background: 'var(--input-bg)', color: 'var(--text)',
+                        }}
+                    />
+                    <Search size={13} style={{ position: 'absolute', left: '8px', top: '8px', color: '#94a3b8' }} />
+                </div>
+
+                {tagMode === 'list' ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', overflowY: 'auto' }}>
                         <span
-                            key={tag}
-                            onClick={() => onTagToggle(tag)}
-                            className={`sidebar-tag ${selectedTags.includes(tag) ? 'active' : ''}`}
+                            onClick={onClearTags}
+                            className={`sidebar-tag ${selectedTags.length === 0 ? 'active' : ''}`}
                             style={{ fontSize: '0.7rem', padding: '2px 8px' }}
                         >
-                            {tag}
+                            全て
                         </span>
-                    ))}
-                </div>
+                        {filteredTags.map(tag => (
+                            <span
+                                key={tag}
+                                onClick={() => onTagToggle(tag)}
+                                className={`sidebar-tag ${selectedTags.includes(tag) ? 'active' : ''}`}
+                                style={{ fontSize: '0.7rem', padding: '2px 8px' }}
+                            >
+                                {tag}
+                            </span>
+                        ))}
+                        {filteredTags.length === 0 && (
+                            <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>該当するタグなし</span>
+                        )}
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
+                        {/* プルダウン: 選択するとタグをトグル */}
+                        <div style={{ border: '1px solid var(--input-border)', borderRadius: '8px', background: 'var(--input-bg)', flexShrink: 0 }}>
+                            <GlassSelect
+                                value=""
+                                onChange={(v) => { if (v) onTagToggle(v); }}
+                                options={[
+                                    { value: '', label: tagQuery ? `「${tagQuery}」で絞り込み` : 'タグを選択...' },
+                                    ...filteredTags.map(t => ({ value: t, label: selectedTags.includes(t) ? `✓ ${t}` : t })),
+                                ]}
+                            />
+                        </div>
+                        {/* 選択中タグ */}
+                        {selectedTags.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                                {selectedTags.map(tag => (
+                                    <span
+                                        key={tag}
+                                        onClick={() => onTagToggle(tag)}
+                                        className="sidebar-tag active"
+                                        style={{ fontSize: '0.7rem', padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                    >
+                                        {tag} <X size={10} />
+                                    </span>
+                                ))}
+                                <span onClick={onClearTags} style={{ fontSize: '0.68rem', color: 'var(--muted)', cursor: 'pointer' }}>クリア</span>
+                            </div>
+                        ) : (
+                            <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>タグ未選択（全件表示）</span>
+                        )}
+                    </div>
+                )}
             </div>
 
 

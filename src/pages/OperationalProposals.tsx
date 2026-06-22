@@ -163,11 +163,14 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     // 問題点（概要）のインライン編集
     const [editingProblemOverview, setEditingProblemOverview] = useState(false);
     const [problemOverviewDraft, setProblemOverviewDraft] = useState('');
+    // タイトルのインライン編集
+    const [editingTitle, setEditingTitle] = useState(false);
+    const [titleDraft, setTitleDraft] = useState('');
     const [editingDecision, setEditingDecision] = useState(false);
     const [decisionDraft, setDecisionDraft] = useState('');
     const [editingVisibility, setEditingVisibility] = useState(false);
     const [visibilityDraft, setVisibilityDraft] = useState<string[]>([]);
-    const [savingField, setSavingField] = useState<'problem' | 'proposal' | 'decision' | 'visibility' | 'assignee' | null>(null);
+    const [savingField, setSavingField] = useState<'title' | 'problem' | 'proposal' | 'decision' | 'visibility' | 'assignee' | null>(null);
     // 担当者の割当編集
     const [editingAssignee, setEditingAssignee] = useState(false);
     const [assigneeDraft, setAssigneeDraft] = useState<string>(''); // profiles.id or '' (未割当)
@@ -507,6 +510,26 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         } catch (e: any) {
             console.error("Failed to save proposal:", e);
             window.alert(`改善提案の保存に失敗しました。入力内容は残っています。\n${e?.message ?? ''}`);
+        } finally {
+            setSavingField(null);
+        }
+    };
+
+    const handleSaveTitle = async () => {
+        if (!selectedProposal || !user?.id) return;
+        const body = titleDraft.trim();
+        if (!body) { window.alert('タイトルは空にできません。'); return; }
+        setSavingField('title');
+        try {
+            if (await hasRemoteConflict()) { setConflictField('proposal'); return; }
+            await withTimeout(apiClient.updateProposalContent(selectedProposal.id, { title: body }, user.id), 15000, 'updateProposalContent(title)');
+            const now = new Date().toISOString();
+            setProposals(prev => prev.map(p => p.id === selectedProposal.id ? { ...p, title: body, updated_by: user.id, updated_at: now } : p));
+            setSelectedProposal(prev => prev ? { ...prev, title: body, updated_by: user.id, updated_at: now } : null);
+            setEditingTitle(false);
+        } catch (e: any) {
+            console.error('Failed to save title:', e);
+            window.alert(`タイトルの保存に失敗しました。入力内容は残っています。\n${e?.message ?? ''}`);
         } finally {
             setSavingField(null);
         }
@@ -1378,7 +1401,44 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                             </div>
                         </div>
 
-                        <h2 style={{ fontSize: '1.85rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text)', lineHeight: 1.3 }}>{selectedProposal.title}</h2>
+                        {/* タイトル (インライン編集可) */}
+                        {editingTitle ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                                <textarea
+                                    value={titleDraft}
+                                    onChange={e => setTitleDraft(e.target.value)}
+                                    rows={2}
+                                    autoFocus
+                                    placeholder="タイトルを入力"
+                                    style={{
+                                        fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.3,
+                                        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(99,102,241,0.45)',
+                                        borderRadius: '12px', padding: '10px 14px', width: '100%', boxSizing: 'border-box',
+                                        resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+                                    }}
+                                />
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                    <button onClick={() => { setEditingTitle(false); setTitleDraft(selectedProposal.title); }}
+                                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '8px 14px', color: 'var(--text-dim)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem' }}>
+                                        <X size={14} />キャンセル
+                                    </button>
+                                    <button onClick={handleSaveTitle} disabled={savingField === 'title'}
+                                        style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.5)', borderRadius: '10px', padding: '8px 14px', color: 'var(--primary)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem' }}>
+                                        <Check size={14} />{savingField === 'title' ? '保存中…' : '保存'}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '12px' }}>
+                                <h2 style={{ flex: 1, fontSize: '1.85rem', fontWeight: 700, margin: 0, color: 'var(--text)', lineHeight: 1.3 }}>{selectedProposal.title}</h2>
+                                {canEditProposal && (
+                                    <button title="タイトルを編集" onClick={() => { editBaselineRef.current = selectedProposal.updated_at ?? null; setTitleDraft(selectedProposal.title); setEditingTitle(true); }}
+                                        style={{ flexShrink: 0, marginTop: '4px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '6px 8px', color: 'var(--text-dim)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
+                                        <Edit2 size={14} />
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
                         {/* 元クレームナレッジへのリンク (展開元がある場合のみ表示) */}
                         {selectedProposal.source_knowledge_id && (

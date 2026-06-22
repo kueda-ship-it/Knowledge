@@ -451,6 +451,11 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         isManagerOrAbove(user.role) ||
         (!!selectedProposal.author && selectedProposal.author.trim() === user.name?.trim())
     );
+    // 問題点（概要）だけは Admin のみ全件、他は自分の起票のみ (manager も他人のものは不可)
+    const canEditProblemOverview = !!selectedProposal && !!user && (
+        isAdminRole(user.role) ||
+        (!!selectedProposal.author && selectedProposal.author.trim() === user.name?.trim())
+    );
     const canEditDecision = !!user && isManagerOrAbove(user.role);
     const canAddComment = !!user && user.role !== 'viewer';
 
@@ -1450,7 +1455,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                     <div>
                                         <div style={{ ...sectionLabel, justifyContent: 'space-between' }}>
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>問題点（概要）</span>
-                                            {canEditProposal && !editingProblemOverview && (
+                                            {canEditProblemOverview && !editingProblemOverview && (
                                                 <button style={editIconBtn} title="問題点を編集" onClick={() => { editBaselineRef.current = selectedProposal.updated_at ?? null; setProblemOverviewDraft(selectedProposal.problem ?? problemText ?? ''); setEditingProblemOverview(true); }}>
                                                     <Edit2 size={14} />
                                                 </button>

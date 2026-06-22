@@ -160,11 +160,14 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const [progressById, setProgressById] = useState<Record<string, { done: number; total: number }>>({});
     const [editingProposal, setEditingProposal] = useState(false);
     const [proposalDraft, setProposalDraft] = useState('');
+    // 問題点（概要）のインライン編集
+    const [editingProblemOverview, setEditingProblemOverview] = useState(false);
+    const [problemOverviewDraft, setProblemOverviewDraft] = useState('');
     const [editingDecision, setEditingDecision] = useState(false);
     const [decisionDraft, setDecisionDraft] = useState('');
     const [editingVisibility, setEditingVisibility] = useState(false);
     const [visibilityDraft, setVisibilityDraft] = useState<string[]>([]);
-    const [savingField, setSavingField] = useState<'proposal' | 'decision' | 'visibility' | 'assignee' | null>(null);
+    const [savingField, setSavingField] = useState<'problem' | 'proposal' | 'decision' | 'visibility' | 'assignee' | null>(null);
     // 担当者の割当編集
     const [editingAssignee, setEditingAssignee] = useState(false);
     const [assigneeDraft, setAssigneeDraft] = useState<string>(''); // profiles.id or '' (未割当)
@@ -499,6 +502,25 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         } catch (e: any) {
             console.error("Failed to save proposal:", e);
             window.alert(`改善提案の保存に失敗しました。入力内容は残っています。\n${e?.message ?? ''}`);
+        } finally {
+            setSavingField(null);
+        }
+    };
+
+    const handleSaveProblemOverview = async () => {
+        if (!selectedProposal || !user?.id) return;
+        setSavingField('problem');
+        try {
+            if (await hasRemoteConflict()) { setConflictField('proposal'); return; }
+            const body = problemOverviewDraft.trim();
+            await withTimeout(apiClient.updateProposalContent(selectedProposal.id, { problem: body }, user.id), 15000, 'updateProposalContent(problem)');
+            const now = new Date().toISOString();
+            setProposals(prev => prev.map(p => p.id === selectedProposal.id ? { ...p, problem: body, updated_by: user.id, updated_at: now } : p));
+            setSelectedProposal(prev => prev ? { ...prev, problem: body, updated_by: user.id, updated_at: now } : null);
+            setEditingProblemOverview(false);
+        } catch (e: any) {
+            console.error('Failed to save problem overview:', e);
+            window.alert(`問題点の保存に失敗しました。入力内容は残っています。\n${e?.message ?? ''}`);
         } finally {
             setSavingField(null);
         }
@@ -1424,10 +1446,38 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
 
                             return (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
-                                    {/* 問題点 (概要) */}
+                                    {/* 問題点 (概要) — 編集可 */}
                                     <div>
-                                        <span style={sectionLabel}>問題点（概要）</span>
-                                        <div style={blockStyle}>{problemText || <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>未入力</span>}</div>
+                                        <div style={{ ...sectionLabel, justifyContent: 'space-between' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>問題点（概要）</span>
+                                            {canEditProposal && !editingProblemOverview && (
+                                                <button style={editIconBtn} title="問題点を編集" onClick={() => { editBaselineRef.current = selectedProposal.updated_at ?? null; setProblemOverviewDraft(selectedProposal.problem ?? problemText ?? ''); setEditingProblemOverview(true); }}>
+                                                    <Edit2 size={14} />
+                                                </button>
+                                            )}
+                                        </div>
+                                        {editingProblemOverview ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <textarea
+                                                    value={problemOverviewDraft}
+                                                    onChange={e => setProblemOverviewDraft(e.target.value)}
+                                                    placeholder="問題点（概要）を入力"
+                                                    style={editAreaStyle}
+                                                />
+                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                    <button onClick={() => { setEditingProblemOverview(false); setProblemOverviewDraft(selectedProposal.problem ?? ''); }}
+                                                        style={{ ...editIconBtn, padding: '8px 14px' }}>
+                                                        <X size={14} />キャンセル
+                                                    </button>
+                                                    <button onClick={handleSaveProblemOverview} disabled={savingField === 'problem'}
+                                                        style={{ ...editIconBtn, padding: '8px 14px', color: 'var(--primary)', borderColor: 'rgba(99,102,241,0.5)', background: 'rgba(99,102,241,0.12)' }}>
+                                                        <Check size={14} />{savingField === 'problem' ? '保存中…' : '保存'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div style={blockStyle}>{problemText || <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>未入力</span>}</div>
+                                        )}
                                     </div>
 
                                     {/* 問題点の項目 (チェックリスト + 進捗) */}
@@ -1571,8 +1621,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         <div style={{ ...sectionLabel, color: '#f97316', justifyContent: 'space-between' }}>
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>改善提案</span>
                                             {canEditProposal && !editingProposal && (
-                                                <button style={editIconBtn} onClick={() => { editBaselineRef.current = selectedProposal.updated_at ?? null; setProposalDraft(selectedProposal.proposal ?? proposalText ?? ''); setEditingProposal(true); }}>
-                                                    <Edit2 size={12} />編集
+                                                <button style={editIconBtn} title="改善提案を編集" onClick={() => { editBaselineRef.current = selectedProposal.updated_at ?? null; setProposalDraft(selectedProposal.proposal ?? proposalText ?? ''); setEditingProposal(true); }}>
+                                                    <Edit2 size={14} />
                                                 </button>
                                             )}
                                         </div>
@@ -1610,8 +1660,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                     <Gavel size={13} />決定事項
                                                 </span>
                                                 {canEditDecision && !editingDecision && (
-                                                    <button style={editIconBtn} onClick={() => { editBaselineRef.current = selectedProposal.updated_at ?? null; setDecisionDraft(selectedProposal.decision ?? ''); setEditingDecision(true); }}>
-                                                        <Edit2 size={12} />{decisionText ? '編集' : '記録する'}
+                                                    <button style={editIconBtn} title={decisionText ? '決定事項を編集' : '決定事項を記録'} onClick={() => { editBaselineRef.current = selectedProposal.updated_at ?? null; setDecisionDraft(selectedProposal.decision ?? ''); setEditingDecision(true); }}>
+                                                        {decisionText ? <Edit2 size={14} /> : <Gavel size={14} />}
                                                     </button>
                                                 )}
                                             </div>
@@ -1655,12 +1705,12 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                         <UserCheck size={14} /> 担当者
                                                     </span>
                                                     {canEditProposal && !editingAssignee && (
-                                                        <button style={editIconBtn} onClick={() => {
+                                                        <button style={editIconBtn} title={selectedProposal.assignee_id ? '担当者を変更' : '担当者を割当'} onClick={() => {
                                                             editBaselineRef.current = selectedProposal.updated_at ?? null;
                                                             setAssigneeDraft(selectedProposal.assignee_id || '');
                                                             setEditingAssignee(true);
                                                         }}>
-                                                            <Edit2 size={12} />{selectedProposal.assignee_id ? '変更' : '割当'}
+                                                            <Edit2 size={14} />
                                                         </button>
                                                     )}
                                                 </div>
@@ -1723,7 +1773,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                             setVisibilityDraft(Array.isArray(vg) ? [...vg] : []);
                                                             setEditingVisibility(true);
                                                         }}>
-                                                            <Edit2 size={12} />編集
+                                                            <Edit2 size={14} />
                                                         </button>
                                                     )}
                                                 </div>

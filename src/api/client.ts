@@ -28,54 +28,90 @@ function timeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
     return Promise.race([p, new Promise<T>(resolve => setTimeout(() => resolve(fallback), ms))]);
 }
 
-// 「叩く前に」有効なトークンを用意する。タブを長時間放置した後の初回操作で、
-// supabase-js の自動更新が非同期で間に合わず、期限切れトークンのまま PostgREST を
-// 叩いて 401 になる事例 (= 最初に開くと保存できない) を防ぐための先回り更新。
-// auth ロックで詰まらないよう全てタイムアウト付き + single-flight (同時多発で更新 1 回に相乗り)。
-let validTokenInFlight: Promise<string | null> | null = null;
-async function getValidAccessToken(): Promise<string | null> {
-    const { token, expiresAtMs } = readStoredAuth();
-    // 期限まで 60 秒以上あるなら手元のトークンで即叩く (通常パス)
-    if (token && expiresAtMs && expiresAtMs > Date.now() + 60_000) return token;
-
-    // 期限切れ/間近 or 未取得 → supabase-js で更新/復元を待つ
-    if (!validTokenInFlight) {
-        validTokenInFlight = (async () => {
-            try {
-                if (token) {
-                    const { data } = await supabase.auth.refreshSession();
-                    return data.session?.access_token ?? token;
-                }
-                const { data } = await supabase.auth.getSession();
-                return data.session?.access_token ?? null;
-            } catch {
-                return token;
-            } finally {
-                validTokenInFlight = null;
+// localStorage から refresh_token を読む。
+function readStoredRefreshToken(): string | null {
+    const url = (import.meta as any).env.VITE_SUPABASE_URL as string;
+    try {
+        const ref = url.match(/https?:\/\/([^.]+)\./)?.[1];
+        if (ref) {
+            const raw = localStorage.getItem(`sb-${ref}-auth-token`);
+            if (raw) {
+                const p = JSON.parse(raw);
+                return p?.refresh_token ?? p?.currentSession?.refresh_token ?? null;
             }
-        })();
-    }
-    // 更新が詰まった場合は手元のトークンで賭ける (後段の 401 リトライが拾う)
-    return timeout(validTokenInFlight, 8000, token);
+        }
+    } catch { /* noop */ }
+    return null;
 }
 
-// 401 を見てからの強制リフレッシュ (最後の砦)。端末時計が遅れていて事前判定が
-// 「まだ有効」と誤判定したケースなどを救済する。single-flight + タイムアウト。
-let forceRefreshInFlight: Promise<string | null> | null = null;
-async function forceRefresh(): Promise<string | null> {
-    if (!forceRefreshInFlight) {
-        forceRefreshInFlight = (async () => {
+// supabase-js の auth ロックを完全に回避してトークンを更新する。
+// /auth/v1/token?grant_type=refresh_token を直接叩き、結果を localStorage に書き戻す
+// (Realtime 再接続ストーム中に refreshSession() が詰まり 401 を救えない事例への対策)。
+async function refreshViaRest(): Promise<string | null> {
+    const url = (import.meta as any).env.VITE_SUPABASE_URL as string;
+    const anonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY as string;
+    const refreshToken = readStoredRefreshToken();
+    if (!refreshToken) return null;
+    try {
+        const res = await fetch(`${url}/auth/v1/token?grant_type=refresh_token`, {
+            method: 'POST',
+            headers: { apikey: anonKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (!data?.access_token) return null;
+        // localStorage に書き戻す (supabase-js も次回読めるよう既存形を維持しつつトークン差し替え)
+        try {
+            const ref = url.match(/https?:\/\/([^.]+)\./)?.[1];
+            const key = `sb-${ref}-auth-token`;
+            const prev = JSON.parse(localStorage.getItem(key) || '{}');
+            localStorage.setItem(key, JSON.stringify({
+                ...prev,
+                access_token: data.access_token,
+                refresh_token: data.refresh_token ?? prev.refresh_token,
+                expires_at: data.expires_at,
+                expires_in: data.expires_in,
+                token_type: data.token_type ?? prev.token_type,
+                user: data.user ?? prev.user,
+            }));
+        } catch { /* 書き戻し失敗は致命ではない */ }
+        return data.access_token as string;
+    } catch {
+        return null;
+    }
+}
+
+// 統一トークン更新 (single-flight)。rawRest 直叩きを最優先し、ダメなら supabase-js にフォールバック。
+// 同時多発の 401 でも更新は 1 回に相乗りさせる (refresh_token のローテーション衝突を防ぐ)。
+let tokenRefreshInFlight: Promise<string | null> | null = null;
+function doTokenRefresh(): Promise<string | null> {
+    if (!tokenRefreshInFlight) {
+        tokenRefreshInFlight = (async () => {
+            const viaRest = await refreshViaRest();
+            if (viaRest) return viaRest;
             try {
                 const { data } = await supabase.auth.refreshSession();
                 return data.session?.access_token ?? null;
             } catch {
                 return null;
-            } finally {
-                forceRefreshInFlight = null;
             }
-        })();
+        })().finally(() => { tokenRefreshInFlight = null; });
     }
-    return timeout(forceRefreshInFlight, 8000, null);
+    return timeout(tokenRefreshInFlight, 10000, null);
+}
+
+// 「叩く前に」有効なトークンを用意する (期限切れ/間近なら先回り更新)。
+async function getValidAccessToken(): Promise<string | null> {
+    const { token, expiresAtMs } = readStoredAuth();
+    if (token && expiresAtMs && expiresAtMs > Date.now() + 60_000) return token;
+    const fresh = await doTokenRefresh();
+    return fresh ?? token; // 更新失敗時は手元トークンで賭ける (後段の 401 リトライが拾う)
+}
+
+// 401 を見てからの強制リフレッシュ (最後の砦)。
+async function forceRefresh(): Promise<string | null> {
+    return doTokenRefresh();
 }
 
 // supabase-js の auth ロック待ちを避けるため localStorage の JWT で PostgREST を直接叩くヘルパー。

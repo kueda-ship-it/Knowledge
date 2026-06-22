@@ -454,7 +454,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         isManagerOrAbove(user.role) ||
         (!!selectedProposal.author && selectedProposal.author.trim() === user.name?.trim())
     );
-    // 問題点（概要）だけは Admin のみ全件、他は自分の起票のみ (manager も他人のものは不可)
+    // 問題点（概要）とタイトルは Admin のみ全件、他は自分の起票のみ (manager も他人のものは不可)
     const canEditProblemOverview = !!selectedProposal && !!user && (
         isAdminRole(user.role) ||
         (!!selectedProposal.author && selectedProposal.author.trim() === user.name?.trim())
@@ -1431,7 +1431,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                         ) : (
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '12px' }}>
                                 <h2 style={{ flex: 1, fontSize: '1.85rem', fontWeight: 700, margin: 0, color: 'var(--text)', lineHeight: 1.3 }}>{selectedProposal.title}</h2>
-                                {canEditProposal && (
+                                {canEditProblemOverview && (
                                     <button title="タイトルを編集" onClick={() => { editBaselineRef.current = selectedProposal.updated_at ?? null; setTitleDraft(selectedProposal.title); setEditingTitle(true); }}
                                         style={{ flexShrink: 0, marginTop: '4px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '6px 8px', color: 'var(--text-dim)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
                                         <Edit2 size={14} />

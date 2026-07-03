@@ -453,19 +453,19 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                             onClick={e => { if (onAuthorClick) { e.stopPropagation(); onAuthorClick(item.author); } }}
                                             title={onAuthorClick ? `${item.author} のプロフィールを見る` : undefined}
                                             style={{
-                                                display: 'flex', alignItems: 'center', gap: '6px',
-                                                fontSize: '0.78rem', color: '#94a3b8',
+                                                display: 'flex', alignItems: 'center', gap: '8px',
+                                                fontSize: '0.9rem', color: '#cbd5e1',
                                                 minWidth: 0, overflow: 'hidden',
                                                 cursor: onAuthorClick ? 'pointer' : 'default',
                                             }}>
                                             {getAuthorAvatar(item.author) ? (
-                                                <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                                                <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                                             ) : (
-                                                <div className="user-avatar-fallback" style={{ width: '18px', height: '18px', fontSize: '0.6rem', flexShrink: 0 }}>
+                                                <div className="user-avatar-fallback" style={{ width: '26px', height: '26px', fontSize: '0.8rem', flexShrink: 0 }}>
                                                     {getInitial(item.author)}
                                                 </div>
                                             )}
-                                            <span style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.author}</span>
+                                            <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.author}</span>
                                         </div>
                                     </div>
                                     {/* 日付 (両行・中央揃え、フォント 0.78rem で投稿者と合わせる) */}

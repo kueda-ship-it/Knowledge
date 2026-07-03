@@ -166,11 +166,14 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     // タイトルのインライン編集
     const [editingTitle, setEditingTitle] = useState(false);
     const [titleDraft, setTitleDraft] = useState('');
+    // 種別(category)のインライン編集 (Admin のみ)
+    const [editingCategory, setEditingCategory] = useState(false);
+    const [categoryDraft, setCategoryDraft] = useState('');
     const [editingDecision, setEditingDecision] = useState(false);
     const [decisionDraft, setDecisionDraft] = useState('');
     const [editingVisibility, setEditingVisibility] = useState(false);
     const [visibilityDraft, setVisibilityDraft] = useState<string[]>([]);
-    const [savingField, setSavingField] = useState<'title' | 'problem' | 'proposal' | 'decision' | 'visibility' | 'assignee' | null>(null);
+    const [savingField, setSavingField] = useState<'title' | 'problem' | 'proposal' | 'decision' | 'visibility' | 'assignee' | 'category' | null>(null);
     // 担当者の割当編集
     const [editingAssignee, setEditingAssignee] = useState(false);
     const [assigneeDraft, setAssigneeDraft] = useState<string>(''); // profiles.id or '' (未割当)
@@ -460,6 +463,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         (!!selectedProposal.author && selectedProposal.author.trim() === user.name?.trim())
     );
     const canEditDecision = !!user && isManagerOrAbove(user.role);
+    // 種別(category)の変更は Admin のみ
+    const canEditCategory = !!user && isAdminRole(user.role);
     const canAddComment = !!user && user.role !== 'viewer';
 
     // 保存前の競合チェック。開いた時点の updated_at と DB 現在値を照合し、
@@ -510,6 +515,26 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         } catch (e: any) {
             console.error("Failed to save proposal:", e);
             window.alert(`改善提案の保存に失敗しました。入力内容は残っています。\n${e?.message ?? ''}`);
+        } finally {
+            setSavingField(null);
+        }
+    };
+
+    const handleSaveCategory = async () => {
+        if (!selectedProposal || !user?.id) return;
+        const cat = categoryDraft.trim();
+        if (!cat) return;
+        setSavingField('category');
+        try {
+            if (await hasRemoteConflict()) { setConflictField('proposal'); return; }
+            await withTimeout(apiClient.updateProposalContent(selectedProposal.id, { category: cat }, user.id), 15000, 'updateProposalContent(category)');
+            const now = new Date().toISOString();
+            setProposals(prev => prev.map(p => p.id === selectedProposal.id ? { ...p, category: cat, updated_by: user.id, updated_at: now } : p));
+            setSelectedProposal(prev => prev ? { ...prev, category: cat, updated_by: user.id, updated_at: now } : null);
+            setEditingCategory(false);
+        } catch (e: any) {
+            console.error('Failed to save category:', e);
+            window.alert(`種別の保存に失敗しました。\n${e?.message ?? ''}`);
         } finally {
             setSavingField(null);
         }
@@ -1390,14 +1415,43 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <ModalCloseButton onClick={() => setSelectedProposal(null)} />
-                                <span style={{
-                                    padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600,
-                                    background: getCategoryStyles(selectedProposal.category || '').bg,
-                                    color: getCategoryStyles(selectedProposal.category || '').color,
-                                    border: `1px solid ${getCategoryStyles(selectedProposal.category || '').border}`,
-                                }}>
-                                    {getNormalizedCategory(selectedProposal.category)}
-                                </span>
+                                {editingCategory ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{ minWidth: 180, border: '1px solid var(--input-border)', borderRadius: 8, background: 'var(--input-bg)' }}>
+                                            <GlassSelect
+                                                compact
+                                                value={categoryDraft}
+                                                onChange={setCategoryDraft}
+                                                options={[...masterCategories, 'その他'].map(c => ({ value: c, label: c }))}
+                                            />
+                                        </div>
+                                        <button onClick={handleSaveCategory} disabled={savingField === 'category'} title="保存"
+                                            style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.5)', borderRadius: '10px', padding: '6px 8px', color: 'var(--primary)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
+                                            <Check size={14} />
+                                        </button>
+                                        <button onClick={() => setEditingCategory(false)} title="キャンセル"
+                                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '6px 8px', color: 'var(--text-dim)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <span style={{
+                                            padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600,
+                                            background: getCategoryStyles(selectedProposal.category || '').bg,
+                                            color: getCategoryStyles(selectedProposal.category || '').color,
+                                            border: `1px solid ${getCategoryStyles(selectedProposal.category || '').border}`,
+                                        }}>
+                                            {getNormalizedCategory(selectedProposal.category)}
+                                        </span>
+                                        {canEditCategory && (
+                                            <button title="種別を変更" onClick={() => { editBaselineRef.current = selectedProposal.updated_at ?? null; setCategoryDraft(getNormalizedCategory(selectedProposal.category)); setEditingCategory(true); }}
+                                                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '6px 8px', color: 'var(--text-dim)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
+                                                <Edit2 size={14} />
+                                            </button>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         </div>
 

@@ -341,7 +341,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const handleDeleteProposal = async () => {
         if (!selectedProposal) return;
         const title = selectedProposal.title || '(無題)';
-        if (!window.confirm(`提議「${title}」を削除します。合議コメントも一緒に削除されます。よろしいですか？`)) return;
+        if (!window.confirm(`提議「${title}」を削除します。コメントも一緒に削除されます。よろしいですか？`)) return;
         try {
             await apiClient.deleteProposal(selectedProposal.id);
             setProposals(prev => prev.filter(p => p.id !== selectedProposal.id));
@@ -633,7 +633,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             setComments(enriched as OperationalProposalComment[]);
         } catch (e: any) {
             console.error("Failed to add comment:", e);
-            window.alert(`合議の送信に失敗しました。入力内容は残っています。再試行してください。\n${e?.message ?? ''}`);
+            window.alert(`コメントの送信に失敗しました。入力内容は残っています。再試行してください。\n${e?.message ?? ''}`);
         } finally {
             setCommentBusy(false);
         }
@@ -645,7 +645,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             setComments(prev => prev.filter(c => c.id !== commentId));
         } catch (e: any) {
             console.error("Failed to delete comment:", e);
-            window.alert(`合議の削除に失敗しました。再試行してください。\n${e?.message ?? ''}`);
+            window.alert(`コメントの削除に失敗しました。再試行してください。\n${e?.message ?? ''}`);
         }
     };
 
@@ -1789,7 +1789,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                     <textarea
                                                         value={decisionDraft}
                                                         onChange={e => setDecisionDraft(e.target.value)}
-                                                        placeholder="決定事項を記録 (合議の結論)"
+                                                        placeholder="決定事項を記録 (議論の結論)"
                                                         style={{ ...editAreaStyle, border: '1px solid rgba(52,211,153,0.4)', background: 'rgba(52,211,153,0.04)' }}
                                                     />
                                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -2004,18 +2004,18 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                             })()}
                         </div>
 
-                        {/* 合議スレッド */}
+                        {/* コメントスレッド */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '28px', marginBottom: '32px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <MessageSquare size={16} style={{ color: 'var(--text-dim)' }} />
-                                <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.95rem' }}>合議</span>
+                                <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.95rem' }}>コメント</span>
                                 <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>{comments.length} 件</span>
                             </div>
 
                             {commentsLoading ? (
                                 <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>読み込み中…</div>
                             ) : comments.length === 0 ? (
-                                <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>まだ議論の記録はありません。</div>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>まだコメントはありません。</div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {comments.map(c => {
@@ -2059,7 +2059,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                     <textarea
                                         value={commentDraft}
                                         onChange={e => setCommentDraft(e.target.value)}
-                                        placeholder="議論内容を追記 (Ctrl+Enter で送信)"
+                                        placeholder="コメントを入力 (Ctrl+Enter で送信)"
                                         onKeyDown={e => {
                                             if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
                                             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -2086,7 +2086,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 cursor: commentDraft.trim() && !commentBusy ? 'pointer' : 'not-allowed',
                                                 fontSize: '0.85rem',
                                             }}>
-                                            <Send size={13} />{commentBusy ? '送信中…' : '追記する'}
+                                            <Send size={13} />{commentBusy ? '送信中…' : 'コメントする'}
                                         </button>
                                     </div>
                                 </div>

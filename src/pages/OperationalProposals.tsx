@@ -1863,7 +1863,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <div style={{ ...blockStyle, border: '1px solid rgba(52,211,153,0.25)', background: 'rgba(52,211,153,0.05)', padding: '10px 14px' }}>
+                                                    <div style={{ ...blockStyle, border: '1px solid rgba(52,211,153,0.25)', background: 'rgba(52,211,153,0.05)', padding: '12px 28px' }}>
                                                         {assignee ? (
                                                             <UserIdentity name={assignee.name} size={24} />
                                                         ) : (
@@ -1941,7 +1941,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <div style={{ ...blockStyle, border: '1px solid rgba(96,165,250,0.25)', background: 'rgba(96,165,250,0.05)', padding: '10px 14px' }}>
+                                                    <div style={{ ...blockStyle, border: '1px solid rgba(96,165,250,0.25)', background: 'rgba(96,165,250,0.05)', padding: '12px 28px' }}>
                                                         {forcedAll && !isAllVisible && (
                                                             <div style={{ fontSize: '0.72rem', color: '#fbbf24', marginBottom: 6 }}>
                                                                 ⚠ 決定事項ありのため設定に関わらず全員公開

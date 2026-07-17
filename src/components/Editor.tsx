@@ -169,8 +169,10 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             author: item?.author || user.name,
             // 最終更新者は毎回現ユーザー (status/content/title 以外の編集でも正確に追跡するため専用列で保持)
             updatedBy: user.name,
-            // クレーム強度 (0=通常、1-10=クレーム)
-            claimLevel: Math.max(0, Math.min(10, Math.round(formData.claimLevel ?? 0))),
+            // クレーム強度 (1-10)。インシデント (クレーム案件) のみ有効、トラブルは常に 0
+            claimLevel: (formData.recordType ?? 'trouble') === 'incident'
+                ? Math.max(0, Math.min(10, Math.round(formData.claimLevel ?? 0)))
+                : 0,
             attachments,
         };
 
@@ -397,7 +399,12 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                                 <button
                                     key={opt.value}
                                     type="button"
-                                    onClick={() => setFormData(p => ({ ...p, recordType: opt.value }))}
+                                    onClick={() => setFormData(p => ({
+                                        ...p,
+                                        recordType: opt.value,
+                                        // インシデント=クレーム案件なので強度必須 (未設定なら Lv.1)。トラブルは強度なし
+                                        claimLevel: opt.value === 'incident' ? ((p.claimLevel ?? 0) > 0 ? p.claimLevel : 1) : 0,
+                                    }))}
                                     style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '6px',
                                         height: '32px', padding: '0 16px', boxSizing: 'border-box',
@@ -416,6 +423,86 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                     </div>
                     <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>トラブル = 通常の障害対応 / インシデント = クレーム案件</span>
                 </div>
+
+                {/* クレーム強度 (1-10)。インシデント = クレーム案件のときだけ表示。数値が上がるほど赤が濃くなる */}
+                {(formData.recordType ?? 'trouble') === 'incident' && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '12px 14px',
+                        background: `rgba(239, 68, 68, ${0.04 + 0.012 * (formData.claimLevel ?? 0)})`,
+                        border: `1px solid rgba(239, 68, 68, ${0.25 + 0.04 * (formData.claimLevel ?? 0)})`,
+                        borderRadius: '10px',
+                        transition: 'all 0.18s ease',
+                    }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minWidth: '110px' }}>
+                            <AlertOctagon size={16} style={{ color: '#ef4444' }} />
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fca5a5' }}>クレーム強度</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', flex: 1 }}>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(lv => {
+                                const active = (formData.claimLevel ?? 0) === lv;
+                                // 強度に応じて赤の濃さを変える (1=薄、10=濃)
+                                const intensity = lv / 10;
+                                return (
+                                    <button
+                                        key={lv}
+                                        type="button"
+                                        onClick={() => setFormData(p => ({ ...p, claimLevel: lv }))}
+                                        className="cursor-hint-pill"
+                                        title={`クレーム Lv.${lv}`}
+                                        style={{
+                                            height: '28px', minWidth: '32px',
+                                            padding: '0 10px',
+                                            boxSizing: 'border-box', lineHeight: 1,
+                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                            background: active ? `rgba(239, 68, 68, ${0.35 + 0.5 * intensity})` : `rgba(239, 68, 68, ${0.06 + 0.08 * intensity})`,
+                                            border: `1px solid ${active ? `rgba(239, 68, 68, ${0.7 + 0.3 * intensity})` : `rgba(239, 68, 68, ${0.25 + 0.05 * intensity})`}`,
+                                            color: active ? '#fff' : '#fca5a5',
+                                            borderRadius: '10px', cursor: 'pointer',
+                                            fontSize: '0.82rem', fontWeight: active ? 700 : 500,
+                                            whiteSpace: 'nowrap',
+                                            boxShadow: active ? `0 0 ${8 + 12 * intensity}px rgba(239,68,68,${0.3 + 0.3 * intensity})` : 'none',
+                                        }}
+                                    >
+                                        {lv}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {/* 提議に展開ボタン (権限ある人かつ既存ナレッジで、展開先 callback がある時のみ表示) */}
+                        {item?.id && onDispatchToProposal && user.role !== 'viewer' && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const lv = formData.claimLevel ?? 0;
+                                    const prefix = lv > 0 ? `[クレーム${lv >= 7 ? '・重大' : ''}] ` : '';
+                                    const baseTitle = (formData.title?.trim()) || `[${formData.category}] ${selectedIncidents.join(', ')}`;
+                                    const titleWithPrefix = baseTitle.startsWith('[クレーム') ? baseTitle : `${prefix}${baseTitle}`;
+                                    onDispatchToProposal({
+                                        title: titleWithPrefix,
+                                        problem: formData.phenomenon || '',
+                                        proposal: formData.countermeasure || '',
+                                        category: formData.category || undefined,
+                                        priority: lv >= 7 ? '高' : lv >= 4 ? '中' : '低',
+                                        source_knowledge_id: item.id,
+                                    });
+                                }}
+                                className="cursor-hint-pill"
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                    height: '28px', padding: '0 12px', boxSizing: 'border-box',
+                                    background: 'rgba(99, 102, 241, 0.15)',
+                                    border: '1px solid rgba(99, 102, 241, 0.5)',
+                                    color: '#c7d2fe', fontSize: '0.82rem', fontWeight: 700,
+                                    borderRadius: '10px', cursor: 'pointer', whiteSpace: 'nowrap',
+                                }}
+                                title="このナレッジを下書きとして提議画面を開きます"
+                            >
+                                <Send size={13} /> 提議に展開
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* 区分 & 詳細 (ラベルは種別に連動) */}
                 <div style={{ display: 'flex', gap: '14px', padding: '18px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid var(--border)' }}>
@@ -487,96 +574,6 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                             style={{ width: '100%', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)' }}
                         />
                     </div>
-                </div>
-
-                {/* クレーム強度 (0=通常、1-10=クレーム強度。数値が上がるほど赤が濃くなる) */}
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: '10px',
-                    padding: '12px 14px',
-                    background: (formData.claimLevel ?? 0) > 0
-                        ? `rgba(239, 68, 68, ${0.04 + 0.012 * (formData.claimLevel ?? 0)})`
-                        : 'rgba(255,255,255,0.03)',
-                    border: (formData.claimLevel ?? 0) > 0
-                        ? `1px solid rgba(239, 68, 68, ${0.25 + 0.04 * (formData.claimLevel ?? 0)})`
-                        : '1px solid var(--border)',
-                    borderRadius: '10px',
-                    transition: 'all 0.18s ease',
-                }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minWidth: '110px' }}>
-                        <AlertOctagon size={16} style={{ color: (formData.claimLevel ?? 0) > 0 ? '#ef4444' : 'var(--muted)' }} />
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: (formData.claimLevel ?? 0) > 0 ? '#fca5a5' : 'var(--text)' }}>クレーム強度</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', flex: 1 }}>
-                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(lv => {
-                            const active = (formData.claimLevel ?? 0) === lv;
-                            const isZero = lv === 0;
-                            // 強度に応じて赤の濃さを変える (1=薄、10=濃)
-                            const intensity = lv / 10;
-                            const bg = active
-                                ? (isZero ? 'rgba(255,255,255,0.12)' : `rgba(239, 68, 68, ${0.35 + 0.5 * intensity})`)
-                                : (isZero ? 'rgba(255,255,255,0.04)' : `rgba(239, 68, 68, ${0.06 + 0.08 * intensity})`);
-                            const border = active
-                                ? (isZero ? 'rgba(255,255,255,0.4)' : `rgba(239, 68, 68, ${0.7 + 0.3 * intensity})`)
-                                : (isZero ? 'rgba(255,255,255,0.15)' : `rgba(239, 68, 68, ${0.25 + 0.05 * intensity})`);
-                            const fg = active
-                                ? (isZero ? 'rgba(255,255,255,0.95)' : '#fff')
-                                : (isZero ? 'rgba(255,255,255,0.6)' : '#fca5a5');
-                            return (
-                                <button
-                                    key={lv}
-                                    type="button"
-                                    onClick={() => setFormData(p => ({ ...p, claimLevel: lv }))}
-                                    className="cursor-hint-pill"
-                                    title={isZero ? '通常 (クレームではない)' : `クレーム Lv.${lv}`}
-                                    style={{
-                                        height: '28px', minWidth: isZero ? '56px' : '32px',
-                                        padding: '0 10px',
-                                        boxSizing: 'border-box', lineHeight: 1,
-                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                        background: bg, border: `1px solid ${border}`, color: fg,
-                                        borderRadius: '10px', cursor: 'pointer',
-                                        fontSize: '0.82rem', fontWeight: active ? 700 : 500,
-                                        whiteSpace: 'nowrap',
-                                        boxShadow: active && !isZero ? `0 0 ${8 + 12 * intensity}px rgba(239,68,68,${0.3 + 0.3 * intensity})` : 'none',
-                                    }}
-                                >
-                                    {isZero ? '通常' : lv}
-                                </button>
-                            );
-                        })}
-                    </div>
-                    {/* 提議に展開ボタン (権限ある人かつ既存ナレッジで、展開先 callback がある時のみ表示) */}
-                    {item?.id && onDispatchToProposal && user.role !== 'viewer' && (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const lv = formData.claimLevel ?? 0;
-                                const prefix = lv > 0 ? `[クレーム${lv >= 7 ? '・重大' : ''}] ` : '';
-                                const baseTitle = (formData.title?.trim()) || `[${formData.category}] ${selectedIncidents.join(', ')}`;
-                                const titleWithPrefix = baseTitle.startsWith('[クレーム') ? baseTitle : `${prefix}${baseTitle}`;
-                                onDispatchToProposal({
-                                    title: titleWithPrefix,
-                                    problem: formData.phenomenon || '',
-                                    proposal: formData.countermeasure || '',
-                                    category: formData.category || undefined,
-                                    priority: lv >= 7 ? '高' : lv >= 4 ? '中' : '低',
-                                    source_knowledge_id: item.id,
-                                });
-                            }}
-                            className="cursor-hint-pill"
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                height: '28px', padding: '0 12px', boxSizing: 'border-box',
-                                background: 'rgba(99, 102, 241, 0.15)',
-                                border: '1px solid rgba(99, 102, 241, 0.5)',
-                                color: '#c7d2fe', fontSize: '0.82rem', fontWeight: 700,
-                                borderRadius: '10px', cursor: 'pointer', whiteSpace: 'nowrap',
-                            }}
-                            title="このナレッジを下書きとして提議画面を開きます"
-                        >
-                            <Send size={13} /> 提議に展開
-                        </button>
-                    )}
                 </div>
 
                 {/* 2. Unit info */}

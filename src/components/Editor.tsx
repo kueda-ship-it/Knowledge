@@ -263,6 +263,9 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         setAttachments(prev => prev.filter(a => a.id !== id));
     };
 
+    // 種別に応じて区分/詳細セレクトのラベル接頭辞を切り替える (トラブル区分 / インシデント区分)
+    const typeLabel = (formData.recordType ?? 'trouble') === 'incident' ? 'インシデント' : 'トラブル';
+
     return (
         <div style={{ padding: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -381,49 +384,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             )}
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                {/* 1. Incident Category & Details (Moved to top) */}
-                <div style={{ display: 'flex', gap: '14px', padding: '18px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label>インシデント区分 <span style={{ color: 'red' }}>*</span></label>
-                        <div style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--input-border)', borderRadius: '8px', background: 'var(--input-bg)' }}>
-                            <GlassSelect
-                                value={formData.category || ''}
-                                options={[{ value: '', label: '選択してください' }, ...masters.categories.map(c => ({ value: c, label: c }))]}
-                                onChange={(v) => setFormData(prev => ({ ...prev, category: v }))}
-                            />
-                        </div>
-                    </div>
-                    <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label>インシデント詳細 (選択追加) <span style={{ color: 'red' }}>*</span></label>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--input-border)', borderRadius: '8px', background: 'var(--input-bg)' }}>
-                                <GlassSelect
-                                    value=""
-                                    options={[
-                                        { value: '', label: '選択してください' },
-                                        ...masters.incidents
-                                            .filter(i => !selectedIncidents.includes(i))
-                                            .map(i => ({ value: i, label: i })),
-                                    ]}
-                                    onChange={(v) => {
-                                        if (v && !selectedIncidents.includes(v)) {
-                                            setSelectedIncidents([...selectedIncidents, v]);
-                                        }
-                                    }}
-                                />
-                            </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                                {selectedIncidents.map(inc => (
-                                    <div key={inc} style={{ background: 'var(--border)', color: 'var(--text)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                        {inc} <X size={12} cursor="pointer" onClick={() => removeIncident(inc)} />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 種別 (トラブル / インシデント) */}
+                {/* 種別 (トラブル / インシデント)。区分/詳細のラベルはこの選択に連動する */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <label style={{ fontSize: '0.85rem', fontWeight: 'bold', minWidth: '36px' }}>種別</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -452,6 +413,49 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                                 </button>
                             );
                         })}
+                    </div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>トラブル = 通常の障害対応 / インシデント = クレーム案件</span>
+                </div>
+
+                {/* 区分 & 詳細 (ラベルは種別に連動) */}
+                <div style={{ display: 'flex', gap: '14px', padding: '18px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label>{typeLabel}区分 <span style={{ color: 'red' }}>*</span></label>
+                        <div style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--input-border)', borderRadius: '8px', background: 'var(--input-bg)' }}>
+                            <GlassSelect
+                                value={formData.category || ''}
+                                options={[{ value: '', label: '選択してください' }, ...masters.categories.map(c => ({ value: c, label: c }))]}
+                                onChange={(v) => setFormData(prev => ({ ...prev, category: v }))}
+                            />
+                        </div>
+                    </div>
+                    <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label>{typeLabel}詳細 (選択追加) <span style={{ color: 'red' }}>*</span></label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--input-border)', borderRadius: '8px', background: 'var(--input-bg)' }}>
+                                <GlassSelect
+                                    value=""
+                                    options={[
+                                        { value: '', label: '選択してください' },
+                                        ...masters.incidents
+                                            .filter(i => !selectedIncidents.includes(i))
+                                            .map(i => ({ value: i, label: i })),
+                                    ]}
+                                    onChange={(v) => {
+                                        if (v && !selectedIncidents.includes(v)) {
+                                            setSelectedIncidents([...selectedIncidents, v]);
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                {selectedIncidents.map(inc => (
+                                    <div key={inc} style={{ background: 'var(--border)', color: 'var(--text)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        {inc} <X size={12} cursor="pointer" onClick={() => removeIncident(inc)} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
 

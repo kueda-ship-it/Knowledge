@@ -88,7 +88,10 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const [usersMaster, setUsersMaster] = useState<User[]>(() => loadUsersCache());
     const [groupCategories, setGroupCategories] = useState<string[]>([]); // master_categories.name (= グループ)
     const [activeCategory, setActiveCategory] = useState<string>('全て');
-    const [activeStatus, setActiveStatus] = useState<string>('全て');
+    // ステータスは複数選択 (空 = 全て)。例: ['未着手','対応中'] = 完了以外を絞り込み
+    const [activeStatuses, setActiveStatuses] = useState<string[]>([]);
+    // 自分が担当(割当)の提議だけに絞り込むトグル
+    const [mineOnly, setMineOnly] = useState<boolean>(false);
     const [selectedProposal, setSelectedProposal] = useState<OperationalProposal | null>(null);
     const [sortMode, setSortMode] = useState<SortMode>('date');
 
@@ -127,7 +130,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     useEffect(() => {
         if (!initialNavParams) return;
         if (initialNavParams.proposalStatus) {
-            setActiveStatus(initialNavParams.proposalStatus);
+            setActiveStatuses([initialNavParams.proposalStatus]);
         }
         if (initialNavParams.proposalCategory) {
             setActiveCategory(initialNavParams.proposalCategory);
@@ -881,8 +884,14 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             ? proposals
             : proposals.filter(p => getNormalizedCategory(p.category) === activeCategory);
 
-        if (activeStatus !== '全て') {
-            filtered = filtered.filter(p => p.status === activeStatus);
+        // 自分の担当のみ (割当が自分の profiles.id)
+        if (mineOnly && user?.id) {
+            filtered = filtered.filter(p => p.assignee_id === user.id);
+        }
+
+        // ステータス複数選択 (空 = 全て)。選択されたいずれかに一致で通過。
+        if (activeStatuses.length > 0) {
+            filtered = filtered.filter(p => activeStatuses.includes(p.status));
         }
 
         return [...filtered].sort((a, b) => {
@@ -1018,7 +1027,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                         <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', margin: 0 }}>運用提議</h1>
                         {!loading && (
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                                {activeCategory === '全て'
+                                {(activeCategory === '全て' && activeStatuses.length === 0 && !mineOnly)
                                     ? `全 ${proposals.length} 件`
                                     : `${filteredProposals.length} 件 / 全 ${proposals.length} 件`}
                             </span>
@@ -1081,10 +1090,31 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                             );
                         })}
                     </div>
-                    {/* ステータスフィルター */}
+                    {/* ステータスフィルター (複数選択可) + 自分の担当トグル */}
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap', alignItems: 'center' }}>
+                        {/* 自分の担当のみ (割当が自分) */}
+                        {user?.id && (
+                            <button
+                                className={`badge-tab${mineOnly ? ' is-active' : ''}`}
+                                onClick={() => setMineOnly(v => !v)}
+                                title="自分に割り当てられた提議のみ表示"
+                                style={{
+                                    display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '5px',
+                                    height: '26px', padding: '0 12px', boxSizing: 'border-box', lineHeight: 1,
+                                    fontSize: '0.72rem', marginRight: '4px',
+                                    color: mineOnly ? '#818cf8' : 'rgba(255,255,255,0.5)',
+                                    background: mineOnly ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.05)',
+                                    borderColor: mineOnly ? '#818cf8' : 'rgba(255,255,255,0.1)',
+                                    boxShadow: mineOnly ? '0 4px 15px rgba(99,102,241,0.35)' : 'none',
+                                    fontWeight: mineOnly ? 700 : 400,
+                                }}>
+                                <UserCheck size={12} style={{ flexShrink: 0 }} />
+                                自分の担当
+                            </button>
+                        )}
                         {(['全て', '未着手', '対応中', '完了', '保留'] as const).map(s => {
-                            const isActive = activeStatus === s;
+                            const isAll = s === '全て';
+                            const isActive = isAll ? activeStatuses.length === 0 : activeStatuses.includes(s);
                             const sc: Record<string, { color: string; bg: string; glow: string }> = {
                                 '未着手': { color: '#f87171', bg: 'rgba(248,113,113,0.15)', glow: 'rgba(248,113,113,0.35)' },
                                 '対応中': { color: '#fbbf24', bg: 'rgba(251,191,36,0.15)',  glow: 'rgba(251,191,36,0.35)'  },
@@ -1092,9 +1122,14 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                 '保留':   { color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', glow: 'rgba(148,163,184,0.25)' },
                             };
                             const c = sc[s];
+                            const toggleStatus = () => {
+                                if (isAll) { setActiveStatuses([]); return; }
+                                setActiveStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+                            };
                             return (
                                 <button key={s} className={`badge-tab${isActive ? ' is-active' : ''}`}
                                     style={{
+                                        display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '5px', lineHeight: 1,
                                         fontSize: '0.72rem', padding: '4px 12px',
                                         ...(c ? {
                                             color: isActive ? c.color : 'rgba(255,255,255,0.5)',
@@ -1111,7 +1146,10 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                             fontWeight: isActive ? 700 : 400,
                                         })
                                     }}
-                                    onClick={() => setActiveStatus(s)}>{s}</button>
+                                    onClick={toggleStatus}>
+                                    {!isAll && isActive && <Check size={12} style={{ flexShrink: 0 }} />}
+                                    {s}
+                                </button>
                             );
                         })}
                     </div>

@@ -946,6 +946,24 @@ export const apiClient = {
         return map;
     },
 
+    // 一覧の「自分の担当」フィルタ用: 各提議の問題点項目に割り当てられた担当者 id を集約。
+    // proposal_id -> assignee_id[] (重複なし)。項目レベルの担当も一覧で拾えるようにする。
+    async fetchAllProblemAssignees(): Promise<Record<string, string[]>> {
+        const res = await rawRest(
+            `/rest/v1/operational_proposal_problems?select=proposal_id,assignee_id&assignee_id=not.is.null`,
+            { method: 'GET' },
+        );
+        if (!res.ok) throw new Error(`担当の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        const rows = (await res.json()) as Array<{ proposal_id: string; assignee_id: string | null }>;
+        const map: Record<string, string[]> = {};
+        for (const r of rows) {
+            if (!r.assignee_id) continue;
+            const arr = map[r.proposal_id] ?? (map[r.proposal_id] = []);
+            if (!arr.includes(r.assignee_id)) arr.push(r.assignee_id);
+        }
+        return map;
+    },
+
     async getNextProposalNo(category: string): Promise<string> {
         // supabase-js 経由だと auth ロック詰まりで追加処理が止まるため rawRest で直叩き
         const res = await rawRest(

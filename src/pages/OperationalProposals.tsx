@@ -161,6 +161,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const [problemBusy, setProblemBusy] = useState(false);
     // 提議ごとの進捗サマリ (一覧カード用): proposal_id -> { done, total }
     const [progressById, setProgressById] = useState<Record<string, { done: number; total: number }>>({});
+    // 一覧「自分の担当」用: proposal_id -> 問題点項目に割り当てられた担当者id[]
+    const [problemAssigneesById, setProblemAssigneesById] = useState<Record<string, string[]>>({});
     const [editingProposal, setEditingProposal] = useState(false);
     const [proposalDraft, setProposalDraft] = useState('');
     // 問題点（概要）のインライン編集
@@ -221,6 +223,9 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         apiClient.fetchAllProblemProgress()
             .then(map => { if (!cancelled) setProgressById(map); })
             .catch(e => console.warn('[OperationalProposals] fetchAllProblemProgress failed:', e?.message));
+        apiClient.fetchAllProblemAssignees()
+            .then(map => { if (!cancelled) setProblemAssigneesById(map); })
+            .catch(e => console.warn('[OperationalProposals] fetchAllProblemAssignees failed:', e?.message));
         return () => { cancelled = true; };
     }, []);
 
@@ -417,6 +422,10 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                 if (cancelled) return;
                 setProblems(rows);
                 setProgressById(prev => ({ ...prev, [selectedProposal.id]: { done: rows.filter(r => r.done).length, total: rows.length } }));
+                setProblemAssigneesById(prev => ({
+                    ...prev,
+                    [selectedProposal.id]: Array.from(new Set(rows.map(r => r.assignee_id).filter((x): x is string => !!x))),
+                }));
             })
             .catch(e => console.warn('[OperationalProposals] fetchProposalProblems failed:', e?.message))
             .finally(() => { if (!cancelled) setProblemsLoading(false); });
@@ -819,11 +828,20 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const handleAssignProblem = async (problem: ProposalProblem, assigneeId: string) => {
         const prev = problems;
         const newId = assigneeId || null;
-        setProblems(prev.map(p => p.id === problem.id ? { ...p, assignee_id: newId } : p));
+        const nextProblems = prev.map(p => p.id === problem.id ? { ...p, assignee_id: newId } : p);
+        setProblems(nextProblems);
+        setProblemAssigneesById(m => ({
+            ...m,
+            [problem.proposal_id]: Array.from(new Set(nextProblems.map(p => p.assignee_id).filter((x): x is string => !!x))),
+        }));
         try {
             await withTimeout(apiClient.updateProposalProblem(problem.id, { assignee_id: newId }), 15000, 'updateProposalProblem(assignee)');
         } catch (e: any) {
             setProblems(prev);
+            setProblemAssigneesById(m => ({
+                ...m,
+                [problem.proposal_id]: Array.from(new Set(prev.map(p => p.assignee_id).filter((x): x is string => !!x))),
+            }));
             window.alert(`項目の担当者保存に失敗しました。\n${e?.message ?? ''}`);
         }
     };
@@ -884,9 +902,12 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             ? proposals
             : proposals.filter(p => getNormalizedCategory(p.category) === activeCategory);
 
-        // 自分の担当のみ (割当が自分の profiles.id)
+        // 自分の担当のみ: 提議レベルの割当 or 問題点項目レベルの割当が自分
         if (mineOnly && user?.id) {
-            filtered = filtered.filter(p => p.assignee_id === user.id);
+            filtered = filtered.filter(p =>
+                p.assignee_id === user.id ||
+                (problemAssigneesById[p.id] ?? []).includes(user.id),
+            );
         }
 
         // ステータス複数選択 (空 = 全て)。選択されたいずれかに一致で通過。

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Mail, Lock, ArrowRight, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -12,6 +12,36 @@ export const Login: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+
+    // OAuth リダイレクト失敗時、Supabase は ?error=...&error_code=...&error_description=...
+    // を query または hash に付けて戻す（例: 2026-07-28 Azure クライアントシークレット失効）。
+    useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#\/?/, ''));
+        const get = (key: string) => searchParams.get(key) ?? hashParams.get(key);
+
+        const oauthError = get('error');
+        if (!oauthError) return;
+
+        const errorCode = get('error_code') ?? oauthError;
+        const description = get('error_description') ?? '';
+        const detail = description ? ` (詳細: ${description})` : '';
+
+        if (errorCode === 'server_error' || errorCode === 'unexpected_failure' || oauthError === 'server_error') {
+            setError(`サインイン処理でサーバーエラーが発生しました。管理者にお問い合わせください。${detail}`);
+        } else {
+            setError(`サインインに失敗しました。${detail}`);
+        }
+
+        const url = new URL(window.location.href);
+        for (const key of ['error', 'error_code', 'error_description']) {
+            url.searchParams.delete(key);
+            hashParams.delete(key);
+        }
+        const rest = hashParams.toString();
+        url.hash = rest ? `#${rest}` : '';
+        window.history.replaceState({}, document.title, url.toString());
+    }, []);
 
     const handleEmailAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -77,6 +107,12 @@ export const Login: React.FC = () => {
                             <p style={{ color: 'var(--muted)', marginBottom: '32px', fontSize: '0.9rem' }}>
                                 アカウントでサインインしてください
                             </p>
+
+                            {error && (
+                                <div className="auth-error" style={{ marginTop: 0, marginBottom: '20px' }}>
+                                    {error}
+                                </div>
+                            )}
 
                             {/* Microsoft SSO */}
                             <button onClick={signInWithMicrosoft} className="microsoft-login-btn">

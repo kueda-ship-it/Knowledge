@@ -51,7 +51,7 @@ FC では「依頼ヘッダー画面 (物件名・型-号機・依頼番号・�
 - title: 障害内容 + 対象・原因の短い要約 (例:「フルタイムロッカー 全扉開かず（F7 ヒューズ切れ・列基板焦げ）」)
 - phenomenon: ← 「現地症状」「備考欄（現地症状）」。発生した事象・確認された状態の要約
 - countermeasure: ← 「処置内容」「備考欄（処置内容）」。実施した対処に加え、今後の対応条件 (部品承認待ち・交換条件など) も含める
-- machine: ← 「型-号機」「号機」欄の英数字 (例: 表示が「H - 7798」なら空白を除いて "H-7798")。設備の種類名ではなく号機番号を優先する
+- machine: ← 「型-号機」「号機」欄の号機番号の**数字のみ** (型式プレフィックスは含めない。例: 「H - 7798」→ "7798"、「FRC-420073」→ "420073")
 - property: ← 「物件名」欄 (例: ヒルズ栗平)。無ければ会社名・設置場所
 - req_num: ← 「依頼番号」欄の半角数字11桁 (例: 12607280302)。11桁以外なら省略
 - category: 次の選択肢に一致する場合のみ: ${categories}
@@ -99,9 +99,14 @@ export function sanitizeDraft(
     ? d.incidents.map(String).filter(i => incidentMaster.length === 0 || incidentMaster.includes(i))
     : undefined;
 
+  // 号機は数字のみ (LLM が「FRC-420073」形式で返しても "420073" に正規化)
+  const machineRaw = d.machine ? String(d.machine).trim() : "";
+  const machineMatch = machineRaw.match(/^[A-Za-z]*[-\s]*(\d+)$/);
+  const machine = machineMatch ? machineMatch[1] : (machineRaw || undefined);
+
   return {
     title,
-    machine: d.machine ? String(d.machine) : undefined,
+    machine,
     property: d.property ? String(d.property) : undefined,
     req_num: typeof d.req_num === "string" && /^\d{11}$/.test(d.req_num) ? d.req_num : undefined,
     category: category && (categories.length === 0 || categories.includes(category)) ? category : undefined,

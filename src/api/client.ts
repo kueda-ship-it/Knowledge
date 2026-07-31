@@ -1117,16 +1117,33 @@ export const apiClient = {
             proposed_at: p.proposed_at ?? p.created_at,
         }));
 
-        // 30秒でタイムアウト（ハング防止）
-        const invokeP = supabase.functions.invoke('gemini-chat', {
-            body: { query, history, knowledge: kSlim, proposals: pSlim, images: images?.length ? images : undefined },
-        });
-        const timeoutP = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 30000)
-        );
-        const { data, error } = await Promise.race([invokeP, timeoutP]) as any;
-        if (error) throw error;
-        const d = (data ?? {}) as any;
+        // supabase.functions.invoke は auth ロックで送信前にハングする事例があるため fetch 直叩き。
+        // 画像付き (Gemini vision) は処理が 30 秒を超えることがあるため 60 秒に延長。
+        const url = (import.meta as any).env.VITE_SUPABASE_URL as string;
+        const anonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY as string;
+        const timeoutMs = images?.length ? 60000 : 30000;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+        let res: Response;
+        try {
+            res = await fetch(`${url}/functions/v1/gemini-chat`, {
+                method: 'POST',
+                headers: {
+                    'apikey': anonKey,
+                    'Authorization': `Bearer ${anonKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query, history, knowledge: kSlim, proposals: pSlim, images: images?.length ? images : undefined }),
+                signal: ctrl.signal,
+            });
+        } catch (e: any) {
+            if (e?.name === 'AbortError') throw new Error('GEMINI_TIMEOUT');
+            throw e;
+        } finally {
+            clearTimeout(timer);
+        }
+        if (!res.ok) throw new Error(`gemini-chat HTTP ${res.status}`);
+        const d = ((await res.json().catch(() => null)) ?? {}) as any;
         // action は LLM が返した時のみ含まれる。形式チェックは UI 側で実施。
         const action = d.action && typeof d.action === 'object' ? (d.action as ChatAction) : undefined;
         return {

@@ -1,4 +1,3 @@
-import { supabase } from '../lib/supabase';
 import { KnowledgeItem } from '../types';
 
 // extract-knowledge Edge Function が返すドラフト。KnowledgeDraft の抽出専用スーパーセット
@@ -92,20 +91,42 @@ export function mergeDraft(
     return out;
 }
 
-// extract-knowledge Edge Function を 30 秒タイムアウト付きで呼ぶ
+// extract-knowledge Edge Function を 30 秒タイムアウト付きで呼ぶ。
+// supabase.functions.invoke は auth ロックで送信前にハングする事例があるため
+// (本プロジェクト既知の地雷)、rawRest と同じく fetch で直接叩く。
 export async function extractKnowledgeFromImages(
     images: EncodedImage[],
     current: MergeCurrent,
     masters: { categories: string[]; incidents: string[] },
 ): Promise<ExtractedKnowledgeDraft> {
-    const invokeP = supabase.functions.invoke('extract-knowledge', {
-        body: { images, current, masters },
-    });
-    const timeoutP = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('EXTRACT_TIMEOUT')), 30000)
-    );
-    const { data, error } = await Promise.race([invokeP, timeoutP]) as any;
-    if (error) throw error;
+    const url = (import.meta as any).env.VITE_SUPABASE_URL as string;
+    const anonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY as string;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    let res: Response;
+    try {
+        res = await fetch(`${url}/functions/v1/extract-knowledge`, {
+            method: 'POST',
+            headers: {
+                'apikey': anonKey,
+                'Authorization': `Bearer ${anonKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ images, current, masters }),
+            signal: controller.signal,
+        });
+    } catch (e: any) {
+        if (e?.name === 'AbortError') throw new Error('EXTRACT_TIMEOUT');
+        throw e;
+    } finally {
+        clearTimeout(timer);
+    }
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+        throw new Error((data as any)?.error ? `抽出エラー: ${(data as any).error}` : `抽出エラー (HTTP ${res.status})`);
+    }
     const draft = (data as any)?.draft;
     if (!draft || typeof draft !== 'object') throw new Error('抽出結果が空でした');
     return draft as ExtractedKnowledgeDraft;

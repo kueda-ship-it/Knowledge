@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { KnowledgeItem, MasterData, Attachment, ProposalDraft, ReactionType } from '../types';
-import { Trash2, X, RotateCcw, Check, Paperclip, ExternalLink, FileText, Image, ShieldCheck, ShieldAlert, AlertTriangle, Clock, History, MessageSquare, AlertOctagon, Send } from 'lucide-react';
+import { Trash2, X, RotateCcw, Check, Paperclip, ExternalLink, FileText, Image, ShieldCheck, ShieldAlert, AlertTriangle, Clock, History, MessageSquare, AlertOctagon, Send, Sparkles } from 'lucide-react';
 import { ReactionBar } from './ReactionBar';
 import { KnowledgeComments } from './KnowledgeComments';
 import { applyReactionToggle, reactionCountsOf, reactionUsersOf } from '../constants/reactions';
@@ -11,6 +11,8 @@ import { GlassSelect } from './common/GlassSelect';
 import { isManagerOrAbove } from '../constants/roles';
 import { TagInput } from './common/TagInput';
 import { TagStat } from '../utils/tagUtils';
+import { EncodedImage, encodeImageForExtraction, extractKnowledgeFromImages, mergeDraft, currentFromForm } from '../utils/screenshotExtract';
+import { getToken } from '../lib/microsoftGraph';
 
 interface EditorProps {
     item: KnowledgeItem | null;
@@ -20,11 +22,13 @@ interface EditorProps {
     onCancel: () => void;
     user: { name: string, role: string, email?: string };
     existingTags?: TagStat[];
+    // AI チャット経由で渡されたスクショ (OneDrive アップロード + 追加抽出に使う)
+    initialFiles?: File[] | null;
     // 「提議に展開」ボタンを押した時のフック。親 (App) が提議画面に遷移して下書きを開く。
     onDispatchToProposal?: (draft: ProposalDraft) => void;
 }
 
-export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete, onCancel, user, existingTags = [], onDispatchToProposal }) => {
+export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete, onCancel, user, existingTags = [], initialFiles, onDispatchToProposal }) => {
     const [formData, setFormData] = useState<Partial<KnowledgeItem>>({
         title: '', machine: '', property: '', req_num: '',
         category: '', incidents: [], tags: [], content: '',
@@ -43,6 +47,19 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
     const [wrongComment, setWrongComment] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { uploadFile, uploading, statusMessage, isAuthenticated, authenticate } = useOneDriveUpload(user.email as string | undefined);
+
+    // --- スクショ AI 読み取り ---
+    const [aiState, setAiState] = useState<'idle' | 'reading' | 'done' | 'error'>('idle');
+    const [aiNote, setAiNote] = useState('');
+    // セッション中に貼られた全画像 (毎回まとめて統合読み取りする)
+    const aiImagesRef = useRef<EncodedImage[]>([]);
+    // ユーザーが status を手動で切り替えたか (true なら AI 判定で status を動かさない)
+    const statusTouchedRef = useRef(false);
+    // 並行抽出の競合対策: 最後に発行したリクエストの結果だけ反映する
+    const extractSeqRef = useRef(0);
+    // formData 等の最新値を抽出コールバックから参照するための ref
+    const latestFormRef = useRef({ formData, selectedIncidents, tagInput });
+    latestFormRef.current = { formData, selectedIncidents, tagInput };
 
     useEffect(() => {
         if (item) {
@@ -73,6 +90,11 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             setAttachments([]);
             setHistory([]);
         }
+        aiImagesRef.current = [];
+        setAiState('idle');
+        setAiNote('');
+        // 既存ナレッジの status は投稿者の判断済みの値なので AI で勝手に動かさない
+        statusTouchedRef.current = !!item?.id;
     }, [item]);
 
     const canEdit = !item ||
@@ -239,12 +261,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         if (files.length === 0) return;
         e.target.value = ''; // 同じファイルを再選択できるようリセット
 
-        for (const file of files) {
-            const att = await uploadFile(file);
-            if (att) {
-                setAttachments(prev => [...prev, att]);
-            }
-        }
+        await handleIncomingFiles(files);
     };
 
     const handleMachineBlur = async () => {
@@ -265,11 +282,101 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         setAttachments(prev => prev.filter(a => a.id !== id));
     };
 
+    // 貼られた全画像 + 現在の入力値で extract-knowledge を呼び、空欄フィールドにのみ反映する
+    const runExtraction = async () => {
+        const images = aiImagesRef.current.slice(-5); // 抽出対象は直近 5 枚まで
+        if (images.length === 0) return;
+        const seq = ++extractSeqRef.current;
+        setAiState('reading');
+        setAiNote('');
+        try {
+            const { formData: fd, selectedIncidents: inc, tagInput: ti } = latestFormRef.current;
+            const current = currentFromForm(fd, inc, ti);
+            const draft = await extractKnowledgeFromImages(images, current, {
+                categories: masters.categories,
+                incidents: masters.incidents,
+            });
+            if (seq !== extractSeqRef.current) return; // 後続リクエストがあるので破棄
+            const latest = latestFormRef.current;
+            const merged = mergeDraft(
+                currentFromForm(latest.formData, latest.selectedIncidents, latest.tagInput),
+                draft,
+                statusTouchedRef.current,
+            );
+            const { tags, incidents, ...formFields } = merged;
+            if (Object.keys(formFields).length > 0) {
+                setFormData(prev => ({ ...prev, ...formFields }));
+            }
+            if (incidents) setSelectedIncidents(incidents);
+            if (tags) setTagInput(tags.join(' #'));
+            setAiState('done');
+            setTimeout(() => setAiState(s => (s === 'done' ? 'idle' : s)), 4000);
+        } catch (e: any) {
+            if (seq !== extractSeqRef.current) return;
+            console.warn('[extract-knowledge] failed:', e);
+            setAiState('error');
+            setAiNote(e?.message === 'EXTRACT_TIMEOUT' ? '読み取りがタイムアウトしました' : (e?.message || '読み取りに失敗しました'));
+        }
+    };
+
+    // 貼り付け / D&D / ファイル選択で入ってきたファイルの共通処理。
+    // 画像は「OneDrive 添付 (認証済みの場合)」と「AI 読み取り」の両方に流す。
+    const handleIncomingFiles = async (files: File[]) => {
+        if (!canEdit || files.length === 0) return;
+
+        const imageFiles = files.filter(f => f.type.startsWith('image/'));
+        // 画像の base64 化は先に済ませて即読み取りを開始する (アップロードを待たない)
+        if (imageFiles.length > 0) {
+            try {
+                const encoded = await Promise.all(imageFiles.map(encodeImageForExtraction));
+                aiImagesRef.current = [...aiImagesRef.current, ...encoded];
+                runExtraction();
+            } catch (e) {
+                console.warn('[encodeImage] failed:', e);
+            }
+        }
+
+        // isAuthenticated state はマウント直後に確定していないことがあるためトークンを直接確認
+        const token = await getToken().catch(() => null);
+        if (token) {
+            for (const file of files) {
+                const att = await uploadFile(file);
+                if (att) setAttachments(prev => [...prev, att]);
+            }
+        } else {
+            setAiNote('OneDrive 未認証のため添付には追加されていません (Microsoft認証後に「ファイルを追加」から添付できます)');
+        }
+    };
+
+    const handlePaste = (e: React.ClipboardEvent) => {
+        const files = Array.from(e.clipboardData?.files || []).filter(f => f.type.startsWith('image/'));
+        if (files.length === 0) return;
+        e.preventDefault();
+        handleIncomingFiles(files);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        const files = Array.from(e.dataTransfer?.files || []);
+        if (files.length > 0) handleIncomingFiles(files);
+    };
+
+    // AI チャット経由のスクショ (initialFiles) を一度だけ処理する
+    const initialFilesConsumedRef = useRef(false);
+    useEffect(() => {
+        if (initialFilesConsumedRef.current) return;
+        if (initialFiles && initialFiles.length > 0) {
+            initialFilesConsumedRef.current = true;
+            handleIncomingFiles(initialFiles);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialFiles]);
+
     // 種別に応じて区分/詳細セレクトのラベル接頭辞を切り替える (トラブル区分 / インシデント区分)
     const typeLabel = (formData.recordType ?? 'trouble') === 'incident' ? 'インシデント' : 'トラブル';
 
     return (
-        <div style={{ padding: '20px' }}>
+        <div style={{ padding: '20px' }} onPaste={handlePaste} onDrop={handleDrop} onDragOver={e => e.preventDefault()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', fontWeight: 'bold' }}>
                     <i className="fa-solid fa-pen"></i> ナレッジ編集
@@ -386,6 +493,30 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             )}
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                {/* スクショ AI 読み取りステータス (FC 報告画面などを Ctrl+V / D&D で貼ると自動抽出) */}
+                {(aiState !== 'idle' || aiNote) && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '10px 14px', borderRadius: '10px',
+                        background: aiState === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(99, 102, 241, 0.1)',
+                        border: `1px solid ${aiState === 'error' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(99, 102, 241, 0.4)'}`,
+                        fontSize: '0.85rem',
+                        color: aiState === 'error' ? '#fca5a5' : 'var(--text)',
+                    }}>
+                        <Sparkles size={16} style={{
+                            color: aiState === 'error' ? '#ef4444' : '#818cf8', flexShrink: 0,
+                            animation: aiState === 'reading' ? 'pulse 1.2s ease-in-out infinite' : 'none',
+                        }} />
+                        <span>
+                            {aiState === 'reading' && 'AI がスクリーンショットを読み取り中…'}
+                            {aiState === 'done' && '読み取り完了 — 内容を確認してください'}
+                            {aiState === 'error' && `AI 読み取り失敗: ${aiNote}`}
+                            {aiState === 'idle' && aiNote}
+                        </span>
+                        <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }`}</style>
+                    </div>
+                )}
+
                 {/* 種別 (トラブル / インシデント)。区分/詳細のラベルはこの選択に連動する */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <label style={{ fontSize: '0.85rem', fontWeight: 'bold', minWidth: '36px' }}>種別</label>
@@ -550,14 +681,14 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <div
                             className={`status-toggle-btn solved ${formData.status === 'solved' ? 'active' : ''}`}
-                            onClick={() => setFormData(p => ({ ...p, status: 'solved' }))}
+                            onClick={() => { statusTouchedRef.current = true; setFormData(p => ({ ...p, status: 'solved' })); }}
                             title="解決済みにする"
                         >
                             <Check size={24} strokeWidth={3} />
                         </div>
                         <div
                             className={`status-toggle-btn unsolved ${formData.status === 'unsolved' ? 'active' : ''}`}
-                            onClick={() => setFormData(p => ({ ...p, status: 'unsolved' }))}
+                            onClick={() => { statusTouchedRef.current = true; setFormData(p => ({ ...p, status: 'unsolved' })); }}
                             title="未解決に戻す"
                         >
                             <RotateCcw size={22} strokeWidth={2.5} />
@@ -683,6 +814,12 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                             <Paperclip size={14} />
                             {uploading ? statusMessage || 'アップロード中...' : 'ファイルを追加'}
                         </button>
+                    )}
+                    {canEdit && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: 'var(--muted)', marginTop: '6px' }}>
+                            <Sparkles size={12} style={{ flexShrink: 0 }} />
+                            FC 報告画面などのスクショを Ctrl+V / ドラッグ&ドロップで貼ると、AI が読み取って空欄を自動入力します
+                        </div>
                     )}
                 </div>
 

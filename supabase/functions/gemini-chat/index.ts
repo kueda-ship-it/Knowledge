@@ -44,6 +44,8 @@ interface ChatRequest {
   history?: Array<{ role: "user" | "assistant"; content: string }>;
   knowledge: KnowledgeSlim[];
   proposals: ProposalSlim[];
+  // 添付画像 (FC 障害報告画面のスクショ等)。base64、最大 5 枚
+  images?: Array<{ mimeType: string; data: string }>;
 }
 
 interface ChatResult {
@@ -151,6 +153,13 @@ action.type の選び方:
 | 「評価の確認画面」 | navigate {view:'evaluation'} |
 | 「メインメニューに戻して」 | navigate {view:'menu'} |
 
+画像が添付されている場合:
+- 画像は FC (フルタイムシステム社内 Web) の「障害対応要請/報告書」「対応結果」画面などのスクリーンショットであることが多い
+- 画像から障害内容を読み取り、ナレッジ登録の意図があれば create_knowledge を返す。draft は次のように埋める:
+  title=障害内容+原因の短い要約 / phenomenon=現地症状の要約 / countermeasure=処置内容の要約 (今後の対応条件も含める) / machine=対象設備 / tags=症状・部品名 3〜5 個 / status=完了なら solved・一次対応止まりなら unsolved
+- 「これを登録して」のように文言が短くても、画像に具体的内容があれば create_knowledge でよい (title は画像から取る)
+- 質問だけの場合 (「これと似た事例ある？」等) は action を出さず、読み取った症状で既存ナレッジを検索して返す
+
 ★ 内容が不明 vs 具体的の判断基準:
 - 「提議を立てたい」「ナレッジを登録したい」のように **何についてか書かれていない** → openCreate (空フォームを開く)
 - 「○○について提議を立てたい」のように **対象 / 問題が書かれている** → create_proposal/knowledge で draft を返す
@@ -208,8 +217,9 @@ serve(async (req: Request) => {
     });
   }
 
-  const { query, history = [], knowledge = [], proposals = [] } = body;
-  if (!query || typeof query !== "string") {
+  const { query, history = [], knowledge = [], proposals = [], images = [] } = body;
+  const imageList = Array.isArray(images) ? images.slice(0, 5) : [];
+  if ((!query || typeof query !== "string") && imageList.length === 0) {
     return new Response(JSON.stringify({ error: "query required" }), {
       status: 400,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
@@ -217,12 +227,18 @@ serve(async (req: Request) => {
   }
 
   const systemPrompt = buildSystemPrompt(knowledge, proposals);
+  const userParts: Array<Record<string, unknown>> = [
+    { text: query || "(画像を確認してください)" },
+    ...imageList.map(img => ({
+      inline_data: { mime_type: img.mimeType || "image/jpeg", data: img.data },
+    })),
+  ];
   const contents = [
     ...history.map(m => ({
       role: m.role === "user" ? "user" : "model",
       parts: [{ text: m.content }],
     })),
-    { role: "user", parts: [{ text: query }] },
+    { role: "user", parts: userParts },
   ];
 
   const geminiBody = {

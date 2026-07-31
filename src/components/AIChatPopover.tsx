@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Send, CheckCircle, AlertCircle, X, ClipboardList, Zap, Check, XCircle } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle, AlertCircle, X, ClipboardList, Zap, Check, XCircle, ImagePlus } from 'lucide-react';
 import { ChatMessage, KnowledgeItem, ChatProposalRef } from '../types';
 
 interface AIChatPopoverProps {
     chatMessages: ChatMessage[];
     isChatSearching: boolean;
-    onChatSend: (text: string) => void;
+    onChatSend: (text: string, images?: File[]) => void;
     onChatResultClick: (item: KnowledgeItem) => void;
     onProposalClick?: (p: ChatProposalRef) => void;
     onActionConfirm?: (messageId: string) => void;
@@ -23,7 +23,24 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [chatInput, setChatInput] = useState('');
+    // 送信前に添付されたスクショ (プレビュー用 object URL とペアで保持)
+    const [pendingImages, setPendingImages] = useState<Array<{ file: File; previewUrl: string }>>([]);
     const chatBottomRef = useRef<HTMLDivElement>(null);
+    const imageInputRef = useRef<HTMLInputElement>(null);
+
+    const addImages = (files: File[]) => {
+        const imgs = files.filter(f => f.type.startsWith('image/'));
+        if (imgs.length === 0) return;
+        setPendingImages(prev => [
+            ...prev,
+            ...imgs.map(file => ({ file, previewUrl: URL.createObjectURL(file) })),
+        ].slice(0, 5));
+    };
+
+    const removeImage = (previewUrl: string) => {
+        URL.revokeObjectURL(previewUrl);
+        setPendingImages(prev => prev.filter(p => p.previewUrl !== previewUrl));
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -37,8 +54,10 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
     }, [chatMessages]);
 
     const handleChatSubmit = () => {
-        if (!chatInput.trim() || isChatSearching) return;
-        onChatSend(chatInput.trim());
+        if ((!chatInput.trim() && pendingImages.length === 0) || isChatSearching) return;
+        onChatSend(chatInput.trim(), pendingImages.length ? pendingImages.map(p => p.file) : undefined);
+        pendingImages.forEach(p => URL.revokeObjectURL(p.previewUrl));
+        setPendingImages([]);
         setChatInput('');
     };
 
@@ -345,11 +364,62 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                     </div>
 
                     <div className="glass-subtle" style={{ padding: '16px', borderTop: '1px solid var(--glass-border)', borderRadius: '0 0 16px 16px' }}>
+                        {pendingImages.length > 0 && (
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                {pendingImages.map(p => (
+                                    <div key={p.previewUrl} style={{ position: 'relative', width: '52px', height: '52px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+                                        <img src={p.previewUrl} alt="添付画像" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <button
+                                            onClick={() => removeImage(p.previewUrl)}
+                                            style={{
+                                                position: 'absolute', top: '2px', right: '2px',
+                                                width: '16px', height: '16px', borderRadius: '50%',
+                                                background: 'rgba(0,0,0,0.65)', border: 'none', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                                            }}
+                                        >
+                                            <X size={10} color="white" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         <div style={{ display: 'flex', gap: '8px' }}>
-                            <input 
+                            <input
+                                ref={imageInputRef}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={e => {
+                                    addImages(Array.from(e.target.files || []));
+                                    e.target.value = '';
+                                }}
+                                style={{ display: 'none' }}
+                            />
+                            <button
+                                onClick={() => imageInputRef.current?.click()}
+                                disabled={isChatSearching}
+                                title="スクショを添付 (Ctrl+V でも貼り付けできます)"
+                                style={{
+                                    width: '44px', height: '44px', borderRadius: '50%', padding: 0, flexShrink: 0,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    background: 'transparent', border: '1px solid var(--glass-border)',
+                                    color: pendingImages.length ? 'var(--primary)' : 'var(--muted)', cursor: 'pointer',
+                                }}
+                            >
+                                <ImagePlus size={18} />
+                            </button>
+                            <input
                                 type="text"
                                 value={chatInput}
                                 onChange={e => setChatInput(e.target.value)}
+                                onPaste={e => {
+                                    const files = Array.from(e.clipboardData?.files || []).filter(f => f.type.startsWith('image/'));
+                                    if (files.length > 0) {
+                                        e.preventDefault();
+                                        addImages(files);
+                                    }
+                                }}
                                 onKeyDown={e => {
                                     // IME 変換中 (Enterで確定) は送信しない
                                     if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
@@ -358,22 +428,22 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                                         handleChatSubmit();
                                     }
                                 }}
-                                placeholder="メッセージを入力..."
+                                placeholder={pendingImages.length ? 'スクショについて指示を入力 (空欄でも送信可)...' : 'メッセージを入力...'}
                                 style={{
-                                    flex: 1, padding: '12px 16px', borderRadius: '24px', 
+                                    flex: 1, padding: '12px 16px', borderRadius: '24px',
                                     border: '1px solid var(--input-border)', fontSize: '0.9rem',
                                     background: 'var(--input-bg)', color: 'var(--text)',
                                     boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)'
                                 }}
                             />
-                            <button 
+                            <button
                                 onClick={handleChatSubmit}
-                                disabled={!chatInput.trim() || isChatSearching}
+                                disabled={(!chatInput.trim() && pendingImages.length === 0) || isChatSearching}
                                 className="primary-btn"
-                                style={{ 
-                                    width: '44px', height: '44px', borderRadius: '50%', padding: '0', 
+                                style={{
+                                    width: '44px', height: '44px', borderRadius: '50%', padding: '0',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    opacity: (!chatInput.trim() || isChatSearching) ? 0.6 : 1
+                                    opacity: ((!chatInput.trim() && pendingImages.length === 0) || isChatSearching) ? 0.6 : 1
                                 }}
                             >
                                 <Send size={18} style={{ marginLeft: '2px' }}/>

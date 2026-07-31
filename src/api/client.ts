@@ -1091,6 +1091,7 @@ export const apiClient = {
         history: Array<{ role: 'user' | 'assistant'; content: string }>,
         knowledge: KnowledgeItem[],
         proposals: any[],
+        images?: Array<{ mimeType: string; data: string }>,
     ): Promise<{ message: string; knowledgeIds: string[]; proposalIds: string[]; action?: ChatAction }> {
         const kSlim = knowledge.map(k => ({
             id: k.id,
@@ -1118,7 +1119,7 @@ export const apiClient = {
 
         // 30秒でタイムアウト（ハング防止）
         const invokeP = supabase.functions.invoke('gemini-chat', {
-            body: { query, history, knowledge: kSlim, proposals: pSlim },
+            body: { query, history, knowledge: kSlim, proposals: pSlim, images: images?.length ? images : undefined },
         });
         const timeoutP = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 30000)

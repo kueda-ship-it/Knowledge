@@ -18,6 +18,9 @@ interface KnowledgeProps {
     // AI チャットの create_knowledge アクション。新規エディタを下書き入りで開く。
     initialNewDraft?: KnowledgeDraft | null;
     onInitialNewDraftConsumed?: () => void;
+    // AI チャットで送られたスクショ。新規エディタに渡して OneDrive 添付 + 追加抽出する
+    initialNewFiles?: File[] | null;
+    onInitialNewFilesConsumed?: () => void;
     // AI チャットの navigate アクション (検索 / フィルタ反映)
     initialNavParams?: NavigateParams | null;
     onInitialNavParamsConsumed?: () => void;
@@ -39,7 +42,7 @@ const sortByCreatedDesc = (items: KnowledgeItem[]): KnowledgeItem[] =>
         return bk.localeCompare(ak);
     });
 
-export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditItem, onInitialEditConsumed, initialNewDraft, onInitialNewDraftConsumed, initialNavParams, onInitialNavParamsConsumed, onDispatchToProposal }) => {
+export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditItem, onInitialEditConsumed, initialNewDraft, onInitialNewDraftConsumed, initialNewFiles, onInitialNewFilesConsumed, initialNavParams, onInitialNavParamsConsumed, onDispatchToProposal }) => {
     const [view, setView] = useState<'list' | 'editor'>('list');
     const [data, setData] = useState<KnowledgeItem[]>(() =>
         sortByCreatedDesc(loadCache<KnowledgeItem[]>(CACHE_KEY, []))
@@ -62,6 +65,8 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
 
     // Editor state
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
+    // AI チャット経由のスクショ (新規エディタにのみ渡す)
+    const [chatFiles, setChatFiles] = useState<File[] | null>(null);
 
     // コメント数 (knowledge_id → 件数)。一覧カードのバッジ表示用
     const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
@@ -266,12 +271,14 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
 
     const handleAddItem = () => {
         setEditingItem(null);
+        setChatFiles(null);
         setView('editor');
     };
 
     const handleEditItem = async (item: KnowledgeItem) => {
         // fetchAll で全フィールド取得済みのため、キャッシュを即座に表示
         setEditingItem(item);
+        setChatFiles(null);
         setView('editor');
         recordViewSafe(item);
         // バックグラウンドで最新詳細を取得し、取得できたら更新（失敗してもキャッシュ表示のまま）
@@ -316,8 +323,10 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
             updatedBy: user.name,
         };
         setEditingItem(draft);
+        setChatFiles(initialNewFiles ?? null);
         setView('editor');
         onInitialNewDraftConsumed?.();
+        onInitialNewFilesConsumed?.();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialNewDraft]);
 
@@ -445,6 +454,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                                     onCancel={() => setView('list')}
                                     user={user}
                                     existingTags={existingTagStats}
+                                    initialFiles={chatFiles}
                                     onDispatchToProposal={onDispatchToProposal}
                                 />
                             </div>

@@ -19,6 +19,7 @@ import { useVersionCheck } from './hooks/useVersionCheck';
 import { UpdateBanner } from './components/UpdateBanner';
 import { ToastStack } from './components/ToastStack';
 import { searchKnowledge } from './utils/searchUtils';
+import { encodeImageForExtraction } from './utils/screenshotExtract';
 
 type Theme = 'light' | 'dark' | 'liquid';
 const THEME_ORDER: Theme[] = ['light', 'dark', 'liquid'];
@@ -51,6 +52,10 @@ function App() {
     // AI チャットからの一括連携
     const [pendingProposalDraft, setPendingProposalDraft] = useState<ProposalDraft | null>(null);
     const [pendingKnowledgeDraft, setPendingKnowledgeDraft] = useState<KnowledgeDraft | null>(null);
+    // create_knowledge アクション確定時に Editor へ渡すスクショ (OneDrive 添付用)
+    const [pendingKnowledgeFiles, setPendingKnowledgeFiles] = useState<File[] | null>(null);
+    // チャットで送った画像を assistant メッセージ id に紐付けて保持 (action 確定時に取り出す)
+    const chatImageFilesRef = useRef<Record<string, File[]>>({});
     const [pendingNavParams, setPendingNavParams] = useState<NavigateParams | null>(null);
     const [proposals, setProposals] = useState<any[]>([]);
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -206,8 +211,11 @@ function App() {
         setCurrentView(view);
     };
 
-    const handleChatSend = async (text: string) => {
-        const userMsg: ChatMessage = { id: `u-${Date.now()}`, type: 'user', text };
+    const handleChatSend = async (text: string, images?: File[]) => {
+        const displayText = images?.length
+            ? `${text || '(スクショを送信)'} 📷×${images.length}`
+            : text;
+        const userMsg: ChatMessage = { id: `u-${Date.now()}`, type: 'user', text: displayText };
         setChatMessages(prev => [...prev, userMsg]);
         setIsChatSearching(true);
 
@@ -218,7 +226,11 @@ function App() {
         }));
 
         try {
-            const res = await apiClient.chatWithGemini(text, history, dashboardData, proposals);
+            // スクショは縮小 + base64 化してから送る (転送量削減)
+            const encoded = images?.length
+                ? await Promise.all(images.map(encodeImageForExtraction))
+                : undefined;
+            const res = await apiClient.chatWithGemini(text, history, dashboardData, proposals, encoded);
             const knowledgeHits = dashboardData.filter(k => res.knowledgeIds.includes(k.id));
             const proposalHits = proposals
                 .filter((p: any) => res.proposalIds.includes(p.id))
@@ -240,6 +252,10 @@ function App() {
                 action: res.action,
                 actionState: res.action ? 'pending' : undefined,
             };
+            // create_knowledge 確定時にスクショを Editor へ引き継げるよう保持
+            if (images?.length && res.action?.type === 'create_knowledge') {
+                chatImageFilesRef.current[assistantMsg.id] = images;
+            }
             setChatMessages(prev => [...prev, assistantMsg]);
         } catch (e) {
             console.warn('Gemini failed, falling back to keyword search:', e);
@@ -281,6 +297,7 @@ function App() {
                 }
                 case 'create_knowledge': {
                     setPendingKnowledgeDraft(action.draft);
+                    setPendingKnowledgeFiles(chatImageFilesRef.current[messageId] ?? null);
                     navigate('knowledge');
                     break;
                 }
@@ -364,6 +381,8 @@ function App() {
                         onInitialEditConsumed={() => setPendingEdit(null)}
                         initialNewDraft={pendingKnowledgeDraft}
                         onInitialNewDraftConsumed={() => setPendingKnowledgeDraft(null)}
+                        initialNewFiles={pendingKnowledgeFiles}
+                        onInitialNewFilesConsumed={() => setPendingKnowledgeFiles(null)}
                         initialNavParams={pendingNavParams}
                         onInitialNavParamsConsumed={() => setPendingNavParams(null)}
                         onDispatchToProposal={(draft) => {

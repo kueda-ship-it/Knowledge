@@ -49,8 +49,8 @@ FC では「依頼ヘッダー画面 (物件名・型-号機・依頼番号・�
 
 # フィールドマッピング (← の後は FC 画面上のラベル名)
 - title: 障害内容 + 対象・原因の短い要約 (例:「フルタイムロッカー 全扉開かず（F7 ヒューズ切れ・列基板焦げ）」)
-- phenomenon: ← 「現地症状」「備考欄（現地症状）」。発生した事象・確認された状態の要約
-- countermeasure: ← 「処置内容」「備考欄（処置内容）」。実施した対処に加え、今後の対応条件 (部品承認待ち・交換条件など) も含める
+- phenomenon: ← 「現地症状」「備考欄（現地症状）」。発生した事象・確認された状態の要約。**画像に症状の記載が無ければフィールドごと省略** (後から報告画面のスクショで埋めるため)
+- countermeasure: ← 「処置内容」「備考欄（処置内容）」。実施した対処に加え、今後の対応条件 (部品承認待ち・交換条件など) も含める。**画像に処置の記載が無ければフィールドごと省略**。「対応完了」等のステータス表示だけからの推測は禁止
 - machine: ← 「型-号機」「号機」欄の号機番号の**数字のみ** (型式プレフィックスは含めない。例: 「H - 7798」→ "7798"、「FRC-420073」→ "420073")
 - property: ← 「物件名」欄 (例: ヒルズ栗平)。無ければ会社名・設置場所
 - req_num: ← 「依頼番号」欄の半角数字11桁 (例: 12607280302)。11桁以外なら省略
@@ -64,7 +64,7 @@ ${currentJson}
 
 # 出力ルール
 1. 純粋な JSON のみを返す。コードブロックで包まない
-2. 読み取れないフィールドは省略する (空文字を入れない)
+2. 読み取れないフィールドは省略する (空文字を入れない)。「画像からは読み取れません」「不明です」のような説明文をフィールド値として入れることは**絶対に禁止**
 3. title は必ず入れる。どうしても読み取れない場合のみ "FC障害対応 (要確認)" とする
 4. 憶測で情報を作らない。画像に書かれていることだけを使う
 
@@ -104,14 +104,24 @@ export function sanitizeDraft(
   const machineMatch = machineRaw.match(/^[A-Za-z]*[-\s]*(\d+)$/);
   const machine = machineMatch ? machineMatch[1] : (machineRaw || undefined);
 
+  // 事象・対処に「画像からは読み取れない」等のメタ記述が入っていたら捨てる
+  // (実際の報告文が画像・スクショに言及することはない)。空欄のまま返せば
+  // 後から報告画面のスクショを貼ったときにマージで埋まる。
+  const cleanBody = (v: unknown): string | undefined => {
+    const s = v ? String(v).trim() : "";
+    if (!s) return undefined;
+    if (/画像|スクリーンショット|スクショ/.test(s)) return undefined;
+    return s;
+  };
+
   return {
     title,
     machine,
     property: d.property ? String(d.property) : undefined,
     req_num: typeof d.req_num === "string" && /^\d{11}$/.test(d.req_num) ? d.req_num : undefined,
     category: category && (categories.length === 0 || categories.includes(category)) ? category : undefined,
-    phenomenon: d.phenomenon ? String(d.phenomenon) : undefined,
-    countermeasure: d.countermeasure ? String(d.countermeasure) : undefined,
+    phenomenon: cleanBody(d.phenomenon),
+    countermeasure: cleanBody(d.countermeasure),
     tags: Array.isArray(d.tags) ? d.tags.map(String).filter(Boolean).slice(0, 8) : undefined,
     incidents: incidents && incidents.length ? incidents : undefined,
     status: d.status === "solved" || d.status === "unsolved" ? d.status : undefined,

@@ -157,6 +157,7 @@ action.type の選び方:
 - 画像は FC (フルタイムシステム社内 Web) の「障害対応要請/報告書」「対応結果」画面などのスクリーンショットであることが多い
 - 画像から障害内容を読み取り、ナレッジ登録の意図があれば create_knowledge を返す。draft は次のように埋める:
   title=障害内容+原因の短い要約 / phenomenon=現地症状の要約 / countermeasure=処置内容の要約 (今後の対応条件も含める) / machine=「型-号機」欄の号機番号の数字のみ (例: 「FRC-420073」→ "420073") / tags=症状・部品名 3〜5 個 / status=完了なら solved・一次対応止まりなら unsolved
+- phenomenon / countermeasure は画像に実際の記載がある場合のみ埋める。無ければ**フィールドごと省略**する。「画像からは読み取れません」のような説明文を入れることや、「対応完了」等のステータス表示だけからの推測は禁止
 - 「これを登録して」のように文言が短くても、画像に具体的内容があれば create_knowledge でよい (title は画像から取る)
 - 質問だけの場合 (「これと似た事例ある？」等) は action を出さず、読み取った症状で既存ナレッジを検索して返す
 
@@ -297,6 +298,13 @@ serve(async (req: Request) => {
       const machineRaw = draft.machine ? String(draft.machine).trim() : "";
       const machineMatch = machineRaw.match(/^[A-Za-z]*[-\s]*(\d+)$/);
       const machine = machineMatch ? machineMatch[1] : (machineRaw || undefined);
+      // 事象・対処の「画像からは読み取れない」等のメタ記述は捨てる (extract-knowledge と同じ)
+      const cleanBody = (v: unknown): string | undefined => {
+        const s = v ? String(v).trim() : "";
+        if (!s) return undefined;
+        if (/画像|スクリーンショット|スクショ/.test(s)) return undefined;
+        return s;
+      };
       return {
         type: "create_knowledge",
         confirmText: String(a.confirmText ?? `「${title}」をナレッジに登録します。よろしいですか？`),
@@ -304,8 +312,8 @@ serve(async (req: Request) => {
           title,
           machine,
           category: draft.category ? String(draft.category) : undefined,
-          phenomenon: draft.phenomenon ? String(draft.phenomenon) : undefined,
-          countermeasure: draft.countermeasure ? String(draft.countermeasure) : undefined,
+          phenomenon: cleanBody(draft.phenomenon),
+          countermeasure: cleanBody(draft.countermeasure),
           tags: Array.isArray(draft.tags) ? draft.tags.map(String) : undefined,
           incidents: Array.isArray(draft.incidents) ? draft.incidents.map(String) : undefined,
           status: (draft.status === "solved" || draft.status === "unsolved") ? draft.status : undefined,

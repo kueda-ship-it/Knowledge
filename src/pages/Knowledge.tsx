@@ -3,6 +3,7 @@ import { Sidebar } from '../components/Sidebar';
 import { KnowledgeList } from '../components/KnowledgeList';
 import { Editor } from '../components/Editor';
 import { UserProfileModal } from '../components/UserProfileModal';
+import { WhatsNewDialog } from '../components/WhatsNewDialog';
 import { KnowledgeItem, User, MasterData, KnowledgeDraft, NavigateParams, ProposalDraft, ReactionType } from '../types';
 import { apiClient, toItem } from '../api/client';
 import { applyReactionToggle } from '../constants/reactions';
@@ -390,6 +391,8 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
 
     return (
         <div className="view active" style={{ display: 'flex', height: '100%' }}>
+            {/* 機能更新のお知らせ (未読の場合のみ、画面を開いたとき 1 回表示) */}
+            <WhatsNewDialog />
             <div className="container" style={{ display: 'flex', width: '100%', height: '100%' }}>
                 <Sidebar
                     user={user}

@@ -80,7 +80,11 @@ clone 後、必ず:
 ## 7. その他の規約
 
 - ソートは **作成日降順** で固定、更新で並び替えない
-- 一覧カードは `display: grid` + `gridTemplateColumns` で列固定、識別系=左 / 属性系=中央
+- **ナレッジ一覧は SNS フィード型**（2026-08-04 確定、grid 列固定はこの画面では適用外）:
+  投稿ヘッダー + タイトル + 本文プレビュー（line-clamp）+ 画像インライン + リアクション行を常時表示。
+  画像は Supabase Storage `knowledge-thumbs` の縮小サムネ（原本は OneDrive）。
+  詳細は Vault の ADR `2026-08-04_sns-feed-timeline`
+- 一覧以外のテーブル的 UI は従来どおり `display: grid` + `gridTemplateColumns` で列固定、識別系=左 / 属性系=中央
 - 書き込み系は **必ずタイムアウト付き**（通常 15 秒）。supabase-js で詰まるパスは **`rawRest` (PostgREST 直叩き)** を使う
 - 応答は簡潔、コードコメントは原則書かない（非自明な WHY のみ）
 

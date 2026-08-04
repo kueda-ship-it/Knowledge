@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KnowledgeItem, User, ReactionType } from '../types';
+import { KnowledgeItem, User, ReactionType, Attachment } from '../types';
 import { RotateCcw, Check, Paperclip, AlertCircle, ChevronDown, ChevronUp, Edit3, AlertOctagon, Wrench, Siren, MessageSquare, Eye } from 'lucide-react';
 import { ReactionBar } from './ReactionBar';
 import { KnowledgeComments } from './KnowledgeComments';
@@ -9,6 +9,70 @@ import { reactionCountsOf, reactionUsersOf } from '../constants/reactions';
 const RECORD_TYPE_META: Record<'trouble' | 'incident', { label: string; rgb: string; Icon: typeof Wrench }> = {
     trouble: { label: 'トラブル', rgb: '245, 158, 11', Icon: Wrench },
     incident: { label: 'インシデント', rgb: '239, 68, 68', Icon: Siren },
+};
+
+// 添付ファイルチップ (画像以外、およびサムネの取れない画像のフォールバック)。クリックで OneDrive 原本
+const AttachmentChip: React.FC<{ att: Attachment }> = ({ att }) => (
+    <a
+        href={att.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="attachment-chip"
+        onClick={e => e.stopPropagation()}
+        title={att.name}
+        style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            height: '28px', padding: '0 12px', boxSizing: 'border-box', lineHeight: 1,
+            fontSize: '0.78rem', color: '#93c5fd', textDecoration: 'none',
+            background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.3)',
+            borderRadius: '8px', maxWidth: '260px', whiteSpace: 'nowrap', overflow: 'hidden',
+        }}>
+        <Paperclip size={12} style={{ flexShrink: 0 }} />
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{att.name}</span>
+    </a>
+);
+
+// フィード内のインライン画像。サムネ URL が失効している場合はチップにフォールバックして
+// 「添付があるのに見えない・開けない」状態を作らない
+const FeedImage: React.FC<{ att: Attachment; single: boolean; moreCount?: number }> = ({ att, single, moreCount }) => {
+    const [failed, setFailed] = useState(false);
+    const src = att.storageThumbUrl || att.thumbnailUrl;
+    // バックフィルで永続サムネが入ったら失敗状態を解除して画像表示に戻す
+    React.useEffect(() => { setFailed(false); }, [src]);
+    if (failed) {
+        return <div onClick={e => e.stopPropagation()}><AttachmentChip att={att} /></div>;
+    }
+    return (
+        <div
+            onClick={e => { e.stopPropagation(); window.open(att.url, '_blank', 'noopener'); }}
+            title={att.name}
+            style={{ position: 'relative', cursor: 'pointer' }}>
+            <img
+                src={att.storageThumbUrl || att.thumbnailUrl}
+                alt={att.name}
+                loading="lazy"
+                onError={() => setFailed(true)}
+                style={{
+                    width: '100%',
+                    maxHeight: single ? '380px' : undefined,
+                    aspectRatio: single ? undefined : '16 / 10',
+                    objectFit: 'cover',
+                    borderRadius: '12px',
+                    border: '1px solid var(--glass-border)',
+                    display: 'block',
+                }}
+            />
+            {moreCount ? (
+                <div style={{
+                    position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)',
+                    borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'white', fontWeight: 700, fontSize: '1.2rem',
+                }}>
+                    +{moreCount}
+                </div>
+            ) : null}
+        </div>
+    );
 };
 
 interface KnowledgeListProps {
@@ -137,8 +201,9 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 </button>
             </div>
 
-            {/* Status Filter Badges (overflow-x:auto は overflow-y を 'auto' 化して hover 浮き上がりを切るので、paddingTop/Bottom で余白を確保) */}
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', overflowX: 'auto', flexShrink: 0, paddingTop: '4px', paddingBottom: '4px' }}>
+            {/* フィルタピル: ステータス / 種別 / 区分を 1 行に横並び (グループ間は縦罫線で区切る)。
+                overflow-x:auto は overflow-y を 'auto' 化して hover 浮き上がりを切るので、paddingTop/Bottom で余白を確保 */}
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '20px', paddingTop: '4px', paddingBottom: '10px', borderBottom: '1px solid var(--border)', overflowX: 'auto', flexShrink: 0 }}>
                 {statusOptions.map(opt => {
                     const active = filterType === opt.value;
                     const tone = statusColorRgb[opt.value];
@@ -172,10 +237,9 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                         </button>
                     );
                 })}
-            </div>
 
-            {/* Record Type Filter Badges (トラブル / インシデント) */}
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', overflowX: 'auto', flexShrink: 0, paddingTop: '4px', paddingBottom: '4px' }}>
+                <div style={{ width: '1px', height: '20px', background: 'var(--border)', flexShrink: 0, margin: '0 4px' }} />
+
                 {([
                     { value: 'all', label: '全て', rgb: null as string | null },
                     { value: 'trouble', label: RECORD_TYPE_META.trouble.label, rgb: RECORD_TYPE_META.trouble.rgb },
@@ -212,10 +276,9 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                         </button>
                     );
                 })}
-            </div>
 
-            {/* Category Filters */}
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', paddingTop: '4px', paddingBottom: '10px', borderBottom: '1px solid var(--border)', overflowX: 'auto', flexShrink: 0 }}>
+                <div style={{ width: '1px', height: '20px', background: 'var(--border)', flexShrink: 0, margin: '0 4px' }} />
+
                 {categories.map(cat => {
                     const active = selectedCategories.includes(cat);
                     const tone = getCategoryColorRgb(cat);
@@ -242,7 +305,8 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 })}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* フィード: 中央寄せしつつ画面幅に追従 (狭い画面では全幅、広い画面では 76% を上限 1240px まで) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: 'clamp(720px, 76%, 1240px)', margin: '0 auto' }}>
                 {loading ? (
                     <div style={{ textAlign: 'center', marginTop: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -254,15 +318,26 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                     data.map((item, index) => {
                         const isExpanded = expandedId === item.id;
                         const commentCount = commentCounts?.[item.id] ?? 0;
-                        const hasSubRow = (item.tags && item.tags.length > 0) || (item.attachments && item.attachments.length > 0) || (item.incidents && item.incidents.length > 0) || commentCount > 0;
                         const catTone = getCategoryColorRgb(item.category || '');
+                        const rtMeta = RECORD_TYPE_META[item.recordType ?? 'trouble'];
+                        const RtIcon = rtMeta.Icon;
+                        const atts = item.attachments ?? [];
+                        const images = atts.filter(a => a.type?.startsWith('image/') && (a.storageThumbUrl || a.thumbnailUrl));
+                        // 画像以外 + サムネ URL を持たない画像はファイル名チップで見せる (見えない添付を作らない)
+                        const fileAtts = atts.filter(a => !images.includes(a));
+                        const shownImages = images.slice(0, 4);
+                        // フィードでは本文をプレビュー表示 (展開で全文)。SNS タイムライン方針: 閉じて隠さない
+                        const clampStyle = (lines: number): React.CSSProperties => isExpanded ? {} : ({
+                            display: '-webkit-box', WebkitLineClamp: lines, WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                        } as React.CSSProperties);
                         return (
                             <div
                                 key={item.id}
                                 onClick={() => toggleExpand(item)}
                                 className={`knowledge-card ${item.status}`}
                                 style={{
-                                    cursor: 'pointer', padding: '10px 14px', marginBottom: 0,
+                                    cursor: 'pointer', padding: '14px 16px', marginBottom: 0,
                                     // クレーム時はカードのアクセントを赤系に上書き (強度に応じて濃く)
                                     ['--card-accent' as any]: (item.claimLevel ?? 0) > 0
                                         ? `rgba(239, 68, 68, ${0.5 + 0.05 * (item.claimLevel ?? 0)})`
@@ -273,313 +348,233 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                         : undefined,
                                 }}
                             >
-                                {/* Grid: バッジ類は両行をまたいで垂直中央揃え。タイトルは1行目、タグ/展開ボタンは2行目。
-                                    クレームは専用列を廃止し、出る時だけタイトル左にコンパクト表示 (空列で幅を浪費しない) */}
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '28px 74px 96px 90px 130px 90px minmax(0,1fr) 130px 110px 140px',
-                                    gridTemplateRows: 'auto auto',
-                                    alignItems: 'center',
-                                    columnGap: '10px',
-                                    rowGap: '4px',
-                                }}>
-                                    {/* Col 1: 開閉 chevron (両行・カード垂直中央) */}
+                                {/* ヘッダー: 投稿者 + 日付 (SNS の投稿ヘッダー)。右側に種別・ステータス・操作 */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                    <div
+                                        onClick={e => { if (onAuthorClick) { e.stopPropagation(); onAuthorClick(item.author); } }}
+                                        title={onAuthorClick ? `${item.author} のプロフィールを見る` : undefined}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '10px',
+                                            minWidth: 0, overflow: 'hidden', flexShrink: 1,
+                                            cursor: onAuthorClick ? 'pointer' : 'default',
+                                        }}>
+                                        {getAuthorAvatar(item.author) ? (
+                                            <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                                        ) : (
+                                            <div className="user-avatar-fallback" style={{ width: '36px', height: '36px', fontSize: '0.95rem', flexShrink: 0 }}>
+                                                {getInitial(item.author)}
+                                            </div>
+                                        )}
+                                        <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.author}</div>
+                                            <div style={{ fontSize: '0.72rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                                                {new Date(item.createdAt ?? item.updatedAt).toLocaleDateString()} ・ No.{index + 1}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ flex: 1 }} />
+                                    {(item.claimLevel ?? 0) > 0 && (
+                                        <span
+                                            title={`クレーム強度 ${item.claimLevel}/10`}
+                                            style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: '3px', flexShrink: 0,
+                                                height: '28px', padding: '0 8px', boxSizing: 'border-box', lineHeight: 1,
+                                                fontSize: '0.72rem', fontWeight: 800, color: '#fff',
+                                                background: `rgba(239, 68, 68, ${0.2 + 0.05 * (item.claimLevel ?? 0)})`,
+                                                border: '1px solid rgba(239, 68, 68, 0.6)', borderRadius: '8px', whiteSpace: 'nowrap',
+                                                boxShadow: '0 0 8px rgba(239, 68, 68, 0.4)', textShadow: '0 1px 1px rgba(0,0,0,0.4)',
+                                            }}>
+                                            <AlertOctagon size={12} style={{ flexShrink: 0 }} />{item.claimLevel}
+                                        </span>
+                                    )}
+                                    <span style={{
+                                        display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
+                                        height: '28px', padding: '0 10px', boxSizing: 'border-box', lineHeight: 1,
+                                        fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+                                        color: `rgb(${rtMeta.rgb})`,
+                                        background: `rgba(${rtMeta.rgb}, 0.14)`,
+                                        border: `1px solid rgba(${rtMeta.rgb}, 0.4)`,
+                                        borderRadius: '8px',
+                                    }}>
+                                        <RtIcon size={12} style={{ flexShrink: 0 }} />
+                                        {rtMeta.label}
+                                    </span>
+                                    <span style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0,
+                                        height: '28px', boxSizing: 'border-box', lineHeight: 1,
+                                        fontSize: '0.78rem', fontWeight: 700,
+                                        color: item.status === 'solved' ? '#22c55e' : '#ef4444',
+                                    }}>
+                                        {item.status === 'solved'
+                                            ? <Check size={14} strokeWidth={3} style={{ display: 'block', flexShrink: 0 }} />
+                                            : <AlertCircle size={14} strokeWidth={2.5} style={{ display: 'block', flexShrink: 0 }} />}
+                                        {item.status === 'solved' ? '解決済' : '未解決'}
+                                    </span>
+                                    <button
+                                        onClick={e => { e.stopPropagation(); onItemClick(item); }}
+                                        title="編集"
+                                        style={{
+                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                            width: '28px', height: '28px', padding: 0, flexShrink: 0,
+                                            background: 'rgba(99,102,241,0.12)', color: '#c7d2fe',
+                                            border: '1px solid rgba(99,102,241,0.4)', borderRadius: '6px',
+                                            cursor: 'pointer',
+                                        }}>
+                                        <Edit3 size={12} />
+                                    </button>
                                     <button
                                         onClick={e => { e.stopPropagation(); toggleExpand(item); }}
                                         style={{
-                                            gridColumn: 1, gridRow: '1 / span 2',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            width: '24px', height: '24px', padding: 0, justifySelf: 'start',
+                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                            width: '28px', height: '28px', padding: 0, flexShrink: 0,
                                             background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)',
                                             borderRadius: '6px', cursor: 'pointer', color: 'var(--muted)',
-                                        }} title={isExpanded ? '閉じる' : '開く'}>
+                                        }} title={isExpanded ? '閉じる' : 'コメントを開く'}>
                                         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                     </button>
+                                </div>
 
-                                    {/* ステータス (両行・左寄せ、アイコン + テキストで列揃え) */}
-                                    <div style={{ gridColumn: 2, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                                        <span style={{
-                                            display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                            height: '16px',
-                                            fontSize: '0.78rem', fontWeight: 700, lineHeight: '16px',
-                                            color: item.status === 'solved' ? '#22c55e' : '#ef4444',
-                                        }}>
-                                            {/* アイコンは visual-center が揃うよう、同一ビューボックスの円形アイコン (Check / AlertCircle) を採用 */}
-                                            <span style={{
-                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                                width: '14px', height: '14px', flexShrink: 0,
-                                            }}>
-                                                {item.status === 'solved'
-                                                    ? <Check size={14} strokeWidth={3} style={{ display: 'block' }} />
-                                                    : <AlertCircle size={14} strokeWidth={2.5} style={{ display: 'block' }} />}
-                                            </span>
-                                            <span style={{ lineHeight: '16px', display: 'inline-block' }}>{item.status === 'solved' ? '解決済' : '未解決'}</span>
-                                        </span>
-                                    </div>
-                                    {/* 種別 (両行・左寄せ・トラブル/インシデント) */}
-                                    <div style={{ gridColumn: 3, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
-                                        {(() => {
-                                            const meta = RECORD_TYPE_META[item.recordType ?? 'trouble'];
-                                            const RtIcon = meta.Icon;
-                                            return (
-                                                <span style={{
-                                                    display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
-                                                    height: '28px', padding: '0 10px', boxSizing: 'border-box', lineHeight: 1,
-                                                    fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap',
-                                                    color: `rgb(${meta.rgb})`,
-                                                    background: `rgba(${meta.rgb}, 0.14)`,
-                                                    border: `1px solid rgba(${meta.rgb}, 0.4)`,
-                                                    borderRadius: '8px',
-                                                }}>
-                                                    <RtIcon size={12} style={{ flexShrink: 0 }} />
-                                                    {meta.label}
-                                                </span>
-                                            );
-                                        })()}
-                                    </div>
-                                    {/* No (両行・左寄せ・28px 高) */}
-                                    <div style={{ gridColumn: 4, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                                        <span style={{
-                                            display: 'inline-flex', alignItems: 'center',
-                                            height: '28px', padding: '0 10px', boxSizing: 'border-box',
-                                            fontSize: '0.75rem', color: 'var(--muted)',
-                                            background: 'rgba(255,255,255,0.05)', borderRadius: '8px',
-                                            border: '1px solid var(--glass-border)', whiteSpace: 'nowrap', lineHeight: 1,
-                                        }}>
-                                            No.{index + 1} / {data.length}
-                                        </span>
-                                    </div>
-                                    {/* 区分 (両行・左寄せ・28px 高) */}
-                                    <div style={{ gridColumn: 5, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
-                                        {item.category ? (
+                                {/* タイトル */}
+                                <div style={{ marginTop: '10px', fontSize: '1.05rem', fontWeight: 700, color: 'var(--text)', overflowWrap: 'anywhere' }}>
+                                    {stripCategoryFromTitle(item.title)}
+                                </div>
+
+                                {/* メタ行: 区分・号機・インシデント・タグ */}
+                                {(item.category || item.machine || (item.incidents?.length ?? 0) > 0 || (item.tags?.length ?? 0) > 0) && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', marginTop: '8px' }}>
+                                        {item.category && (
                                             <span className={`metadata-badge ${getCategoryBadgeClass(item.category)}`} style={{
                                                 height: '28px', padding: '0 12px', boxSizing: 'border-box', lineHeight: 1,
-                                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+                                                display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap',
                                             }}>{item.category}</span>
-                                        ) : null}
-                                    </div>
-                                    {/* 詳細 (両行・左寄せ・28px 高) */}
-                                    <div style={{ gridColumn: 6, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
-                                        {item.machine ? (
+                                        )}
+                                        {item.machine && (
                                             <span className="metadata-badge badge-machine" style={{
                                                 height: '28px', padding: '0 12px', boxSizing: 'border-box', lineHeight: 1,
-                                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+                                                display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap',
                                             }}>{item.machine}</span>
-                                        ) : null}
-                                    </div>
-
-                                    {/* タイトル + 編集ボタン (1行目・左寄せ、常に編集可)。クレームは出る時だけ左にコンパクト表示 */}
-                                    <div style={{
-                                        gridColumn: 7, gridRow: 1,
-                                        display: 'flex', alignItems: 'center', gap: '8px',
-                                        minWidth: 0, overflow: 'hidden',
-                                    }}>
-                                        {(item.claimLevel ?? 0) > 0 && (
-                                            <span
-                                                title={`クレーム強度 ${item.claimLevel}/10`}
-                                                style={{
-                                                    display: 'inline-flex', alignItems: 'center', gap: '3px', flexShrink: 0,
-                                                    height: '20px', padding: '0 7px', boxSizing: 'border-box', lineHeight: 1,
-                                                    fontSize: '0.72rem', fontWeight: 800, color: '#fff',
-                                                    background: `rgba(239, 68, 68, ${0.2 + 0.05 * (item.claimLevel ?? 0)})`,
-                                                    border: '1px solid rgba(239, 68, 68, 0.6)', borderRadius: '8px', whiteSpace: 'nowrap',
-                                                    boxShadow: '0 0 8px rgba(239, 68, 68, 0.4)', textShadow: '0 1px 1px rgba(0,0,0,0.4)',
-                                                }}>
-                                                <AlertOctagon size={11} style={{ flexShrink: 0 }} />{item.claimLevel}
-                                            </span>
                                         )}
+                                        {item.incidents && item.incidents.length > 0 && (
+                                            <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>{item.incidents.join(', ')}</span>
+                                        )}
+                                        {item.tags?.map((tag, i) => (
+                                            <span key={i} style={{ fontSize: '0.78rem', color: 'var(--primary)' }}>#{tag}</span>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* 本文: 事象・対処。フィードでは行クランプでプレビュー、展開で全文 */}
+                                {item.phenomenon && (
+                                    <div style={{
+                                        marginTop: '10px',
+                                        borderLeft: '3px solid #fbbf24',
+                                        background: 'rgba(251, 191, 36, 0.06)',
+                                        borderRadius: '6px',
+                                        padding: '10px 14px',
+                                    }}>
                                         <div style={{
-                                            fontSize: '1rem', fontWeight: 700, color: 'var(--text)',
-                                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                            textAlign: 'left', minWidth: 0, flexShrink: 1,
+                                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                            fontSize: '0.78rem', fontWeight: 700, marginBottom: '6px',
+                                            color: '#fbbf24', letterSpacing: '0.05em',
                                         }}>
-                                            {stripCategoryFromTitle(item.title)}
+                                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fbbf24', boxShadow: '0 0 6px #fbbf24' }} />
+                                            事象
                                         </div>
-                                        <button
-                                            onClick={e => { e.stopPropagation(); onItemClick(item); }}
-                                            title="編集"
-                                            style={{
-                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                                width: '24px', height: '24px', padding: 0, flexShrink: 0,
-                                                background: 'rgba(99,102,241,0.12)', color: '#c7d2fe',
-                                                border: '1px solid rgba(99,102,241,0.4)', borderRadius: '6px',
-                                                cursor: 'pointer',
-                                            }}>
-                                            <Edit3 size={12} />
-                                        </button>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap', ...clampStyle(4) }}>{item.phenomenon}</div>
                                     </div>
-                                    {/* 2行目・タイトル列: タグ/インシデント/添付 (コンパクト表示時のみ) */}
+                                )}
+                                {item.countermeasure && (
                                     <div style={{
-                                        gridColumn: 7, gridRow: 2,
-                                        display: 'flex', flexWrap: 'nowrap', overflow: 'hidden',
-                                        gap: '6px', alignItems: 'center', minWidth: 0,
+                                        marginTop: '8px',
+                                        borderLeft: '3px solid #34d399',
+                                        background: 'rgba(52, 211, 153, 0.06)',
+                                        borderRadius: '6px',
+                                        padding: '10px 14px',
                                     }}>
-                                        {!isExpanded && hasSubRow && (
-                                            <>
-                                                {item.incidents && item.incidents.length > 0 && (
-                                                    <span style={{ fontSize: '0.75rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{item.incidents.join(', ')}</span>
-                                                )}
-                                                {item.tags?.map((tag, i) => (
-                                                    <span key={i} style={{ fontSize: '0.75rem', color: 'var(--primary)', whiteSpace: 'nowrap' }}>#{tag}</span>
-                                                ))}
-                                                {item.attachments && item.attachments.length > 0 && (
-                                                    <span className="metadata-badge badge-attachment" style={{ height: '24px', padding: '0 10px', boxSizing: 'border-box', lineHeight: 1, fontSize: '0.72rem' }}>
-                                                        <Paperclip size={11} /> {item.attachments.length}
-                                                    </span>
-                                                )}
-                                                {commentCount > 0 && (
-                                                    <span style={{
-                                                        display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                                        fontSize: '0.72rem', color: '#38bdf8', whiteSpace: 'nowrap', lineHeight: 1,
-                                                    }}>
-                                                        <MessageSquare size={11} /> {commentCount}
-                                                    </span>
-                                                )}
-                                                {(viewCounts?.[item.id] ?? 0) > 0 && (
-                                                    <span title={`延べ ${viewCounts?.[item.id]} 回閲覧`} style={{
-                                                        display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                                        fontSize: '0.72rem', color: 'var(--muted)', whiteSpace: 'nowrap', lineHeight: 1,
-                                                    }}>
-                                                        <Eye size={11} /> {viewCounts?.[item.id]}
-                                                    </span>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {/* 投稿者 (両行・左寄せ・中央揃え。クリックでプロフィール) */}
-                                    <div style={{ gridColumn: 8, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
-                                        <div
-                                            onClick={e => { if (onAuthorClick) { e.stopPropagation(); onAuthorClick(item.author); } }}
-                                            title={onAuthorClick ? `${item.author} のプロフィールを見る` : undefined}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: '8px',
-                                                fontSize: '0.9rem', color: '#cbd5e1',
-                                                minWidth: 0, overflow: 'hidden',
-                                                cursor: onAuthorClick ? 'pointer' : 'default',
-                                            }}>
-                                            {getAuthorAvatar(item.author) ? (
-                                                <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                                            ) : (
-                                                <div className="user-avatar-fallback" style={{ width: '26px', height: '26px', fontSize: '0.8rem', flexShrink: 0 }}>
-                                                    {getInitial(item.author)}
-                                                </div>
-                                            )}
-                                            <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.author}</span>
-                                        </div>
-                                    </div>
-                                    {/* 日付 (両行・中央揃え、フォント 0.78rem で投稿者と合わせる) */}
-                                    <div style={{ gridColumn: 9, gridRow: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <span style={{
-                                            display: 'inline-flex', alignItems: 'center',
-                                            height: '28px', padding: '0 10px', boxSizing: 'border-box',
-                                            fontSize: '0.78rem', color: 'var(--muted)',
-                                            background: 'rgba(255,255,255,0.05)',
-                                            border: '1px solid var(--glass-border)',
-                                            borderRadius: '10px', whiteSpace: 'nowrap', lineHeight: 1,
+                                        <div style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                            fontSize: '0.78rem', fontWeight: 700, marginBottom: '6px',
+                                            color: '#34d399', letterSpacing: '0.05em',
                                         }}>
-                                            {new Date(item.createdAt ?? item.updatedAt).toLocaleDateString()}
-                                        </span>
+                                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399', boxShadow: '0 0 6px #34d399' }} />
+                                            対処
+                                        </div>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap', ...clampStyle(3) }}>{item.countermeasure}</div>
                                     </div>
-                                    {/* リアクション集計 (両行・中央揃え。非ゼロの種別のみ表示、押下は展開ビューの ReactionBar で) */}
+                                )}
+
+                                {/* 画像: タイムラインにそのまま表示 (クリックで OneDrive 原本) */}
+                                {shownImages.length > 0 && (
                                     <div
                                         onClick={e => e.stopPropagation()}
                                         style={{
-                                            gridColumn: 10, gridRow: '1 / span 2',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            marginTop: '10px', display: 'grid', gap: '6px',
+                                            gridTemplateColumns: shownImages.length === 1 ? '1fr' : 'repeat(2, 1fr)',
                                         }}>
-                                        <ReactionBar
-                                            variant="summary"
-                                            counts={reactionCountsOf(item)}
-                                            users={reactionUsersOf(item)}
-                                            myReaction={item.myReaction}
-                                            usersMaster={users}
-                                        />
+                                        {shownImages.map((att, i) => (
+                                            <FeedImage
+                                                key={att.id}
+                                                att={att}
+                                                single={shownImages.length === 1}
+                                                moreCount={i === 3 && images.length > 4 ? images.length - 4 : undefined}
+                                            />
+                                        ))}
                                     </div>
+                                )}
+
+                                {/* 画像以外の添付 (と、サムネの無い画像): ファイル名チップで常時表示 */}
+                                {fileAtts.length > 0 && (
+                                    <div onClick={e => e.stopPropagation()} style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+                                        {fileAtts.map(att => <AttachmentChip key={att.id} att={att} />)}
+                                    </div>
+                                )}
+
+                                {/* フッター: リアクション (常時押下可) + コメント・添付・閲覧数 */}
+                                <div
+                                    onClick={e => e.stopPropagation()}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '12px', flexWrap: 'wrap' }}>
+                                    <ReactionBar
+                                        variant="full"
+                                        counts={reactionCountsOf(item)}
+                                        users={reactionUsersOf(item)}
+                                        myReaction={item.myReaction}
+                                        usersMaster={users}
+                                        onToggle={onToggleReaction ? (type) => onToggleReaction(item, type) : undefined}
+                                    />
+                                    <button
+                                        className="feed-comment-btn"
+                                        onClick={() => toggleExpand(item)}
+                                        title={isExpanded ? 'コメントを閉じる' : 'コメントを見る'}
+                                        style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                            height: '28px', padding: '0 10px', boxSizing: 'border-box', lineHeight: 1,
+                                            fontSize: '0.78rem', color: '#38bdf8', whiteSpace: 'nowrap',
+                                            background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.3)',
+                                            borderRadius: '8px', cursor: 'pointer',
+                                        }}>
+                                        <MessageSquare size={12} /> {commentCount > 0 ? commentCount : 'コメント'}
+                                    </button>
+                                    {(viewCounts?.[item.id] ?? 0) > 0 && (
+                                        <span title={`延べ ${viewCounts?.[item.id]} 回閲覧`} style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                            fontSize: '0.78rem', color: 'var(--muted)', whiteSpace: 'nowrap', lineHeight: 1,
+                                        }}>
+                                            <Eye size={12} /> {viewCounts?.[item.id]}
+                                        </span>
+                                    )}
                                 </div>
 
-                                {/* 展開: 事象・対処 (読み取り専用) */}
+                                {/* 展開: コメントスレッド (本文はクランプ解除で全文表示) */}
                                 {isExpanded && (
                                     <div
                                         onClick={e => e.stopPropagation()}
-                                        style={{
-                                            marginTop: '12px', padding: '12px 14px',
-                                            background: 'rgba(255,255,255,0.03)',
-                                            border: '1px solid rgba(255,255,255,0.06)',
-                                            borderRadius: '12px',
-                                            display: 'flex', flexDirection: 'column', gap: '12px',
-                                        }}>
-                                        {/* インシデント・タグ・添付 */}
-                                        {((item.incidents && item.incidents.length > 0) || (item.tags && item.tags.length > 0) || (item.attachments && item.attachments.length > 0)) && (
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
-                                                {item.incidents && item.incidents.length > 0 && (
-                                                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>{item.incidents.join(', ')}</span>
-                                                )}
-                                                {item.tags?.map((tag, i) => (
-                                                    <span key={i} style={{ fontSize: '0.78rem', color: 'var(--primary)' }}>#{tag}</span>
-                                                ))}
-                                                {item.attachments && item.attachments.length > 0 && (
-                                                    <span className="metadata-badge badge-attachment">
-                                                        <Paperclip size={12} /> {item.attachments.length}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
-                                        {/* 事象 (琥珀系アクセント) */}
-                                        {item.phenomenon && (
-                                            <div style={{
-                                                borderLeft: '3px solid #fbbf24',
-                                                background: 'rgba(251, 191, 36, 0.06)',
-                                                borderRadius: '6px',
-                                                padding: '10px 14px',
-                                            }}>
-                                                <div style={{
-                                                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                                    fontSize: '0.78rem', fontWeight: 700, marginBottom: '6px',
-                                                    color: '#fbbf24', letterSpacing: '0.05em',
-                                                }}>
-                                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fbbf24', boxShadow: '0 0 6px #fbbf24' }} />
-                                                    事象
-                                                </div>
-                                                <div style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{item.phenomenon}</div>
-                                            </div>
-                                        )}
-                                        {/* 対処 (ミント系アクセント) */}
-                                        {item.countermeasure && (
-                                            <div style={{
-                                                borderLeft: '3px solid #34d399',
-                                                background: 'rgba(52, 211, 153, 0.06)',
-                                                borderRadius: '6px',
-                                                padding: '10px 14px',
-                                            }}>
-                                                <div style={{
-                                                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                                    fontSize: '0.78rem', fontWeight: 700, marginBottom: '6px',
-                                                    color: '#34d399', letterSpacing: '0.05em',
-                                                }}>
-                                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399', boxShadow: '0 0 6px #34d399' }} />
-                                                    対処
-                                                </div>
-                                                <div style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{item.countermeasure}</div>
-                                            </div>
-                                        )}
-                                        {/* リアクション (展開時のみ押下可。1人1種の排他トグル) */}
-                                        <ReactionBar
-                                            variant="full"
-                                            counts={reactionCountsOf(item)}
-                                            users={reactionUsersOf(item)}
-                                            myReaction={item.myReaction}
-                                            usersMaster={users}
-                                            onToggle={onToggleReaction ? (type) => onToggleReaction(item, type) : undefined}
-                                        />
-                                        {/* コメントスレッド */}
+                                        style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                                         <KnowledgeComments
                                             knowledgeId={item.id}
                                             user={user}
                                             usersMaster={users}
                                             onCountChange={(n) => onCommentCountChange?.(item.id, n)}
                                         />
-                                        {/* 編集はタイトル右のボタンに集約しているのでここでは出さない */}
                                     </div>
                                 )}
                             </div>

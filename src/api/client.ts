@@ -150,6 +150,52 @@ async function rawRest(
     return res;
 }
 
+// タイムライン用サムネを Supabase Storage (knowledge-thumbs / 公開読み取り) に置く。
+// 失敗しても投稿自体は成立させたいので null を返すだけにする (呼び出し側は無視して続行)。
+export async function uploadKnowledgeThumb(blob: Blob, path: string): Promise<string | null> {
+    const url = (import.meta as any).env.VITE_SUPABASE_URL as string;
+    const anonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY as string;
+    try {
+        const token = (await getValidAccessToken()) ?? anonKey;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15000);
+        const res = await fetch(`${url}/storage/v1/object/knowledge-thumbs/${path}`, {
+            method: 'POST',
+            headers: {
+                'apikey': anonKey,
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': blob.type || 'image/webp',
+                'x-upsert': 'true',
+            },
+            body: blob,
+            signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (!res.ok) return null;
+        return `${url}/storage/v1/object/public/knowledge-thumbs/${path}`;
+    } catch {
+        return null;
+    }
+}
+
+// 既存投稿の attachments だけを差し替える (サムネの遅延バックフィル用)。
+export async function patchKnowledgeAttachments(id: string, attachments: Attachment[]): Promise<boolean> {
+    try {
+        const res = await timeout(
+            rawRest(`/rest/v1/knowledge?id=eq.${encodeURIComponent(id)}`, {
+                method: 'PATCH',
+                body: { attachments },
+                prefer: 'return=minimal',
+            }),
+            15000,
+            null as unknown as Response
+        );
+        return !!res && res.ok;
+    } catch {
+        return false;
+    }
+}
+
 // DB行 → KnowledgeItem の変換
 export function toItem(row: Record<string, unknown>): KnowledgeItem {
     const rawContent = (row.content as string) ?? '';
@@ -205,19 +251,14 @@ function applyReactionAggregates(
 }
 
 export const apiClient = {
+    // 初回読み込みも rawRest (PostgREST 直叩き)。supabase-js の read が auth ロックで
+    // ハングし「接続中...」のまま固まる事例があるため (write 系と同じ既知問題)。
     async fetchAll(currentUserId?: string): Promise<KnowledgeItem[]> {
-        // Fetch items and their reaction counts
-        const { data, error } = await supabase
-            .from('knowledge')
-            .select(`
-                id, title, machine, property, req_num, category,
-                incidents, tags, content, phenomenon, countermeasure, status, record_type, created_at, updated_at, author, updated_by, claim_level, attachments,
-                knowledge_reactions(type, user_id)
-            `)
-            .order('created_at', { ascending: false });
+        const select = 'id,title,machine,property,req_num,category,incidents,tags,content,phenomenon,countermeasure,status,record_type,created_at,updated_at,author,updated_by,claim_level,attachments,knowledge_reactions(type,user_id)';
+        const res = await rawRest(`/rest/v1/knowledge?select=${select}&order=created_at.desc`, { method: 'GET' });
+        if (!res.ok) throw new Error(`ナレッジの取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        const data = (await res.json()) as any[];
 
-        if (error) throw error;
-        
         return (data ?? []).map(row => {
             const item = toItem(row);
             applyReactionAggregates(item, (row.knowledge_reactions as any[]) || [], currentUserId);
@@ -226,17 +267,11 @@ export const apiClient = {
     },
 
     async fetchOne(id: string, currentUserId?: string): Promise<KnowledgeItem | null> {
-        const { data, error } = await supabase
-            .from('knowledge')
-            .select(`
-                id, title, machine, property, req_num, category,
-                incidents, tags, content, phenomenon, countermeasure, status, record_type, created_at, updated_at, author, updated_by, claim_level, attachments,
-                knowledge_reactions(type, user_id)
-            `)
-            .eq('id', id)
-            .single();
-
-        if (error) throw error;
+        const select = 'id,title,machine,property,req_num,category,incidents,tags,content,phenomenon,countermeasure,status,record_type,created_at,updated_at,author,updated_by,claim_level,attachments,knowledge_reactions(type,user_id)';
+        const res = await rawRest(`/rest/v1/knowledge?select=${select}&id=eq.${encodeURIComponent(id)}&limit=1`, { method: 'GET' });
+        if (!res.ok) throw new Error(`ナレッジの取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        const rows = (await res.json()) as any[];
+        const data = rows?.[0];
         if (!data) return null;
 
         const item = toItem(data);
@@ -247,18 +282,18 @@ export const apiClient = {
     async fetchMasters(): Promise<MasterData> {
         // profiles は FDW foreign table で category を持てないため、
         // category は public.profile_categories (ローカル) を別取得してマージする。
-        const [incRes, catRes, profRes, profCatRes] = await Promise.all([
-            supabase.from('master_incidents').select('name').order('name'),
-            supabase.from('master_categories').select('name').order('name'),
-            supabase.from('profiles').select('id, email, display_name, knl_role, avatar_url, grp:group, leader').order('display_name'),
-            supabase.from('profile_categories').select('user_id, category'),
+        // こちらも rawRest (auth ロック回避)。
+        const getJson = async (path: string, label: string): Promise<any[]> => {
+            const res = await rawRest(path, { method: 'GET' });
+            if (!res.ok) throw new Error(`${label}の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+            return (await res.json()) as any[];
+        };
+        const [incidents, categories, profiles, profCats] = await Promise.all([
+            getJson('/rest/v1/master_incidents?select=name&order=name', 'インシデントマスタ'),
+            getJson('/rest/v1/master_categories?select=name&order=name', '区分マスタ'),
+            getJson('/rest/v1/profiles?select=id,email,display_name,knl_role,avatar_url,grp:group,leader&order=display_name', 'ユーザーマスタ'),
+            getJson('/rest/v1/profile_categories?select=user_id,category', '担当区分'),
         ]);
-        const firstErr = incRes.error || catRes.error || profRes.error || profCatRes.error;
-        if (firstErr) throw firstErr;
-        const incidents = incRes.data;
-        const categories = catRes.data;
-        const profiles = profRes.data;
-        const profCats = profCatRes.data;
 
         const catsByUser = new Map<string, string[]>();
         for (const row of (profCats ?? []) as Array<{ user_id: string; category: string | null }>) {

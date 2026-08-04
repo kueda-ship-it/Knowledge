@@ -156,11 +156,13 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({
                     <button
                         key={type}
                         type="button"
+                        className={onToggle ? 'reaction-pill' : undefined}
                         onClick={() => onToggle?.(type)}
                         onMouseEnter={e => count > 0 && handlePillEnter(`pop-${type}`, e.currentTarget)}
                         onMouseLeave={() => setHoveredPill(null)}
                         title={`${meta.label}をトグル`}
                         style={{
+                            ['--rx' as any]: meta.rgb,
                             position: 'relative',
                             display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
                             height: '28px', padding: '0 12px', boxSizing: 'border-box', lineHeight: 1,

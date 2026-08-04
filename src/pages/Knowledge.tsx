@@ -8,6 +8,7 @@ import { KnowledgeItem, User, MasterData, KnowledgeDraft, NavigateParams, Propos
 import { apiClient, toItem } from '../api/client';
 import { applyReactionToggle } from '../constants/reactions';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
+import { useThumbBackfill } from '../hooks/useThumbBackfill';
 import { loadCache, saveCache } from '../utils/cache';
 import { aggregateTags } from '../utils/tagUtils';
 
@@ -63,6 +64,11 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [filterType, setFilterType] = useState<'all' | 'unsolved' | 'solved' | 'mine'>('all');
     const [recordTypeFilter, setRecordTypeFilter] = useState<'all' | 'trouble' | 'incident'>('all');
+
+    // SNS フィード化以前の画像添付に永続サムネを遅延生成 (本人の OneDrive 分のみ成功する)
+    useThumbBackfill(data, (id, attachments) => {
+        setData(prev => prev.map(i => i.id === id ? { ...i, attachments } : i));
+    });
 
     // Editor state
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);

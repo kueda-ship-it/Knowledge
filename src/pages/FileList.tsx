@@ -46,7 +46,7 @@ export const FileList: React.FC<FileListProps> = ({ data, onBack }) => {
     };
 
     return (
-        <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
+        <div style={{ padding: '20px', width: '100%', boxSizing: 'border-box', maxWidth: 'clamp(640px, 76%, 1200px)', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                 <BackButton onClick={onBack} />
                 <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>

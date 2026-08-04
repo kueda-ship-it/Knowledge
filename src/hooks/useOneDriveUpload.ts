@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { getGraphClient, getToken } from '../lib/microsoftGraph';
+import { makeThumbnail } from '../utils/imageThumbnail';
+import { uploadKnowledgeThumb } from '../api/client';
 
 export interface Attachment {
     id: string;
@@ -8,6 +10,7 @@ export interface Attachment {
     type: string;
     size: number;
     thumbnailUrl?: string;
+    storageThumbUrl?: string;
 }
 
 const FOLDER_NAME = "KnowledgeDB_Attachments";
@@ -114,14 +117,25 @@ export function useOneDriveUpload(userEmail?: string) {
             } catch { /* use webUrl fallback */ }
 
             let thumbnailUrl = '';
+            let storageThumbUrl = '';
             if (file.type.startsWith('image/')) {
                 try {
                     const thumb = await client.api(`/me/drive/items/${driveItem.id}/thumbnails`).select('large').get();
                     thumbnailUrl = thumb.value?.[0]?.large?.url || '';
                 } catch { /* no thumbnail */ }
+
+                // タイムライン用の永続サムネ (Graph URL は失効するので Storage に縮小版を置く)。
+                // 失敗しても添付自体は成立させる。
+                try {
+                    setStatusMessage('サムネイル生成中...');
+                    const thumbBlob = await makeThumbnail(file);
+                    if (thumbBlob) {
+                        storageThumbUrl = (await uploadKnowledgeThumb(thumbBlob, `${driveItem.id}.webp`)) || '';
+                    }
+                } catch { /* サムネ無しで続行 */ }
             }
 
-            return { id: driveItem.id, url: webUrl, name: file.name, type: file.type, size: file.size, thumbnailUrl };
+            return { id: driveItem.id, url: webUrl, name: file.name, type: file.type, size: file.size, thumbnailUrl, storageThumbUrl };
         } catch (e: any) {
             if (e.message === "LoginRequired") {
                 alert("Microsoft認証の期限が切れました。一度ログアウトし、再度ログインしてください。");

@@ -1248,3 +1248,36 @@ body[data-theme="liquid"] .proposal-card:hover {
   border-color: rgba(59, 130, 246, 0.5);
   background-color: rgba(255, 255, 255, 0.04);
 }
+
+/* ======================================== */
+/* SNS フィード: ホバーで押せることを示す      */
+/* ======================================== */
+/* リアクションピル: 種別ごとの色 (--rx) でふわっと点灯 + 浮き上がり */
+.reaction-pill:hover {
+  transform: translateY(-1px);
+  background: rgba(var(--rx), 0.16) !important;
+  border-color: rgba(var(--rx), 0.55) !important;
+  color: rgb(var(--rx)) !important;
+  box-shadow: 0 2px 10px rgba(var(--rx), 0.25) !important;
+}
+.reaction-pill:active {
+  transform: translateY(0);
+}
+.feed-comment-btn {
+  transition: all 0.2s ease;
+}
+.feed-comment-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(56, 189, 248, 0.18) !important;
+  border-color: rgba(56, 189, 248, 0.55) !important;
+  box-shadow: 0 2px 10px rgba(56, 189, 248, 0.25);
+}
+.attachment-chip {
+  transition: all 0.2s ease;
+}
+.attachment-chip:hover {
+  transform: translateY(-1px);
+  background: rgba(59, 130, 246, 0.18) !important;
+  border-color: rgba(59, 130, 246, 0.55) !important;
+  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.25);
+}

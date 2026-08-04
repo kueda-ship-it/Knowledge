@@ -127,6 +127,8 @@ export interface Attachment {
     type: string;
     size: number;
     thumbnailUrl?: string;
+    // Supabase Storage 上の永続サムネ URL (Graph の thumbnailUrl は短時間で失効するため)
+    storageThumbUrl?: string;
 }
 
 export interface KnowledgeItem {

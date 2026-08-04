@@ -160,12 +160,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
         );
     };
 
-    const renderBarList = (counts: Record<string, number>, color: string, onSelect?: (key: string) => void) => {
+    const renderBarList = (counts: Record<string, number>, color: string, onSelect?: (key: string) => void, limit = 10) => {
         const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
         const max = sorted.length > 0 ? sorted[0][1] : 1;
         if (sorted.length === 0) return <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>データなし</div>;
 
-        return sorted.slice(0, 10).map(([key, val]) => (
+        return sorted.slice(0, limit).map(([key, val]) => (
             <div key={key}
                 className={onSelect ? 'cursor-hint-tile' : undefined}
                 style={{ marginBottom: '12px', padding: '4px 6px', cursor: onSelect ? 'pointer' : 'default' }}
@@ -193,7 +193,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
 
     return (
         <div className="view active" style={{ overflowY: 'auto', flex: 1 }}>
-            <div className="dashboard-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
+            {/* ナレッジ一覧と同様、画面幅に追従 (狭い画面は全幅、広い画面は 88% を上限 1680px まで)。
+                親 .view が flex のため margin auto だけだと stretch が効かず中身の幅に縮む → width 100% を明示 */}
+            <div className="dashboard-container" style={{ width: '100%', boxSizing: 'border-box', maxWidth: 'clamp(720px, 88%, 1680px)', margin: '0 auto', padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <BackButton onClick={onBack} />
@@ -274,8 +276,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                     <div className="dash-panel" style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                         <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: 'var(--text)', borderBottom: '2px solid var(--border)', paddingBottom: '10px' }}>
                             <Hash size={20} color="#8b5cf6" /> タグ別
+                            <span style={{ marginLeft: 'auto', fontSize: '0.78rem', fontWeight: 'normal', color: 'var(--muted)' }}>
+                                全 {Object.keys(stats.tagCounts).length} 種
+                            </span>
                         </h3>
-                        {chartType === 'bar' ? renderBarList(stats.tagCounts, '#8b5cf6', setSelTag) : renderPieChart(stats.tagCounts, setSelTag)}
+                        {chartType === 'bar' ? (
+                            // タグは種類が多いので上位 10 で切らず、全件をスクロールで見せる
+                            <div style={{ maxHeight: '420px', overflowY: 'auto', paddingRight: '6px' }}>
+                                {renderBarList(stats.tagCounts, '#8b5cf6', setSelTag, Infinity)}
+                            </div>
+                        ) : renderPieChart(stats.tagCounts, setSelTag)}
                     </div>
 
                     <div className="dash-panel" style={{ background: 'var(--card-bg)', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', gridColumn: '1 / -1' }}>

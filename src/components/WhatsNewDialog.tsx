@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
-import { Sparkles, X, ImagePlus, Wand2, Paperclip } from 'lucide-react';
+import { Sparkles, X, Newspaper, ImagePlus, ThumbsUp } from 'lucide-react';
 
 // 機能更新のお知らせ。id を変えると全ユーザーに再表示される (既読は localStorage 管理)。
 const ANNOUNCEMENT = {
-    id: 'fc-screenshot-extract-2026-07',
-    title: 'FC スクショからナレッジを自動作成できるようになりました',
+    id: 'sns-feed-timeline-2026-08',
+    title: 'ナレッジ一覧が SNS タイムラインになりました',
     points: [
         {
+            icon: <Newspaper size={16} />,
+            head: '開かなくても読める',
+            body: '事象・対処のプレビューを一覧に常時表示するようにしました。クリックすると全文とコメント欄が開きます。',
+        },
+        {
             icon: <ImagePlus size={16} />,
-            head: 'スクショを貼るだけ',
-            body: 'ナレッジ新規作成フォームに FC の報告画面スクショを Ctrl+V (またはドラッグ&ドロップ) すると、AI が読み取って空欄を自動入力します。',
+            head: '写真がそのまま見える',
+            body: '画像付きの投稿はタイムラインに写真がそのまま表示されます。クリックで OneDrive の原本が開きます。画像以外の添付もファイル名のチップからワンクリックで開けます。',
         },
         {
-            icon: <Wand2 size={16} />,
-            head: '複数枚もまとめて 1 件に',
-            body: '依頼ヘッダー画面と対応結果画面など、複数枚を貼ると統合して読み取ります。手入力済みの項目は上書きしません。',
-        },
-        {
-            icon: <Paperclip size={16} />,
-            head: '画像はそのまま添付に',
-            body: '貼ったスクショは OneDrive 添付として自動で保存されます。AI チャットからも画像を送ってナレッジ登録できます。',
+            icon: <ThumbsUp size={16} />,
+            head: 'リアクションがすぐ押せる',
+            body: '「いいね！」「助かった」などのリアクションは、投稿を開かなくてもタイムラインから直接押せるようになりました。',
         },
     ],
 } as const;

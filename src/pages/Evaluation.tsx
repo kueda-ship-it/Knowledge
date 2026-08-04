@@ -97,7 +97,7 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
 
             <div className="dashboard-container">
                 {activeTab === 'ranking' ? (
-                    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                    <div style={{ width: '100%', boxSizing: 'border-box', maxWidth: 'clamp(720px, 80%, 1280px)', margin: '0 auto' }}>
                         <div style={{ marginBottom: '32px', textAlign: 'center' }}>
                             <h2 style={{ fontSize: '1.8rem', color: '#f59e0b' }}>
                                 <Star size={32} style={{ verticalAlign: 'middle', marginRight: '10px' }} />
@@ -181,7 +181,7 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                         </div>
                     </div>
                 ) : (
-                    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                    <div style={{ width: '100%', boxSizing: 'border-box', maxWidth: 'clamp(720px, 80%, 1280px)', margin: '0 auto' }}>
                         <div style={{ marginBottom: '32px', textAlign: 'center' }}>
                             <h2 style={{ fontSize: '1.8rem', color: '#ef4444' }}>
                                 <AlertTriangle size={32} style={{ verticalAlign: 'middle', marginRight: '10px' }} />

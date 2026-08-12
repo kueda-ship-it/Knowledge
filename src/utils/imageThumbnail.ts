@@ -4,10 +4,10 @@
 const MAX_WIDTH = 800;
 const QUALITY = 0.75;
 
-export async function makeThumbnail(source: Blob): Promise<Blob | null> {
+export async function makeThumbnail(source: Blob, maxWidth: number = MAX_WIDTH): Promise<Blob | null> {
     try {
         const bitmap = await createImageBitmap(source);
-        const scale = Math.min(1, MAX_WIDTH / bitmap.width);
+        const scale = Math.min(1, maxWidth / bitmap.width);
         const w = Math.max(1, Math.round(bitmap.width * scale));
         const h = Math.max(1, Math.round(bitmap.height * scale));
 

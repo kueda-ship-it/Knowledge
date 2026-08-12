@@ -214,6 +214,7 @@ export interface OperationalProposal {
     source_knowledge_id?: string; // 元クレームナレッジ id (「提議に展開」で起票された場合に set)
     assignee_id?: string | null;  // 担当者 (profiles.id)。未割当 = null
     assigned_at?: string | null;  // 担当割当日時。督促 (割当後N日未着手) の起点
+    image_urls?: string[] | null; // 添付画像 (Supabase Storage knowledge-thumbs/proposals の公開 URL)
     created_at: string;
     updated_at: string;
 }

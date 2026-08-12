@@ -178,6 +178,36 @@ export async function uploadKnowledgeThumb(blob: Blob, path: string): Promise<st
     }
 }
 
+// 運用提議の添付画像。OneDrive を挟まず Supabase Storage
+// (knowledge-thumbs / 公開読み取り) の proposals/ 配下へ直接置く。
+// 投稿本体と違い画像が主目的なので、失敗は握り潰さず throw して呼び出し側で通知する。
+export async function uploadProposalImage(blob: Blob, fileName: string): Promise<string> {
+    const url = (import.meta as any).env.VITE_SUPABASE_URL as string;
+    const anonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY as string;
+    const token = (await getValidAccessToken()) ?? anonKey;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
+        const res = await fetch(`${url}/storage/v1/object/knowledge-thumbs/proposals/${fileName}`, {
+            method: 'POST',
+            headers: {
+                'apikey': anonKey,
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': blob.type || 'image/webp',
+                'x-upsert': 'true',
+            },
+            body: blob,
+            signal: controller.signal,
+        });
+        if (!res.ok) {
+            throw new Error(`画像のアップロードに失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        }
+        return `${url}/storage/v1/object/public/knowledge-thumbs/proposals/${fileName}`;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 // 既存投稿の attachments だけを差し替える (サムネの遅延バックフィル用)。
 export async function patchKnowledgeAttachments(id: string, attachments: Attachment[]): Promise<boolean> {
     try {
@@ -863,7 +893,7 @@ export const apiClient = {
     // 改善提案 / 決定事項などのフィールド更新 (updated_by / updated_at を同時に書く)
     async updateProposalContent(
         id: string,
-        patch: Partial<{ proposal: string; problem: string; decision: string; title: string; priority: string; category: string; visible_groups: string[] | null; assignee_id: string | null; assigned_at: string | null }>,
+        patch: Partial<{ proposal: string; problem: string; decision: string; title: string; priority: string; category: string; visible_groups: string[] | null; assignee_id: string | null; assigned_at: string | null; image_urls: string[] | null }>,
         userId?: string,
     ): Promise<void> {
         const payload: Record<string, any> = { ...patch, updated_at: new Date().toISOString() };
@@ -939,6 +969,28 @@ export const apiClient = {
             return rows?.[0] ?? null;
         } catch {
             return null;
+        }
+    },
+
+    // 新規チケット作成時に問題点を項目分割して一括登録する。
+    // 1 リクエストでまとめて INSERT し、作成行を sort_order 順で返す。
+    async createProposalProblems(proposalId: string, bodies: string[], userId?: string): Promise<ProposalProblem[]> {
+        const rows = bodies
+            .map(b => b.trim())
+            .filter(Boolean)
+            .map((body, i) => ({ proposal_id: proposalId, body, sort_order: i, created_by: userId ?? null }));
+        if (rows.length === 0) return [];
+        const res = await rawRest('/rest/v1/operational_proposal_problems', {
+            method: 'POST',
+            body: rows,
+            prefer: 'return=representation',
+        });
+        if (!res.ok) throw new Error(`問題点の一括登録に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        try {
+            const created = (await res.json()) as ProposalProblem[];
+            return (created ?? []).sort((a, b) => a.sort_order - b.sort_order);
+        } catch {
+            return [];
         }
     },
 

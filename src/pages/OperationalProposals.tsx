@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, Clock, AlertCircle, User as UserIcon, Calendar, MessageSquare, Tag, ArrowUpDown, Hash, Plus, ArrowLeft, Edit2, Send, X, Check, Gavel, Trash2, RotateCcw, CheckSquare, Square, ListChecks, UserCheck, ImagePlus, Image as ImageIcon } from 'lucide-react';
 import { apiClient, uploadProposalImage } from '../api/client';
 import { makeThumbnail } from '../utils/imageThumbnail';
+import { hasInlineImage, insertImageMarkup, splitInlineImages, stripInlineImages } from '../utils/inlineImages';
 import { supabase } from '../lib/supabase';
 import { OperationalProposal, OperationalProposalComment, User, ProposalDraft, NavigateParams, ProposalProblem } from '../types';
 import { BackButton } from '../components/common/BackButton';
@@ -61,6 +62,21 @@ function imageFilesFromDataTransfer(dt: DataTransfer | null): File[] {
     if (!dt) return [];
     return Array.from(dt.files || []).filter(f => f.type.startsWith('image/'));
 }
+
+// 本文を「テキスト + インライン画像」で描画する
+const BodyWithImages: React.FC<{ text: string; onImageClick: (url: string) => void }> = ({ text, onImageClick }) => (
+    <>
+        {splitInlineImages(text).map((part, i) => part.type === 'image' ? (
+            <img key={`${i}-${part.url}`} src={part.url} alt="" onClick={() => onImageClick(part.url)}
+                style={{
+                    display: 'block', maxWidth: '100%', borderRadius: '12px', cursor: 'zoom-in',
+                    border: '1px solid rgba(255,255,255,0.12)', margin: '10px 0',
+                }} />
+        ) : (
+            <span key={i}>{part.value.replace(/^\n/, '').replace(/\n$/, '')}</span>
+        ))}
+    </>
+);
 
 // 送信操作の無限ハング防止。画面を開いている間のアイドルには付けず、
 // 実際の書き込み呼び出し (合議追記・削除・フィールド保存) のみに付ける。
@@ -234,11 +250,11 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     // 新規作成時の問題点チェックリスト項目 (作成後に operational_proposal_problems へ一括登録)
     const [createProblemItems, setCreateProblemItems] = useState<string[]>([]);
     const [createProblemDraft, setCreateProblemDraft] = useState('');
-    // 新規作成時の添付画像。選択時点で Storage へ上げ、公開 URL を保持する
-    const [createImages, setCreateImages] = useState<string[]>([]);
+    // 画像は問題点（概要）の本文にインライン挿入する。貼り付け位置がそのまま表示位置。
     const [imageUploading, setImageUploading] = useState(false);
+    const createProblemRef = useRef<HTMLTextAreaElement>(null);
     const createFileInputRef = useRef<HTMLInputElement>(null);
-    // 詳細モーダルの画像追加
+    const detailProblemRef = useRef<HTMLTextAreaElement>(null);
     const detailFileInputRef = useRef<HTMLInputElement>(null);
     // 画像の拡大表示 (クリックで原寸ビュー)
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -246,7 +262,6 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const resetCreateExtras = () => {
         setCreateProblemItems([]);
         setCreateProblemDraft('');
-        setCreateImages([]);
     };
 
     const addCreateProblemItem = () => {
@@ -256,17 +271,26 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         setCreateProblemDraft('');
     };
 
-    const handleCreateImages = async (files: File[]) => {
+    // 画像をアップロードし、テキストエリアのカーソル位置へ ![](url) を差し込む。
+    const insertImagesAtCursor = async (
+        files: File[],
+        ref: React.RefObject<HTMLTextAreaElement>,
+        value: string,
+        setValue: (next: string) => void,
+    ) => {
         if (files.length === 0) return;
-        const room = MAX_PROPOSAL_IMAGES - createImages.length;
-        if (room <= 0) {
-            window.alert(`画像は最大 ${MAX_PROPOSAL_IMAGES} 枚までです。`);
-            return;
-        }
+        const el = ref.current;
+        const pos = el ? el.selectionStart : value.length;
         setImageUploading(true);
         try {
-            const urls = await uploadImageFiles(files.slice(0, room));
-            setCreateImages(prev => [...prev, ...urls]);
+            const urls = await uploadImageFiles(files.slice(0, MAX_PROPOSAL_IMAGES));
+            if (urls.length === 0) return;
+            const { text, caret } = insertImageMarkup(value, pos, urls);
+            setValue(text);
+            requestAnimationFrame(() => {
+                el?.focus();
+                el?.setSelectionRange(caret, caret);
+            });
         } catch (e: any) {
             console.error('Failed to upload proposal image:', e);
             window.alert(`画像のアップロードに失敗しました。\n${e?.message ?? ''}`);
@@ -683,26 +707,6 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         }
     };
 
-    const handleDetailImages = async (files: File[]) => {
-        if (!selectedProposal || files.length === 0) return;
-        const current = selectedProposal.image_urls ?? [];
-        const room = MAX_PROPOSAL_IMAGES - current.length;
-        if (room <= 0) {
-            window.alert(`画像は最大 ${MAX_PROPOSAL_IMAGES} 枚までです。`);
-            return;
-        }
-        setImageUploading(true);
-        try {
-            const urls = await uploadImageFiles(files.slice(0, room));
-            if (urls.length > 0) await handleSaveImages([...current, ...urls]);
-        } catch (e: any) {
-            console.error('Failed to upload proposal image:', e);
-            window.alert(`画像のアップロードに失敗しました。\n${e?.message ?? ''}`);
-        } finally {
-            setImageUploading(false);
-        }
-    };
-
     const handleSaveVisibility = async () => {
         if (!selectedProposal || !user?.id) return;
         setSavingField('visibility');
@@ -850,7 +854,6 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                 category: form.category,
                 visible_groups: form.visible_groups.length > 0 ? form.visible_groups : null,
                 source_knowledge_id: form.source_knowledge_id?.trim() || null,
-                image_urls: createImages.length > 0 ? createImages : null,
             });
             const timeoutP = new Promise<never>((_, reject) =>
                 setTimeout(() => reject(new Error('timeout: createProposal (20s)')), 20000),
@@ -1429,10 +1432,13 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         const desc = proposal.description || '';
                                         const marker = '【改善提案】\n';
                                         const idx = desc.indexOf(marker);
-                                        const preview = (proposal as any).problem
+                                        // 本文にインライン画像 (![](url)) が入るので、1 行プレビューでは記法を落とす
+                                        const preview = stripInlineImages(
+                                            (proposal as any).problem
                                             || (idx >= 0 ? desc.slice(0, idx).trim() : desc.trim())
                                             || (proposal as any).proposal
-                                            || '';
+                                            || ''
+                                        );
                                         const prog = progressById[proposal.id];
                                         const hasProgress = !!prog && prog.total > 0;
                                         const progPct = hasProgress ? Math.round((prog.done / prog.total) * 100) : 0;
@@ -1768,12 +1774,42 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         {editingProblemOverview ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                 <textarea
+                                                    ref={detailProblemRef}
                                                     value={problemOverviewDraft}
                                                     onChange={e => setProblemOverviewDraft(e.target.value)}
-                                                    placeholder="問題点（概要）を入力"
+                                                    onPaste={e => {
+                                                        const files = imageFilesFromDataTransfer(e.clipboardData as unknown as DataTransfer);
+                                                        if (files.length === 0) return;
+                                                        e.preventDefault();
+                                                        insertImagesAtCursor(files, detailProblemRef, problemOverviewDraft, setProblemOverviewDraft);
+                                                    }}
+                                                    onDrop={e => {
+                                                        const files = imageFilesFromDataTransfer(e.dataTransfer);
+                                                        if (files.length === 0) return;
+                                                        e.preventDefault();
+                                                        insertImagesAtCursor(files, detailProblemRef, problemOverviewDraft, setProblemOverviewDraft);
+                                                    }}
+                                                    onDragOver={e => e.preventDefault()}
+                                                    placeholder="問題点（概要）を入力（画像はここに貼り付け / ドロップでその位置に入ります）"
                                                     style={editAreaStyle}
                                                 />
-                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                {hasInlineImage(problemOverviewDraft) && (
+                                                    <div style={{ ...blockStyle, padding: '14px 18px', fontSize: '0.92rem' }}>
+                                                        <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: '6px' }}>プレビュー</div>
+                                                        <BodyWithImages text={problemOverviewDraft} onImageClick={setLightboxUrl} />
+                                                    </div>
+                                                )}
+                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                    <input ref={detailFileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
+                                                        onChange={e => {
+                                                            const files = Array.from(e.target.files || []);
+                                                            e.target.value = '';
+                                                            insertImagesAtCursor(files, detailProblemRef, problemOverviewDraft, setProblemOverviewDraft);
+                                                        }} />
+                                                    <button onClick={() => detailFileInputRef.current?.click()} disabled={imageUploading}
+                                                        style={{ ...editIconBtn, padding: '8px 14px', marginRight: 'auto', color: '#93c5fd', borderColor: 'rgba(96,165,250,0.45)', background: 'rgba(96,165,250,0.12)' }}>
+                                                        <ImagePlus size={13} />{imageUploading ? 'アップロード中…' : '画像を挿入'}
+                                                    </button>
                                                     <button onClick={() => { setEditingProblemOverview(false); setProblemOverviewDraft(selectedProposal.problem ?? ''); }}
                                                         style={{ ...editIconBtn, padding: '8px 14px' }}>
                                                         <X size={14} />キャンセル
@@ -1785,7 +1821,11 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div style={blockStyle}>{problemText || <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>未入力</span>}</div>
+                                            <div style={blockStyle}>
+                                                {problemText
+                                                    ? <BodyWithImages text={problemText} onImageClick={setLightboxUrl} />
+                                                    : <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>未入力</span>}
+                                            </div>
                                         )}
                                     </div>
 
@@ -2001,36 +2041,19 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         </div>
                                     )}
 
-                                    {/* 画像 (編集権限があれば追加・削除。テキスト欄と違い即保存) */}
+                                    {/* 添付画像 (本文インライン化より前に添付された分。新規は問題点の本文に貼る) */}
                                     {(() => {
                                         const images = selectedProposal.image_urls ?? [];
-                                        if (images.length === 0 && !canEditProposal) return null;
+                                        if (images.length === 0) return null;
                                         return (
                                             <div>
                                                 <div style={{ ...sectionLabel, color: '#60a5fa', justifyContent: 'space-between' }}>
                                                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                                                        <ImageIcon size={13} />画像
+                                                        <ImageIcon size={13} />添付画像
                                                     </span>
-                                                    {canEditProposal && (
-                                                        <button style={editIconBtn} title="画像を追加" disabled={imageUploading}
-                                                            onClick={() => detailFileInputRef.current?.click()}>
-                                                            <ImagePlus size={13} />{imageUploading ? 'アップロード中…' : '追加'}
-                                                        </button>
-                                                    )}
                                                 </div>
-                                                <input ref={detailFileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
-                                                    onChange={e => {
-                                                        const files = Array.from(e.target.files || []);
-                                                        e.target.value = '';
-                                                        handleDetailImages(files);
-                                                    }} />
-                                                {images.length === 0 ? (
-                                                    <div style={{ ...blockStyle, border: '1px dashed rgba(96,165,250,0.3)', background: 'rgba(96,165,250,0.03)', fontSize: '0.85rem', color: 'var(--text-dim)' }}>
-                                                        画像は未添付です。
-                                                    </div>
-                                                ) : (
-                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
-                                                        {images.map(url => (
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
+                                                    {images.map(url => (
                                                             <div key={url} style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)' }}>
                                                                 <img src={url} alt="" onClick={() => setLightboxUrl(url)}
                                                                     style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block', cursor: 'zoom-in' }} />
@@ -2048,8 +2071,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                                 )}
                                                             </div>
                                                         ))}
-                                                    </div>
-                                                )}
+                                                </div>
                                             </div>
                                         );
                                     })()}
@@ -2463,21 +2485,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                     backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
                 }}>
-                    <div className="modal-content glass-elevated" onClick={e => e.stopPropagation()}
-                        onPaste={e => {
-                            const files = imageFilesFromDataTransfer(e.clipboardData as unknown as DataTransfer);
-                            if (files.length === 0) return;
-                            e.preventDefault();
-                            handleCreateImages(files);
-                        }}
-                        onDrop={e => {
-                            const files = imageFilesFromDataTransfer(e.dataTransfer);
-                            if (files.length === 0) return;
-                            e.preventDefault();
-                            handleCreateImages(files);
-                        }}
-                        onDragOver={e => e.preventDefault()}
-                        style={{
+                    <div className="modal-content glass-elevated" onClick={e => e.stopPropagation()} style={{
                         maxWidth: '640px', width: '90%', maxHeight: '90vh', overflowY: 'auto',
                         padding: '40px', borderRadius: '32px',
                         background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
@@ -2525,16 +2533,60 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                 />
                             </div>
 
-                            {/* 問題点 */}
+                            {/* 問題点 (画像は本文のカーソル位置にインライン挿入) */}
                             <div>
                                 <label style={labelStyle}>問題点</label>
                                 <textarea
+                                    ref={createProblemRef}
                                     value={form.problem}
                                     onChange={e => setForm(f => ({ ...f, problem: e.target.value }))}
-                                    placeholder="現状の問題・背景を入力"
-                                    rows={3}
+                                    onPaste={e => {
+                                        const files = imageFilesFromDataTransfer(e.clipboardData as unknown as DataTransfer);
+                                        if (files.length === 0) return;
+                                        e.preventDefault();
+                                        insertImagesAtCursor(files, createProblemRef, form.problem, v => setForm(f => ({ ...f, problem: v })));
+                                    }}
+                                    onDrop={e => {
+                                        const files = imageFilesFromDataTransfer(e.dataTransfer);
+                                        if (files.length === 0) return;
+                                        e.preventDefault();
+                                        insertImagesAtCursor(files, createProblemRef, form.problem, v => setForm(f => ({ ...f, problem: v })));
+                                    }}
+                                    onDragOver={e => e.preventDefault()}
+                                    placeholder="現状の問題・背景を入力（画像はここに貼り付け / ドロップでその位置に入ります）"
+                                    rows={4}
                                     style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.7 }}
                                 />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+                                    <input ref={createFileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
+                                        onChange={e => {
+                                            const files = Array.from(e.target.files || []);
+                                            e.target.value = '';
+                                            insertImagesAtCursor(files, createProblemRef, form.problem, v => setForm(f => ({ ...f, problem: v })));
+                                        }} />
+                                    <button onClick={() => createFileInputRef.current?.click()} disabled={imageUploading}
+                                        style={{
+                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', lineHeight: 1,
+                                            height: '28px', boxSizing: 'border-box', padding: '0 12px', borderRadius: '10px',
+                                            background: 'rgba(96,165,250,0.15)', border: '1px solid rgba(96,165,250,0.45)',
+                                            color: '#93c5fd', cursor: imageUploading ? 'wait' : 'pointer', fontSize: '0.78rem',
+                                        }}>
+                                        <ImagePlus size={12} />画像を挿入
+                                    </button>
+                                    {imageUploading && <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>アップロード中…</span>}
+                                </div>
+                                {/* 入力中も貼った画像の位置を確認できるようプレビューを出す */}
+                                {hasInlineImage(form.problem) && (
+                                    <div style={{
+                                        marginTop: '10px', padding: '12px 14px', borderRadius: '14px',
+                                        background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)',
+                                        fontSize: '0.9rem', lineHeight: 1.7, color: 'var(--text)', whiteSpace: 'pre-wrap',
+                                        overflowWrap: 'anywhere', wordBreak: 'break-word', minWidth: 0,
+                                    }}>
+                                        <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: '6px' }}>プレビュー</div>
+                                        <BodyWithImages text={form.problem} onImageClick={setLightboxUrl} />
+                                    </div>
+                                )}
                             </div>
 
                             {/* 問題点チェックリスト (作成時に項目分割) */}
@@ -2604,63 +2656,6 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                     rows={3}
                                     style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.7 }}
                                 />
-                            </div>
-
-                            {/* 画像 (Supabase Storage に直接アップ) */}
-                            <div>
-                                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', lineHeight: 1, color: '#60a5fa' }}>
-                                        <ImageIcon size={12} />画像
-                                    </span>
-                                    <span style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 400 }}>
-                                        (貼り付け / ドラッグ&ドロップ / 選択・最大 {MAX_PROPOSAL_IMAGES} 枚)
-                                    </span>
-                                </label>
-                                <div style={{
-                                    padding: '12px', borderRadius: '14px',
-                                    background: 'rgba(96,165,250,0.04)', border: '1px dashed rgba(96,165,250,0.35)',
-                                }}>
-                                    {createImages.length > 0 && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px', marginBottom: '10px' }}>
-                                            {createImages.map(url => (
-                                                <div key={url} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)' }}>
-                                                    <img src={url} alt="" onClick={() => setLightboxUrl(url)}
-                                                        style={{ width: '100%', height: '90px', objectFit: 'cover', display: 'block', cursor: 'zoom-in' }} />
-                                                    <button onClick={() => setCreateImages(prev => prev.filter(u => u !== url))} title="削除"
-                                                        style={{
-                                                            position: 'absolute', top: '4px', right: '4px',
-                                                            width: '22px', height: '22px', borderRadius: '50%',
-                                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                                            background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.25)',
-                                                            color: '#fff', cursor: 'pointer', padding: 0,
-                                                        }}>
-                                                        <X size={12} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <input ref={createFileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
-                                            onChange={e => {
-                                                const files = Array.from(e.target.files || []);
-                                                e.target.value = '';
-                                                handleCreateImages(files);
-                                            }} />
-                                        <button onClick={() => createFileInputRef.current?.click()} disabled={imageUploading}
-                                            style={{
-                                                display: 'inline-flex', alignItems: 'center', gap: '6px', lineHeight: 1,
-                                                height: '32px', boxSizing: 'border-box', padding: '0 14px', borderRadius: '10px',
-                                                background: 'rgba(96,165,250,0.15)', border: '1px solid rgba(96,165,250,0.45)',
-                                                color: '#93c5fd', cursor: imageUploading ? 'wait' : 'pointer', fontSize: '0.82rem',
-                                            }}>
-                                            <ImagePlus size={12} />画像を選択
-                                        </button>
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-                                            {imageUploading ? 'アップロード中…' : `${createImages.length} / ${MAX_PROPOSAL_IMAGES} 枚`}
-                                        </span>
-                                    </div>
-                                </div>
                             </div>
 
                             {/* 起案者 / 日付 */}

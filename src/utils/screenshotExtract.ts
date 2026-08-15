@@ -20,10 +20,12 @@ export interface EncodedImage {
     data: string; // base64 (プレフィックスなし)
 }
 
-const MAX_EDGE = 1600;
-const JPEG_QUALITY = 0.85;
+// FC 画面のスクショはブラウザ全画面キャプチャが多く、依頼番号など 10px 前後の
+// 小さな数字が本文中に埋もれる。1600px まで落とすと OCR で読み落とすため 2000px 維持。
+const MAX_EDGE = 2000;
+const JPEG_QUALITY = 0.9;
 
-// スクショを長辺 1600px / JPEG に縮小して base64 化する (Gemini への転送量削減)
+// スクショを長辺 2000px / JPEG に縮小して base64 化する (Gemini への転送量削減)
 export async function encodeImageForExtraction(file: File): Promise<EncodedImage> {
     const bitmap = await createImageBitmap(file);
     const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));

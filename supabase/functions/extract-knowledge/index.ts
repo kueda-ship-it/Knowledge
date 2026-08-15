@@ -53,7 +53,9 @@ FC では「依頼ヘッダー画面 (物件名・型-号機・依頼番号・�
 - countermeasure: ← 「処置内容」「備考欄（処置内容）」。実施した対処に加え、今後の対応条件 (部品承認待ち・交換条件など) も含める。**画像に処置の記載が無ければフィールドごと省略**。「対応完了」等のステータス表示だけからの推測は禁止
 - machine: ← 「型-号機」「号機」欄の号機番号の**数字のみ** (型式プレフィックスは含めない。例: 「H - 7798」→ "7798"、「FRC-420073」→ "420073")
 - property: ← 「物件名」欄 (例: ヒルズ栗平)。無ければ会社名・設置場所
-- req_num: ← 「依頼番号」欄の半角数字11桁 (例: 12607280302)。11桁以外なら省略
+- req_num: ← 「依頼番号」欄の半角数字11桁 (例: 12607280302)。**必ず文字列**で返す (数値型で返さない)。
+  依頼ヘッダー画面ではブラウザ最上部の [閉じる][更新] ボタン行の右側にも同じ番号が出ているので、
+  表の「依頼番号」欄が小さくて読みにくい場合はそちらも照合すること。11桁以外なら省略
 - category: 次の選択肢に一致する場合のみ: ${categories}
 - incidents: 次の選択肢に一致するもののみ配列で: ${incidents}
 - tags: 症状・部品名などのキーワードを 3〜5 個 (例: ヒューズ切れ, 列基板, 荷有り表示)
@@ -104,6 +106,13 @@ export function sanitizeDraft(
   const machineMatch = machineRaw.match(/^[A-Za-z]*[-\s]*(\d+)$/);
   const machine = machineMatch ? machineMatch[1] : (machineRaw || undefined);
 
+  // 依頼番号は全桁数字なので JSON モードの Gemini が number で返すことがある。
+  // 区切り記号・全角も含めて数字だけに正規化してから 11 桁判定する。
+  const reqDigits = (d.req_num === undefined || d.req_num === null ? "" : String(d.req_num))
+    .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .replace(/\D/g, "");
+  const req_num = /^\d{11}$/.test(reqDigits) ? reqDigits : undefined;
+
   // 事象・対処に「画像からは読み取れない」等のメタ記述が入っていたら捨てる
   // (実際の報告文が画像・スクショに言及することはない)。空欄のまま返せば
   // 後から報告画面のスクショを貼ったときにマージで埋まる。
@@ -118,7 +127,7 @@ export function sanitizeDraft(
     title,
     machine,
     property: d.property ? String(d.property) : undefined,
-    req_num: typeof d.req_num === "string" && /^\d{11}$/.test(d.req_num) ? d.req_num : undefined,
+    req_num,
     category: category && (categories.length === 0 || categories.includes(category)) ? category : undefined,
     phenomenon: cleanBody(d.phenomenon),
     countermeasure: cleanBody(d.countermeasure),

@@ -405,6 +405,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                     onBack={onBack}
                     onAdd={handleAddItem}
                     onSearch={setSearchKeyword}
+                    searchKeyword={searchKeyword}
                     selectedTags={selectedTags}
                     onTagToggle={(tag) => {
                         setSelectedTags(prev =>

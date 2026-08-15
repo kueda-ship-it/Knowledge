@@ -12,6 +12,7 @@ import { isManagerOrAbove } from '../constants/roles';
 import { TagInput } from './common/TagInput';
 import { TagStat } from '../utils/tagUtils';
 import { EncodedImage, encodeImageForExtraction, extractKnowledgeFromImages, mergeDraft, currentFromForm } from '../utils/screenshotExtract';
+import { EditorSnapshot, StoredDraft, isDirty, hasContent, saveDraft, loadDraft, clearDraft } from '../utils/editorDraft';
 import { getToken } from '../lib/microsoftGraph';
 
 interface EditorProps {
@@ -46,6 +47,16 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
     const [showWrongDialog, setShowWrongDialog] = useState(false);
     const [wrongComment, setWrongComment] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // --- 閉じる確認 / 下書き復元 ---
+    const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+    // 新規作成で開いたときに復元できる前回の下書き (バナーで提示、押されるまで反映しない)
+    const [restorable, setRestorable] = useState<StoredDraft | null>(null);
+    // 未保存判定の基準。item 読み込み直後 / 下書き復元直後の状態を入れる
+    const baselineRef = useRef<EditorSnapshot | null>(null);
+    const draftUserKey = user.email || user.name;
+    const isNewEditor = !item?.id;
+
     const { uploadFile, uploading, statusMessage, isAuthenticated, authenticate } = useOneDriveUpload(user.email as string | undefined);
 
     // --- スクショ AI 読み取り ---
@@ -63,14 +74,21 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
 
     useEffect(() => {
         if (item) {
-            setFormData({
+            const nextForm = {
                 ...item,
                 phenomenon: item.phenomenon ?? '',
                 countermeasure: item.countermeasure ?? '',
-            });
+            };
+            setFormData(nextForm);
             setSelectedIncidents(item.incidents || []);
             setTagInput((item.tags || []).join(' #'));
             setAttachments(item.attachments || []);
+            baselineRef.current = {
+                formData: nextForm,
+                selectedIncidents: item.incidents || [],
+                tagInput: (item.tags || []).join(' #'),
+                attachments: item.attachments || [],
+            };
             // 履歴取得 (新規作成 (id 空) のときはスキップ)
             if (item.id) {
                 apiClient.fetchHistory(item.id).then(setHistory).catch(console.error);
@@ -78,18 +96,24 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                 setHistory([]);
             }
         } else {
-            setFormData({
+            const nextForm: Partial<KnowledgeItem> = {
                 title: '', machine: '', property: '', req_num: '',
                 category: '', incidents: [], tags: [], content: '',
                 phenomenon: '', countermeasure: '',
                 status: 'unsolved',
                 claimLevel: 0,
-            });
+            };
+            setFormData(nextForm);
             setSelectedIncidents([]);
             setTagInput('');
             setAttachments([]);
             setHistory([]);
+            baselineRef.current = { formData: nextForm, selectedIncidents: [], tagInput: '', attachments: [] };
         }
+        // 前回「下書きを残して閉じる」を選んでいたら、新規エディタでのみ復元バナーを出す。
+        // 既存ナレッジの編集画面に他案件の下書きを持ち込むと事故になるので出さない。
+        setRestorable(!item?.id ? loadDraft(draftUserKey) : null);
+        setShowCloseConfirm(false);
         aiImagesRef.current = [];
         setAiState('idle');
         setAiNote('');
@@ -205,6 +229,8 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                 apiClient.save(payload, isNew ? undefined : (item || undefined)),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 30000))
             ]);
+            // 保存できた時点で下書きは役目を終える (残すと次の新規作成で復元バナーが出て紛らわしい)
+            clearDraft(draftUserKey);
             onSave(payload);
         } catch (e: any) {
             const msg = e?.message === 'TIMEOUT'
@@ -372,6 +398,56 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialFiles]);
 
+    // --- 閉じる確認 / 下書き ---
+    const snapshot = (): EditorSnapshot => ({ formData, selectedIncidents, tagInput, attachments });
+
+    // 新規作成中は入力を自動保存する。誤ってタブを閉じた / リロードした場合でも
+    // 次に新規作成を開いたときに「続きから再開」できる。
+    // 空フォームでは保存しない (未復元の下書きを空で上書きしてしまうため)。
+    useEffect(() => {
+        if (!isNewEditor) return;
+        const snap: EditorSnapshot = { formData, selectedIncidents, tagInput, attachments };
+        if (!hasContent(snap)) return;
+        const timer = setTimeout(() => saveDraft(snap, draftUserKey), 800);
+        return () => clearTimeout(timer);
+    }, [formData, selectedIncidents, tagInput, attachments, isNewEditor, draftUserKey]);
+
+    // × を押したとき。未保存の変更が無ければそのまま閉じる (毎回確認するのは煩わしいので)
+    const handleCloseRequest = () => {
+        const base = baselineRef.current;
+        if (!base || !isDirty(snapshot(), base)) return onCancel();
+        setShowCloseConfirm(true);
+    };
+
+    const closeDiscarding = () => {
+        clearDraft(draftUserKey);
+        setShowCloseConfirm(false);
+        onCancel();
+    };
+
+    const restoreDraft = () => {
+        if (!restorable) return;
+        setFormData(restorable.formData);
+        setSelectedIncidents(restorable.selectedIncidents);
+        setTagInput(restorable.tagInput);
+        setAttachments(restorable.attachments);
+        // 復元直後を基準にする。ここから何も触らずに閉じたら確認は出さない
+        baselineRef.current = {
+            formData: restorable.formData,
+            selectedIncidents: restorable.selectedIncidents,
+            tagInput: restorable.tagInput,
+            attachments: restorable.attachments,
+        };
+        // 復元した status は本人が選んだ値なので AI 判定で上書きしない
+        statusTouchedRef.current = true;
+        setRestorable(null);
+    };
+
+    const discardRestorable = () => {
+        clearDraft(draftUserKey);
+        setRestorable(null);
+    };
+
     // 種別に応じて区分/詳細セレクトのラベル接頭辞を切り替える (トラブル区分 / インシデント区分)
     const typeLabel = (formData.recordType ?? 'trouble') === 'incident' ? 'インシデント' : 'トラブル';
 
@@ -381,7 +457,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', fontWeight: 'bold' }}>
                     <i className="fa-solid fa-pen"></i> ナレッジ編集
                 </h3>
-                <button onClick={onCancel} className="secondary-btn" title="閉じる" style={{ width: '36px', height: '36px', padding: 0 }}>
+                <button onClick={handleCloseRequest} className="secondary-btn" title="閉じる" style={{ width: '36px', height: '36px', padding: 0 }}>
                     <X size={18} />
                 </button>
             </div>
@@ -462,6 +538,71 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                 </div>
             )}
 
+            {showCloseConfirm && (
+                <div
+                    onClick={() => setShowCloseConfirm(false)}
+                    style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000,
+                        background: 'rgba(2, 6, 23, 0.6)', backdropFilter: 'blur(4px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+                    }}
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            // box-sizing は input 系にしか効いていないので明示する (狭い画面でカードがはみ出すため)
+                            width: '100%', maxWidth: '340px', padding: '22px', boxSizing: 'border-box',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px',
+                            textAlign: 'center', borderRadius: '16px',
+                            background: 'var(--card-bg)', border: '1px solid var(--glass-border)',
+                            backdropFilter: 'blur(20px)',
+                            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.45)',
+                        }}
+                    >
+                        <div style={{
+                            width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0,
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(245, 158, 11, 0.15)',
+                            border: '1px solid rgba(245, 158, 11, 0.45)',
+                            boxShadow: '0 0 20px rgba(245, 158, 11, 0.25)',
+                        }}>
+                            <AlertTriangle size={20} style={{ color: '#f59e0b' }} />
+                        </div>
+
+                        <div>
+                            <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '6px' }}>
+                                保存せずに閉じますか？
+                            </div>
+                            <div style={{ fontSize: '0.8rem', lineHeight: 1.6, color: 'var(--muted)' }}>
+                                入力中の内容はまだ保存されていません。
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                            <button
+                                type="button" onClick={() => setShowCloseConfirm(false)} className="secondary-btn"
+                                style={{ flex: 1, height: '38px', boxSizing: 'border-box', padding: '0 12px', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                            >
+                                編集に戻る
+                            </button>
+                            <button
+                                type="button" onClick={closeDiscarding}
+                                style={{
+                                    flex: 1, height: '38px', boxSizing: 'border-box', padding: '0 12px', fontSize: '0.85rem',
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', lineHeight: 1,
+                                    borderRadius: '8px', cursor: 'pointer',
+                                    background: 'rgba(239, 68, 68, 0.15)',
+                                    border: '1px solid rgba(239, 68, 68, 0.5)',
+                                    color: '#fca5a5',
+                                }}
+                            >
+                                <Trash2 size={12} /> 破棄して閉じる
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Change History with Diff */}
             {showHistory && item && (
                 <div style={{
@@ -493,6 +634,39 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             )}
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                {/* 前回「下書きを残して閉じる」した内容の復元。押されるまでフォームには反映しない */}
+                {restorable && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        padding: '10px 14px', borderRadius: '10px',
+                        background: 'rgba(245, 158, 11, 0.1)',
+                        border: '1px solid rgba(245, 158, 11, 0.4)',
+                        fontSize: '0.85rem',
+                    }}>
+                        <History size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                            作成途中の下書きがあります
+                            {restorable.savedAt && (
+                                <span style={{ color: 'var(--muted)' }}>
+                                    （{new Date(restorable.savedAt).toLocaleString()}）
+                                </span>
+                            )}
+                        </span>
+                        <button
+                            type="button" onClick={restoreDraft} className="primary-btn"
+                            style={{ height: '28px', boxSizing: 'border-box', padding: '0 14px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px', lineHeight: 1, flexShrink: 0 }}
+                        >
+                            <RotateCcw size={12} /> 続きから再開
+                        </button>
+                        <button
+                            type="button" onClick={discardRestorable} className="secondary-btn"
+                            style={{ height: '28px', boxSizing: 'border-box', padding: '0 14px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px', lineHeight: 1, flexShrink: 0 }}
+                        >
+                            <X size={12} /> 破棄
+                        </button>
+                    </div>
+                )}
+
                 {/* スクショ AI 読み取りステータス (FC 報告画面などを Ctrl+V / D&D で貼ると自動抽出) */}
                 {(aiState !== 'idle' || aiNote) && (
                     <div style={{

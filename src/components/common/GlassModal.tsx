@@ -29,32 +29,38 @@ export const GlassModal: React.FC<Props> = ({ open, title, icon, onClose, childr
                 position: 'fixed',
                 inset: 0,
                 zIndex: 9998,
-                background: 'rgba(0, 0, 0, 0.5)',
+                background: 'var(--modal-scrim)',
                 backdropFilter: 'blur(8px)',
                 WebkitBackdropFilter: 'blur(8px)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: 20,
+                boxSizing: 'border-box',
                 animation: 'glass-modal-fade 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
         >
             <div
+                role="dialog"
+                aria-modal="true"
+                aria-label={title}
                 onClick={e => e.stopPropagation()}
                 style={{
                     width: '100%',
                     maxWidth,
                     maxHeight: '85vh',
+                    boxSizing: 'border-box',
                     display: 'flex',
                     flexDirection: 'column',
                     borderRadius: 20,
-                    background: 'rgba(24, 28, 40, 0.92)',
+                    background: 'var(--modal-bg)',
+                    color: 'var(--text)',
                     backdropFilter: 'blur(28px) saturate(180%)',
                     WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-                    border: '1px solid rgba(255, 255, 255, 0.14)',
-                    boxShadow: '0 2px 0 0 rgba(255,255,255,0.08) inset, 0 24px 64px 0 rgba(0,0,0,0.55), 0 8px 20px 0 rgba(0,0,0,0.3)',
+                    border: '1px solid var(--glass-border)',
+                    boxShadow: 'var(--modal-shadow)',
                     overflow: 'hidden',
-                    animation: 'glass-modal-slide 0.24s cubic-bezier(0.16, 1, 0.3, 1)',
+                    animation: 'glass-modal-fade 0.24s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}
             >
                 <div style={{
@@ -62,28 +68,12 @@ export const GlassModal: React.FC<Props> = ({ open, title, icon, onClose, childr
                     alignItems: 'center',
                     gap: 12,
                     padding: '18px 24px',
-                    borderBottom: '1px solid rgba(255,255,255,0.08)',
+                    borderBottom: '1px solid var(--glass-border)',
                     flexShrink: 0,
                 }}>
                     {icon}
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'rgba(255,255,255,0.95)', flex: 1 }}>{title}</h3>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            background: 'rgba(255,255,255,0.06)',
-                            border: 'none',
-                            color: 'rgba(255,255,255,0.75)',
-                            width: 32, height: 32,
-                            borderRadius: 10,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                    >
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{title}</h3>
+                    <button type="button" className="glass-modal-close" onClick={onClose} title="閉じる" aria-label="閉じる">
                         <X size={16} />
                     </button>
                 </div>
@@ -95,7 +85,7 @@ export const GlassModal: React.FC<Props> = ({ open, title, icon, onClose, childr
                 {footer && (
                     <div style={{
                         padding: '14px 24px',
-                        borderTop: '1px solid rgba(255,255,255,0.08)',
+                        borderTop: '1px solid var(--glass-border)',
                         display: 'flex',
                         justifyContent: 'flex-end',
                         gap: 8,
@@ -111,10 +101,28 @@ export const GlassModal: React.FC<Props> = ({ open, title, icon, onClose, childr
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
-                @keyframes glass-modal-slide {
-                    from { opacity: 0; transform: translateY(8px) scale(0.98); }
-                    to { opacity: 1; transform: translateY(0) scale(1); }
+                .glass-modal-close {
+                    flex-shrink: 0;
+                    width: 32px;
+                    height: 32px;
+                    box-sizing: border-box;
+                    padding: 0;
+                    border: 1px solid var(--btn-icon-border);
+                    border-radius: 10px;
+                    background: var(--btn-icon-bg);
+                    color: var(--btn-icon-color);
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: filter 0.15s, background 0.15s, color 0.15s;
                 }
+                .glass-modal-close:hover {
+                    background: var(--btn-icon-hover-bg);
+                    color: var(--btn-icon-hover-color);
+                    filter: brightness(1.12);
+                }
+                .glass-modal-close:active { transform: translateY(1px); }
             `}</style>
         </div>,
         document.body

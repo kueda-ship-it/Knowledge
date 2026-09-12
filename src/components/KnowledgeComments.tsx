@@ -132,7 +132,7 @@ export const KnowledgeComments: React.FC<KnowledgeCommentsProps> = ({ knowledgeI
                 fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8', letterSpacing: '0.05em',
             }}>
                 <MessageSquare size={12} />
-                コメント・{comments.length}件
+                コメント・<span className="num">{comments.length}</span>件
             </div>
 
             {loading ? (
@@ -158,7 +158,7 @@ export const KnowledgeComments: React.FC<KnowledgeCommentsProps> = ({ knowledgeI
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)' }}>{name}</span>
-                                        <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{new Date(c.created_at).toLocaleString()}</span>
+                                        <span className="num" style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{new Date(c.created_at).toLocaleString()}</span>
                                         {canDelete(c) && (
                                             <button
                                                 onClick={() => handleDelete(c.id)}

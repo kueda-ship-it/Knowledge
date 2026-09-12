@@ -52,7 +52,7 @@ export const FileList: React.FC<FileListProps> = ({ data, onBack }) => {
                 <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Paperclip size={20} /> 添付ファイル一覧
                 </h2>
-                <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>({allFiles.length}件)</span>
+                <span className="num" style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>({allFiles.length}件)</span>
             </div>
 
             {/* Filters */}

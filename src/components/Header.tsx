@@ -61,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
                          </div>
                     )}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1 }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>
                             {user.name}
                         </span>
                         <small style={{
@@ -115,9 +115,9 @@ export const Header: React.FC<HeaderProps> = ({
                             animation: 'chatPop 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                             transformOrigin: 'top right'
                         }}>
-                            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+                            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
                                 <span>通知</span>
-                                {unreadCount > 0 && <span style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>未読 {unreadCount}件</span>}
+                                {unreadCount > 0 && <span style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>未読 <span className="num">{unreadCount}</span>件</span>}
                             </div>
                             <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                                 {notifications.length > 0 ? notifications.map(note => {
@@ -147,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({
                                                 {meta.text}
                                             </div>
                                             <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-                                                {new Date(note.created_at).toLocaleString()}
+                                                <span className="num">{new Date(note.created_at).toLocaleString()}</span>
                                             </div>
                                         </div>
                                     </div>

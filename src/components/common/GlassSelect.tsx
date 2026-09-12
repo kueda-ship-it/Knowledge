@@ -83,7 +83,7 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
                     textAlign: 'left',
                 }}
             >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, color: selected?.color || 'var(--text)', fontWeight: 500 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, color: selected?.color || 'var(--text)', fontWeight: 400 }}>
                     {selected?.icon}
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected?.label || '選択...'}</span>
                 </span>
@@ -139,7 +139,7 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
                                     color: opt.color || 'rgba(255,255,255,0.95)',
                                     background: isSel ? 'color-mix(in oklab, var(--primary) 20%, transparent)' : 'transparent',
                                     transition: 'background 0.12s',
-                                    fontWeight: isSel ? 600 : 400,
+                                    fontWeight: isSel ? 700 : 400,
                                 }}
                                 onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
                                 onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}

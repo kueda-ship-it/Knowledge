@@ -171,7 +171,7 @@ export const TagInput: React.FC<Props> = ({ value, onChange, existingTags, place
                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {s.tag}
                                 </span>
-                                <span style={{ fontSize: 11, opacity: 0.55, fontVariantNumeric: 'tabular-nums' }}>
+                                <span className="num" style={{ fontSize: 11, opacity: 0.55 }}>
                                     {s.count}
                                 </span>
                             </div>

@@ -251,7 +251,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     display: inline-flex; align-items: center; justify-content: center;
                     min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box;
                     border-radius: 8px; background: var(--tag-active-bg); color: var(--tag-active-text);
-                    font-size: 0.62rem; line-height: 1; font-variant-numeric: tabular-nums;
+                    font-size: 0.62rem; line-height: 1; font-family: var(--font-num); font-variant-numeric: tabular-nums;
                 }
                 .sidebar-rail-dot {
                     position: absolute; top: 1px; right: 1px;

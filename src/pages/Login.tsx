@@ -223,7 +223,7 @@ export const Login: React.FC = () => {
                     background: var(--input-bg);
                     cursor: pointer;
                     font-size: 1rem;
-                    font-weight: 600;
+                    font-weight: 700;
                     color: var(--text);
                     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
@@ -248,7 +248,7 @@ export const Login: React.FC = () => {
                     background: transparent;
                     cursor: pointer;
                     font-size: 0.95rem;
-                    font-weight: 500;
+                    font-weight: 400;
                     color: var(--text);
                     transition: all 0.2s ease;
                 }
@@ -333,7 +333,7 @@ export const Login: React.FC = () => {
                     background: linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary) 70%, #6366f1));
                     color: white;
                     font-size: 1rem;
-                    font-weight: 600;
+                    font-weight: 700;
                     cursor: pointer;
                     display: flex;
                     align-items: center;

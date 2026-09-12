@@ -184,7 +184,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 <div>
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text)', margin: 0 }}>ナレッジ一覧</h2>
                     {!loading && (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                        <span className="num" style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                             {totalCount !== undefined && totalCount !== data.length
                                 ? `${data.length} 件 / 全 ${totalCount} 件`
                                 : `全 ${data.length} 件`}
@@ -366,8 +366,8 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                             </div>
                                         )}
                                         <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                                            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.author}</div>
-                                            <div style={{ fontSize: '0.72rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                                            <div style={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.3, color: '#e2e8f0', overflowWrap: 'anywhere' }}>{item.author}</div>
+                                            <div className="num" style={{ fontSize: '0.72rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                                                 {new Date(item.createdAt ?? item.updatedAt).toLocaleDateString()} ・ No.{index + 1}
                                             </div>
                                         </div>
@@ -379,7 +379,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                             style={{
                                                 display: 'inline-flex', alignItems: 'center', gap: '3px', flexShrink: 0,
                                                 height: '28px', padding: '0 8px', boxSizing: 'border-box', lineHeight: 1,
-                                                fontSize: '0.72rem', fontWeight: 800, color: '#fff',
+                                                fontSize: '0.72rem', fontWeight: 700, color: '#fff',
                                                 background: `rgba(239, 68, 68, ${0.2 + 0.05 * (item.claimLevel ?? 0)})`,
                                                 border: '1px solid rgba(239, 68, 68, 0.6)', borderRadius: '8px', whiteSpace: 'nowrap',
                                                 boxShadow: '0 0 8px rgba(239, 68, 68, 0.4)', textShadow: '0 1px 1px rgba(0,0,0,0.4)',

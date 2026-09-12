@@ -20,19 +20,10 @@
   --space-3xl: 64px;
   --space-4xl: 96px;
 
-  /* Latin: Avenir ファミリー優先（macOS/iOS 標準搭載）。未搭載環境は Google Fonts の Nunito。 */
-  /* 日本語: macOS は Hiragino、Windows は Meiryo UI (明示指定)、次点 Yu Gothic。 */
-  --font-sans:
-    Avenir, 'Avenir Next', 'Avenir Next LT Pro', 'Avenir LT Std',
-    Nunito,
-    -apple-system, BlinkMacSystemFont,
-    'Hiragino Kaku Gothic ProN',
-    'Meiryo UI', Meiryo,
-    'Yu Gothic Medium',
-    system-ui, sans-serif;
-  --font-mono:
-    'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono',
-    Menlo, Consolas, 'Liberation Mono', monospace;
+  /* 書体は BIZ UD ファミリーのみ（Google Fonts 400/700）。他の書体は使わない。 */
+  --font-sans: "BIZ UDPGothic", "BIZ UDPゴシック", sans-serif;
+  /* BIZ UDPゴシックは「1」だけ幅が狭く tnum も無いため、数値は等幅版（全数字 0.5em）にする */
+  --font-num: "BIZ UDGothic", "BIZ UDゴシック", sans-serif;
 
   font-family: var(--font-sans);
   line-height: 1.7;
@@ -422,7 +413,7 @@ body[data-theme="liquid"] .glass-primary {
   padding: var(--space-sm) var(--space-lg);
   border-radius: 12px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
   transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
 }
 
@@ -456,7 +447,7 @@ body[data-theme="liquid"] .primary-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 500;
+  font-weight: 400;
   transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
 }
 
@@ -500,7 +491,7 @@ body[data-theme="liquid"] .secondary-btn:hover {
   padding: var(--space-sm) var(--space-lg);
   border-radius: 12px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
   transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
 }
 body[data-theme="liquid"] .danger-btn {
@@ -621,7 +612,7 @@ body[data-theme="liquid"] .logout-btn-red:hover {
   cursor: pointer !important;
   transition: all 0.4s cubic-bezier(0.16,1,0.3,1) !important;
   font-size: 1.25rem !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   min-height: 200px;
 }
 
@@ -656,7 +647,7 @@ body[data-theme="liquid"] .menu-card:hover {
 /* Liquid: メニューラベルを落ち着いた色に (白すぎ対策) */
 body[data-theme="liquid"] .menu-card span {
   opacity: 0.78;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.01em;
   transition: opacity 0.3s ease;
 }
@@ -678,14 +669,37 @@ body[data-theme="liquid"] main.main-content[style] {
 /* フォーム入力                              */
 /* ======================================== */
 
-/* フォーム要素・ボタンはデフォルトで body の font-family を継承しないため明示的に指定 */
+/* フォーム要素・ボタン・コード系は UA 既定の書体（等幅含む）が残るため明示的に継承 */
 button,
 input,
 select,
 textarea,
 optgroup,
-option {
+option,
+code,
+kbd,
+samp,
+pre {
   font-family: inherit;
+}
+
+/* UA 既定の line-height: normal は BIZ UDPゴシックだと約 1.0em で、移行前よりボタン・入力欄が 3px ほど低くなる */
+button,
+input,
+select,
+textarea {
+  line-height: 1.4;
+}
+
+/* Chrome は select の line-height を無視するので、input と同じ高さを min-height で作る（1.4em + 上下 padding + 上下枠） */
+select {
+  min-height: calc(1.4em + 2 * var(--space-sm) + 2px);
+}
+
+/* 件数・%・日付・時刻などの数値 */
+.num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
 }
 
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
@@ -978,7 +992,7 @@ body[data-theme="liquid"] .glass-refract-wrap > .glass-specular {
   padding: 4px 12px;
   border-radius: 8px;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid var(--glass-border);

@@ -70,7 +70,7 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({
                     color: 'rgba(255,255,255,0.7)',
                     borderBottom: '1px solid rgba(255,255,255,0.1)',
                     marginBottom: 4,
-                }}>{meta.label}・{userIds.length}人</div>
+                }}>{meta.label}・<span className="num">{userIds.length}</span>人</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {userIds.map(uid => {
                         const u = usersMaster.find(x => x.id === uid);
@@ -136,7 +136,7 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({
                             <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', flexShrink: 0 }}>
                                 <meta.Icon size={12} style={{ display: 'block' }} />
                             </span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '16px', minWidth: '8px' }}>{count}</span>
+                            <span className="num" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '16px', minWidth: '8px' }}>{count}</span>
                             {renderPopover(type)}
                         </span>
                     );
@@ -177,7 +177,7 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({
                         }}>
                         <meta.Icon size={12} style={{ flexShrink: 0 }} fill={mine ? `rgb(${meta.rgb})` : 'transparent'} />
                         <span>{meta.label}</span>
-                        <span style={{ minWidth: '8px', textAlign: 'center' }}>{count}</span>
+                        <span className="num" style={{ minWidth: '8px', textAlign: 'center' }}>{count}</span>
                         {renderPopover(type)}
                     </button>
                 );

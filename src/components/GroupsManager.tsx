@@ -83,7 +83,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
             {/* 左: カテゴリ (グループ) リスト */}
             <aside style={{ display: 'flex', flexDirection: 'column', gap: 4, borderRight: '1px solid rgba(255,255,255,0.08)', paddingRight: 12 }}>
                 <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 8px 8px' }}>
-                    グループ ({categories.length})
+                    グループ (<span className="num">{categories.length}</span>)
                 </div>
                 {categories.map(c => {
                     const count = membersByCategory.get(c)?.length ?? 0;
@@ -102,19 +102,19 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                                 textAlign: 'left',
                                 cursor: 'pointer',
                                 fontSize: '0.88rem',
-                                fontWeight: isActive ? 700 : 500,
+                                fontWeight: isActive ? 700 : 400,
                                 transition: 'all 0.15s',
                             }}
                         >
                             <LayoutGrid size={14} style={{ opacity: isActive ? 1 : 0.6 }} />
-                            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c}</span>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '1px 7px', borderRadius: 8 }}>{count}</span>
+                            <span style={{ flex: 1, minWidth: 0, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{c}</span>
+                            <span className="num" style={{ fontSize: '0.72rem', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '1px 7px', borderRadius: 8 }}>{count}</span>
                         </button>
                     );
                 })}
                 {unassigned.length > 0 && (
                     <div style={{ marginTop: 12, fontSize: '0.72rem', color: 'var(--muted)', padding: '0 8px' }}>
-                        未所属: {unassigned.length} 人
+                        未所属: <span className="num">{unassigned.length}</span> 人
                     </div>
                 )}
             </aside>
@@ -155,8 +155,8 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                                     </div>
                                 )}
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: '0.86rem', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
-                                    <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{m.email}</div>
+                                    <div style={{ fontSize: '0.86rem', lineHeight: 1.3, color: 'var(--text)', overflowWrap: 'anywhere' }}>{m.name}</div>
+                                    <div style={{ fontSize: '0.72rem', color: 'var(--muted)', overflowWrap: 'anywhere' }}>{m.email}</div>
                                 </div>
                                 {(m.categories?.length ?? 0) > 1 && (
                                     <div style={{ fontSize: '0.7rem', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: 6, marginRight: 4, flexShrink: 0 }}>
@@ -186,7 +186,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
 
                 {/* 追加候補 */}
                 <div style={{ marginTop: 4 }}>
-                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>追加できるユーザー</div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--muted)', marginBottom: 6 }}>追加できるユーザー</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 320, overflowY: 'auto', paddingRight: 4 }}>
                         {assignableUsers.map(u => (
                             <div key={u.id} style={{
@@ -206,7 +206,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                                             {u.name.charAt(0).toUpperCase()}
                                         </div>
                                     )}
-                                    <span style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</span>
+                                    <span style={{ color: 'var(--text)', lineHeight: 1.3, overflowWrap: 'anywhere', minWidth: 0 }}>{u.name}</span>
                                     {(u.categories?.length ?? 0) > 0 && (
                                         <span style={{ fontSize: '0.7rem', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '1px 7px', borderRadius: 6, flexShrink: 0 }}>
                                             所属: {(u.categories ?? []).join(', ')}

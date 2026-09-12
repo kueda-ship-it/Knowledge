@@ -44,7 +44,7 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <BackButton onClick={onBack} />
-                    <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>評価の確認</h1>
+                    <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>評価の確認</h1>
                 </div>
 
                 <div style={{
@@ -64,7 +64,7 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                             background: activeTab === 'ranking' ? 'white' : 'transparent',
                             color: activeTab === 'ranking' ? 'var(--primary)' : 'var(--text)',
                             cursor: 'pointer',
-                            fontWeight: activeTab === 'ranking' ? 600 : 400,
+                            fontWeight: activeTab === 'ranking' ? 700 : 400,
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
@@ -83,7 +83,7 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                             background: activeTab === 'alerts' ? 'white' : 'transparent',
                             color: activeTab === 'alerts' ? '#ef4444' : 'var(--text)',
                             cursor: 'pointer',
-                            fontWeight: activeTab === 'alerts' ? 600 : 400,
+                            fontWeight: activeTab === 'alerts' ? 700 : 400,
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
@@ -122,9 +122,9 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                                         overflow: 'hidden',
                                         cursor: onItemClick ? 'pointer' : 'default'
                                     }}>
-                                    <div style={{
+                                    <div className="num" style={{
                                         fontSize: '2rem',
-                                        fontWeight: 800,
+                                        fontWeight: 700,
                                         color: index < 3 ? '#f59e0b' : 'var(--muted)',
                                         width: '40px',
                                         textAlign: 'center'
@@ -132,7 +132,7 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                                         {index + 1}
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+                                        <div style={{ color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>
                                             {item.category} / {item.machine}
                                         </div>
                                         <h3 style={{ margin: '0 0 8px 0', fontSize: '1.2rem' }}>{item.title}</h3>
@@ -141,7 +141,7 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                                                 <User size={14} /> {item.author}
                                             </span>
                                             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <Calendar size={14} /> {new Date(item.updatedAt).toLocaleDateString()}
+                                                <Calendar size={14} /> <span className="num">{new Date(item.updatedAt).toLocaleDateString()}</span>
                                             </span>
                                         </div>
                                     </div>
@@ -155,7 +155,7 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                                         alignItems: 'center',
                                         gap: '6px'
                                     }}>
-                                        <ThumbsUp size={18} /> {item.likeCount} Likes
+                                        <ThumbsUp size={18} /> <span className="num">{item.likeCount}</span> Likes
                                     </div>
                                     {index < 3 && (
                                         <div style={{
@@ -167,9 +167,9 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                                             padding: '20px 20px 5px 20px',
                                             transform: 'rotate(45deg)',
                                             fontSize: '0.7rem',
-                                            fontWeight: 800
+                                            fontWeight: 700
                                         }}>
-                                            TOP {index + 1}
+                                            TOP <span className="num">{index + 1}</span>
                                         </div>
                                     )}
                                 </div>
@@ -209,7 +209,7 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                                         </div>
                                     </div>
                                     <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '8px', fontSize: '0.9rem' }}>
-                                        <div style={{ fontWeight: 600, color: '#ef4444', marginBottom: '4px' }}>最新の指摘コメント:</div>
+                                        <div style={{ fontWeight: 700, color: '#ef4444', marginBottom: '4px' }}>最新の指摘コメント:</div>
                                         <div style={{ color: 'var(--text)', fontStyle: 'italic' }}>
                                             「内容が一部古くなっています。最新の仕様書を確認してください。」
                                             {/* Note: In real app, we'd map and show multiple comments here */}
@@ -218,7 +218,7 @@ export const Evaluation: React.FC<EvaluationProps> = ({ data, onBack, user, onIt
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div style={{ display: 'flex', gap: '16px', color: 'var(--muted)', fontSize: '0.85rem' }}>
                                             <span>作成者: {item.author}</span>
-                                            <span>最終更新: {new Date(item.updatedAt).toLocaleDateString()}</span>
+                                            <span>最終更新: <span className="num">{new Date(item.updatedAt).toLocaleDateString()}</span></span>
                                         </div>
                                         <button className="primary-btn" style={{ padding: '6px 16px', fontSize: '0.85rem' }}>
                                             修正する

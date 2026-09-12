@@ -1103,7 +1103,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
             background: `hsla(${hue}, 45%, 45%, 0.10)`,
             border: `1px solid hsla(${hue}, 40%, 55%, 0.35)`,
             color: `hsl(${hue}, 45%, 78%)`,
-            fontWeight: 500,
+            fontWeight: 400,
         };
     };
 
@@ -1129,6 +1129,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         outline: 'none',
         boxSizing: 'border-box',
     };
+    // select は line-height が効かないため、inputStyle の input と同じ高さ（1.4em + 上下 padding 20px + 枠 2px）を min-height で作る
+    const selectStyle: React.CSSProperties = { ...inputStyle, minHeight: 'calc(1.4em + 22px)' };
 
     const labelStyle: React.CSSProperties = {
         fontSize: '0.8rem',
@@ -1156,7 +1158,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                         {displayName.charAt(0)}
                     </div>
                 )}
-                <span style={{ fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{displayName}</span>
+                <span style={{ fontSize: '0.85rem', lineHeight: 1.3, overflowWrap: 'anywhere', minWidth: 0 }}>{displayName}</span>
             </div>
         );
     };
@@ -1181,7 +1183,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                     <div>
                         <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', margin: 0 }}>運用提議</h1>
                         {!loading && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                            <span className="num" style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
                                 {(activeCategory === '全て' && activeStatuses.length === 0 && !mineOnly)
                                     ? `全 ${proposals.length} 件`
                                     : `${filteredProposals.length} 件 / 全 ${proposals.length} 件`}
@@ -1327,7 +1329,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                         <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#34d399', letterSpacing: '0.04em' }}>
                             決定事項
                         </span>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginLeft: 'auto' }}>
+                        <span className="num" style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginLeft: 'auto' }}>
                             {decidedProposals.length} 件
                         </span>
                     </div>
@@ -1355,11 +1357,11 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                         }}>
                                             {getNormalizedCategory(p.category)}
                                         </span>
-                                        <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)' }}>
+                                        <span className="num" style={{ fontSize: '0.65rem', color: 'var(--text-dim)' }}>
                                             No.{p.source_no || '—'}
                                         </span>
                                     </div>
-                                    <span style={{ fontSize: '0.82rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ fontSize: '0.82rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {p.title}
                                     </span>
                                     <span style={{
@@ -1387,12 +1389,12 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                         <AlertCircle size={22} style={{ flexShrink: 0, marginTop: '1px' }} />
                         <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 700, marginBottom: '4px', color: '#f87171' }}>データの取得に失敗しました</div>
-                            <div style={{ fontSize: '0.8rem', opacity: 0.85, fontFamily: 'monospace', wordBreak: 'break-all' }}>{fetchError}</div>
+                            <div style={{ fontSize: '0.8rem', opacity: 0.85, wordBreak: 'break-all' }}>{fetchError}</div>
                         </div>
                         <button className="btn-retry-danger" onClick={() => fetchData()} style={{
                             padding: '8px 18px', borderRadius: '10px', flexShrink: 0,
                             background: 'rgba(239,68,68,0.3)', border: '1px solid rgba(239,68,68,0.6)',
-                            color: '#fca5a5', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
+                            color: '#fca5a5', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700,
                             transition: 'all 0.2s',
                         }}>再試行</button>
                     </div>
@@ -1452,7 +1454,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                     <div style={{
                                                         display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
                                                         height: '28px', padding: '0 10px', boxSizing: 'border-box',
-                                                        borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
+                                                        borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700,
                                                         background: catStyle.bg, color: catStyle.color, border: `1px solid ${catStyle.border}`, whiteSpace: 'nowrap',
                                                         boxShadow: `0 0 12px ${catStyle.border}`, lineHeight: 1,
                                                     }}>
@@ -1461,7 +1463,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                     </div>
                                                 </div>
                                                 {/* No (全行・左寄せ・垂直中央) */}
-                                                <div style={{ gridColumn: '2', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', fontSize: '0.75rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                                                <div className="num" style={{ gridColumn: '2', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', fontSize: '0.75rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
                                                     No.{proposal.source_no || '—'}
                                                 </div>
                                                 {/* 進捗バッジ (全行・左寄せ・垂直中央) */}
@@ -1470,7 +1472,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                         display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
                                                         height: '28px', padding: '0 12px', boxSizing: 'border-box',
                                                         borderRadius: '20px',
-                                                        fontSize: '0.75rem', fontWeight: 800,
+                                                        fontSize: '0.75rem', fontWeight: 700,
                                                         background: proposal.status === '完了' ? 'rgba(16,185,129,0.15)' : proposal.status === '対応中' ? 'rgba(245,158,11,0.15)' : proposal.status === '保留' ? 'rgba(148,163,184,0.15)' : 'rgba(239,68,68,0.15)',
                                                         color: proposal.status === '完了' ? '#34d399' : proposal.status === '対応中' ? '#fbbf24' : proposal.status === '保留' ? '#94a3b8' : '#f87171',
                                                         border: '1px solid currentColor',
@@ -1482,7 +1484,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                     </div>
                                                 </div>
                                                 {/* タイトル (1行目・左寄せ) */}
-                                                <h3 style={{ gridColumn: '4', gridRow: '1', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, textAlign: 'left' }}>
+                                                <h3 style={{ gridColumn: '4', gridRow: '1', fontSize: '1.05rem', fontWeight: 700, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, textAlign: 'left' }}>
                                                     {proposal.title}
                                                 </h3>
                                                 {/* 2行目・タイトル列: 問題点プレビュー */}
@@ -1501,8 +1503,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                         </span>
                                                     </div>
                                                 )}
-                                                {/* 投稿者 (全行・左寄せ・1行固定) */}
-                                                <div style={{ gridColumn: '5', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                                                {/* 投稿者 (全行・左寄せ・名前は省略せず折り返す) */}
+                                                <div style={{ gridColumn: '5', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, color: 'var(--text-dim)' }}>
                                                     <UserIdentity name={proposal.author} size={18} />
                                                 </div>
                                                 {/* 担当者 (全行・左寄せ。割当後7日 未着手で点滅して督促) */}
@@ -1514,7 +1516,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                             <div
                                                                 title={stale ? '担当割当後7日以上「未着手」です' : (a?.name ?? '')}
                                                                 style={{
-                                                                    display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden',
+                                                                    display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0,
                                                                     ...(stale ? { animation: 'proposalStaleBlink 1.1s ease-in-out infinite' } : {}),
                                                                 }}>
                                                                 {a?.avatarUrl ? (
@@ -1524,7 +1526,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                                         {(a?.name ?? '?').charAt(0)}
                                                                     </div>
                                                                 )}
-                                                                <span style={{ fontSize: '0.78rem', color: stale ? '#fbbf24' : 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a?.name ?? '不明'}</span>
+                                                                <span style={{ fontSize: '0.78rem', lineHeight: 1.3, color: stale ? '#fbbf24' : 'var(--text-dim)', overflowWrap: 'anywhere', minWidth: 0 }}>{a?.name ?? '不明'}</span>
                                                                 {stale && <AlertCircle size={12} style={{ color: '#f59e0b', flexShrink: 0 }} />}
                                                             </div>
                                                         );
@@ -1542,7 +1544,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                         border: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap', lineHeight: 1,
                                                     }}>
                                                         <Calendar size={12} />
-                                                        {proposal.proposed_at ? new Date(proposal.proposed_at).toLocaleDateString() : '未設定'}
+                                                        <span className="num">{proposal.proposed_at ? new Date(proposal.proposed_at).toLocaleDateString() : '未設定'}</span>
                                                     </div>
                                                 </div>
                                                 {/* 優先度ドット (全行・中央揃え・テキスト無し) */}
@@ -1580,7 +1582,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                             flexShrink: 0, whiteSpace: 'nowrap',
                                                             color: progPct === 100 ? '#34d399' : '#c4b5fd',
                                                         }}>
-                                                            <ListChecks size={11} />{prog.done}/{prog.total}（{progPct}%）
+                                                            <ListChecks size={11} /><span className="num">{prog.done}/{prog.total}（{progPct}%）</span>
                                                         </span>
                                                     </div>
                                                 )}
@@ -1633,7 +1635,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                 ) : (
                                     <>
                                         <span style={{
-                                            padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600,
+                                            padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 700,
                                             background: getCategoryStyles(selectedProposal.category || '').bg,
                                             color: getCategoryStyles(selectedProposal.category || '').color,
                                             border: `1px solid ${getCategoryStyles(selectedProposal.category || '').border}`,
@@ -1703,17 +1705,17 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                     background: 'rgba(239, 68, 68, 0.08)',
                                     border: '1px solid rgba(239, 68, 68, 0.4)',
                                     color: '#fca5a5', borderRadius: '12px',
-                                    fontSize: '0.85rem', fontWeight: 600,
+                                    fontSize: '0.85rem', fontWeight: 700,
                                     cursor: onOpenKnowledge ? 'pointer' : 'default',
                                 }}>
                                 🔗 元クレームナレッジを開く
-                                <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontFamily: 'monospace' }}>#{selectedProposal.source_knowledge_id}</span>
+                                <span className="num" style={{ fontSize: '0.72rem', color: '#94a3b8' }}>#{selectedProposal.source_knowledge_id}</span>
                             </button>
                         )}
 
                         <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
                             <div style={{
-                                padding: '8px 24px', borderRadius: '24px', fontSize: '0.9rem', fontWeight: 600,
+                                padding: '8px 24px', borderRadius: '24px', fontSize: '0.9rem', fontWeight: 700,
                                 background: selectedProposal.status === '完了' ? 'rgba(16,185,129,0.15)' : selectedProposal.status === '対応中' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)',
                                 color: selectedProposal.status === '完了' ? '#34d399' : selectedProposal.status === '対応中' ? '#fbbf24' : '#f87171',
                                 border: '1px solid currentColor',
@@ -1841,7 +1843,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                         <ListChecks size={14} /> 問題点チェックリスト
                                                     </span>
                                                     {total > 0 && (
-                                                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: pct === 100 ? '#34d399' : 'var(--text-dim)' }}>
+                                                        <span className="num" style={{ fontSize: '0.8rem', fontWeight: 700, color: pct === 100 ? '#34d399' : 'var(--text-dim)' }}>
                                                             {done}/{total} 完了（{pct}%）
                                                         </span>
                                                     )}
@@ -2220,7 +2222,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                                     <span key={g} style={{
                                                                         padding: '3px 10px', borderRadius: 14,
                                                                         background: 'rgba(96,165,250,0.18)', border: '1px solid rgba(96,165,250,0.35)',
-                                                                        color: '#bfdbfe', fontSize: '0.78rem', fontWeight: 600,
+                                                                        color: '#bfdbfe', fontSize: '0.78rem', fontWeight: 700,
                                                                     }}>{g}</span>
                                                                 ))}
                                                             </div>
@@ -2245,7 +2247,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                 <Calendar size={20} />
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <span style={{ fontSize: '0.75rem' }}>起案日</span>
-                                    <span style={{ color: 'var(--text)' }}>
+                                    <span className="num" style={{ color: 'var(--text)' }}>
                                         {selectedProposal.proposed_at ? new Date(selectedProposal.proposed_at).toLocaleDateString() : '未設定'}
                                     </span>
                                 </div>
@@ -2259,7 +2261,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                             <span style={{ fontSize: '0.75rem' }}>最終更新</span>
                                             <UserIdentity name={updater?.name ?? ''} size={28} />
                                             {updatedAt && (
-                                                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                                                <span className="num" style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '2px' }}>
                                                     {updatedAt.toLocaleDateString()} {updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             )}
@@ -2273,8 +2275,8 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '28px', marginBottom: '32px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <MessageSquare size={16} style={{ color: 'var(--text-dim)' }} />
-                                <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.95rem' }}>コメント</span>
-                                <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>{comments.length} 件</span>
+                                <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.95rem' }}>コメント</span>
+                                <span className="num" style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>{comments.length} 件</span>
                             </div>
 
                             {commentsLoading ? (
@@ -2295,7 +2297,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                                                     <UserIdentity name={c.author_name ?? ''} size={22} />
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                                                        <span className="num" style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
                                                             {when.toLocaleDateString()} {when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </span>
                                                         {canDelete && (
@@ -2360,7 +2362,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
 
                         {user?.role !== 'viewer' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '32px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.95rem' }}>ステータスを更新</span>
+                                <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.95rem' }}>ステータスを更新</span>
                                 <div style={{ display: 'flex', gap: '12px' }}>
                                     {(['未着手', '対応中', '完了', '保留'] as const).map(s => {
                                         const isActive = selectedProposal.status === s;
@@ -2507,7 +2509,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                 fontSize: '0.82rem', color: '#fca5a5',
                             }}>
                                 <span>🔗 クレームナレッジから展開されました</span>
-                                <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#94a3b8', fontFamily: 'monospace' }}>
+                                <span className="num" style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#94a3b8' }}>
                                     knowledge_id: {form.source_knowledge_id}
                                 </span>
                             </div>
@@ -2517,7 +2519,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                             {/* 種別 */}
                             <div>
                                 <label style={labelStyle}>種別 <span style={{ color: '#f87171' }}>*</span></label>
-                                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={inputStyle}>
+                                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={selectStyle}>
                                     {masterCategories.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                             </div>
@@ -2607,7 +2609,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 padding: '10px 12px', borderRadius: '12px',
                                                 background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.25)',
                                             }}>
-                                                <span style={{ fontSize: '0.78rem', color: '#c4b5fd', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>{i + 1}</span>
+                                                <span className="num" style={{ fontSize: '0.78rem', color: '#c4b5fd', textAlign: 'right' }}>{i + 1}</span>
                                                 <span style={{
                                                     fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text)',
                                                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
@@ -2678,13 +2680,13 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                 <div>
                                     <label style={labelStyle}>優先度</label>
-                                    <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as any }))} style={inputStyle}>
+                                    <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as any }))} style={selectStyle}>
                                         {(['高', '中', '低'] as const).map(p => <option key={p} value={p}>{p}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label style={labelStyle}>ステータス</label>
-                                    <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as any }))} style={inputStyle}>
+                                    <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as any }))} style={selectStyle}>
                                         {(['未着手', '対応中', '完了', '保留'] as const).map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                 </div>

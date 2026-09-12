@@ -274,7 +274,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                 <div className="summary-card-icon cat-icon"><LayoutGrid size={22} /></div>
                                 <div className="summary-card-text">
                                     <h3>区分マスタ</h3>
-                                    <p>{masterData.categories.length} 件 · クリックで編集</p>
+                                    <p><span className="num">{masterData.categories.length}</span> 件 · クリックで編集</p>
                                 </div>
                                 <ChevronRight size={20} className="summary-card-chevron" />
                             </button>
@@ -285,7 +285,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                             <div className="summary-card-icon inc-icon"><Info size={22} /></div>
                             <div className="summary-card-text">
                                 <h3>インシデントマスタ</h3>
-                                <p>{masterData.incidents.length} 件 · クリックで編集</p>
+                                <p><span className="num">{masterData.incidents.length}</span> 件 · クリックで編集</p>
                             </div>
                             <ChevronRight size={20} className="summary-card-chevron" />
                         </button>
@@ -297,7 +297,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                 <div className="summary-card-text">
                                     <h3>グループ設定</h3>
                                     <p>
-                                        {masterData.users.filter(u => (u.categories?.length ?? 0) > 0).length} / {masterData.users.length} 人 割当済 · クリックで編集
+                                        <span className="num">{masterData.users.filter(u => (u.categories?.length ?? 0) > 0).length} / {masterData.users.length}</span> 人 割当済 · クリックで編集
                                     </p>
                                 </div>
                                 <ChevronRight size={20} className="summary-card-chevron" />
@@ -567,7 +567,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     font-size: 0.78rem;
                     color: var(--muted);
                     white-space: nowrap;
-                    font-variant-numeric: tabular-nums;
+                    font-family: var(--font-num); font-variant-numeric: tabular-nums;
                 }
                 .add-user-form .input-group {
                     display: flex;
@@ -593,7 +593,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     border: none;
                     border-radius: 6px;
                     cursor: pointer;
-                    font-weight: 500;
+                    font-weight: 400;
                     transition: all 0.2s;
                 }
                 .add-user-btn:hover {
@@ -645,7 +645,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
 
                 .header-titles h1 {
                     font-size: 1.8rem;
-                    font-weight: 800;
+                    font-weight: 700;
                     margin: 0;
                     letter-spacing: -0.02em;
                 }
@@ -675,7 +675,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     background: color-mix(in oklab, var(--primary) 12%, transparent);
                     padding: 4px 12px;
                     border-radius: 20px;
-                    font-weight: 600;
+                    font-weight: 700;
                 }
 
                 /* Glass Card */
@@ -912,7 +912,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     gap: 12px;
                 }
 
-                .user-name { font-weight: 600; font-size: 0.9rem; }
+                .user-name { font-weight: 700; font-size: 0.9rem; }
 
                 .avatar-img, .avatar-initials {
                     width: 36px;

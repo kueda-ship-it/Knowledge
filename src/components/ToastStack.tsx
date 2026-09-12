@@ -48,7 +48,7 @@ const ToastItem: React.FC<{
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text)', lineHeight: 1.4 }}>{meta.text}</div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: '2px' }}>
-                    {new Date(note.created_at).toLocaleTimeString()}
+                    <span className="num">{new Date(note.created_at).toLocaleTimeString()}</span>
                 </div>
             </div>
             <button

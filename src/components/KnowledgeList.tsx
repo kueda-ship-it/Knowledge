@@ -201,9 +201,9 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                 </button>
             </div>
 
-            {/* フィルタピル: ステータス / 種別 / 区分を 1 行に横並び (グループ間は縦罫線で区切る)。
-                overflow-x:auto は overflow-y を 'auto' 化して hover 浮き上がりを切るので、paddingTop/Bottom で余白を確保 */}
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '20px', paddingTop: '4px', paddingBottom: '10px', borderBottom: '1px solid var(--border)', overflowX: 'auto', flexShrink: 0 }}>
+            {/* フィルタピル: ステータス / 種別 / 区分を横並び (グループ間は縦罫線で区切る)。
+                BIZ UDPゴシックは字幅が広く 1366px 幅で横スクロールに隠れるピルが出たため、はみ出す分は折り返す */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', rowGap: '8px', alignItems: 'center', marginBottom: '20px', paddingTop: '4px', paddingBottom: '10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
                 {statusOptions.map(opt => {
                     const active = filterType === opt.value;
                     const tone = statusColorRgb[opt.value];

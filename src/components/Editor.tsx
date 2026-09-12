@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { KnowledgeItem, MasterData, Attachment, ProposalDraft, ReactionType } from '../types';
-import { Trash2, X, RotateCcw, Check, Paperclip, ExternalLink, FileText, Image, ShieldCheck, ShieldAlert, AlertTriangle, Clock, History, MessageSquare, AlertOctagon, Send, Sparkles } from 'lucide-react';
+import { Trash2, X, RotateCcw, Check, Paperclip, ExternalLink, FileText, Image, ShieldCheck, ShieldAlert, AlertTriangle, Clock, History, MessageSquare, AlertOctagon, Send, Sparkles, Pen } from 'lucide-react';
 import { ReactionBar } from './ReactionBar';
 import { KnowledgeComments } from './KnowledgeComments';
 import { applyReactionToggle, reactionCountsOf, reactionUsersOf } from '../constants/reactions';
@@ -455,7 +455,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         <div style={{ padding: '20px' }} onPaste={handlePaste} onDrop={handleDrop} onDragOver={e => e.preventDefault()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', fontWeight: 'bold' }}>
-                    <i className="fa-solid fa-pen"></i> ナレッジ編集
+                    <Pen size={18} /> ナレッジ編集
                 </h3>
                 <button onClick={handleCloseRequest} className="secondary-btn" title="閉じる" style={{ width: '36px', height: '36px', padding: 0 }}>
                     <X size={18} />
@@ -616,7 +616,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                         {history.length > 0 ? history.map(h => (
                             <div key={h.id} style={{ borderLeft: '2px solid var(--primary)', paddingLeft: '15px', position: 'relative' }}>
                                 <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: '4px' }}>
-                                    <strong>{h.changedBy}</strong> • {new Date(h.updatedAt).toLocaleString()}
+                                    <strong>{h.changedBy}</strong> • <span className="num">{new Date(h.updatedAt).toLocaleString()}</span>
                                 </div>
                                 <div style={{ fontSize: '0.85rem', marginBottom: '8px', padding: '4px 8px', background: 'rgba(0,0,0,0.03)', borderRadius: '4px' }}>
                                     <MessageSquare size={12} style={{ verticalAlign: 'middle', marginRight: '5px' }} />
@@ -648,7 +648,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                             作成途中の下書きがあります
                             {restorable.savedAt && (
                                 <span style={{ color: 'var(--muted)' }}>
-                                    （{new Date(restorable.savedAt).toLocaleString()}）
+                                    （<span className="num">{new Date(restorable.savedAt).toLocaleString()}</span>）
                                 </span>
                             )}
                         </span>
@@ -714,7 +714,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                                         display: 'inline-flex', alignItems: 'center', gap: '6px',
                                         height: '32px', padding: '0 16px', boxSizing: 'border-box',
                                         borderRadius: '20px', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1,
-                                        fontWeight: active ? 700 : 500,
+                                        fontWeight: active ? 700 : 400,
                                         background: active ? `rgba(${opt.rgb}, 0.22)` : 'rgba(255,255,255,0.05)',
                                         color: active ? `rgb(${opt.rgb})` : 'var(--muted)',
                                         border: `1px solid ${active ? `rgba(${opt.rgb}, 0.65)` : 'rgba(255,255,255,0.15)'}`,
@@ -764,7 +764,7 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                                             border: `1px solid ${active ? `rgba(239, 68, 68, ${0.7 + 0.3 * intensity})` : `rgba(239, 68, 68, ${0.25 + 0.05 * intensity})`}`,
                                             color: active ? '#fff' : '#fca5a5',
                                             borderRadius: '10px', cursor: 'pointer',
-                                            fontSize: '0.82rem', fontWeight: active ? 700 : 500,
+                                            fontSize: '0.82rem', fontWeight: active ? 700 : 400,
                                             whiteSpace: 'nowrap',
                                             boxShadow: active ? `0 0 ${8 + 12 * intensity}px rgba(239,68,68,${0.3 + 0.3 * intensity})` : 'none',
                                         }}
@@ -1002,12 +1002,12 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                         <span>
                             投稿者: <strong>{item.author}</strong> &nbsp;
                             {item.createdAt
-                                ? new Date(item.createdAt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                ? <span className="num">{new Date(item.createdAt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                                 : ''}
                         </span>
                         <span>
                             最終更新: <strong>{item.updatedBy ?? history[0]?.changedBy ?? item.author}</strong> &nbsp;
-                            {new Date(item.updatedAt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            <span className="num">{new Date(item.updatedAt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                         </span>
                     </div>
                 )}
@@ -1039,7 +1039,7 @@ const DiffView: React.FC<{ oldText: string, newText: string }> = ({ oldText, new
     
     return (
         <div style={{
-            fontSize: '0.8rem', fontFamily: 'monospace', padding: '10px',
+            fontSize: '0.8rem', padding: '10px',
             background: 'rgba(0,0,0,0.02)', borderRadius: '8px', border: '1px solid var(--border)'
         }}>
             {oldText !== newText ? (
@@ -1047,7 +1047,7 @@ const DiffView: React.FC<{ oldText: string, newText: string }> = ({ oldText, new
                     <div style={{ color: '#ef4444', textDecoration: 'line-through', opacity: 0.7, marginBottom: '4px' }}>
                         - {oldLines.slice(0, 3).join(' ')}{oldLines.length > 3 ? '...' : ''}
                     </div>
-                    <div style={{ color: '#10b981', fontWeight: 600 }}>
+                    <div style={{ color: '#10b981', fontWeight: 700 }}>
                         + {newLines.slice(0, 3).join(' ')}{newLines.length > 3 ? '...' : ''}
                     </div>
                     {newLines.length > 3 && (

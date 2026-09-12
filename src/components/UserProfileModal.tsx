@@ -99,7 +99,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         }}>
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: `rgb(${rgb})` }}>
                                 <Icon size={14} />
-                                <span style={{ fontSize: '1.4rem', fontWeight: 800, lineHeight: 1 }}>{value}</span>
+                                <span className="num" style={{ fontSize: '1.4rem', fontWeight: 700, lineHeight: 1 }}>{value}</span>
                             </div>
                             <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>{label}</span>
                         </div>
@@ -134,7 +134,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 {/* 投稿一覧 (作成日降順) */}
                 <div>
                     <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>
-                        投稿したナレッジ・{myItems.length}件
+                        投稿したナレッジ・<span className="num">{myItems.length}</span>件
                     </div>
                     {myItems.length === 0 ? (
                         <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', padding: '12px 0' }}>
@@ -161,11 +161,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                                             cursor: onItemClick ? 'pointer' : 'default',
                                         }}
                                     >
-                                        <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', whiteSpace: 'nowrap' }}>
+                                        <span className="num" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', whiteSpace: 'nowrap' }}>
                                             {new Date(item.createdAt ?? item.updatedAt).toLocaleDateString()}
                                         </span>
                                         <span style={{
-                                            fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.92)',
+                                            fontSize: '0.85rem', fontWeight: 700, color: 'rgba(255,255,255,0.92)',
                                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                         }}>
                                             {item.title.replace(/^\[.*?\]\s*/, '')}
@@ -174,13 +174,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                                             display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center',
                                             fontSize: '0.75rem', color: rTotal > 0 ? '#ec4899' : 'rgba(255,255,255,0.4)', lineHeight: 1,
                                         }}>
-                                            <Heart size={11} /> {rTotal}
+                                            <Heart size={11} /> <span className="num">{rTotal}</span>
                                         </span>
                                         <span style={{
                                             display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center',
                                             fontSize: '0.75rem', color: vCount > 0 ? '#a78bfa' : 'rgba(255,255,255,0.4)', lineHeight: 1,
                                         }}>
-                                            <Eye size={11} /> {vCount}
+                                            <Eye size={11} /> <span className="num">{vCount}</span>
                                         </span>
                                     </div>
                                 );

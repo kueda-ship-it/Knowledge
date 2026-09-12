@@ -182,7 +182,7 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                             background: meta.color,
                             color: 'white',
                             fontSize: '0.85rem',
-                            fontWeight: 600,
+                            fontWeight: 700,
                             cursor: busy ? 'wait' : 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
                             opacity: busy ? 0.6 : 1,

@@ -139,7 +139,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                         textAlign: 'center', pointerEvents: 'none'
                     }}>
                         <div style={{ fontSize: '0.7rem', color: 'var(--muted)', fontWeight: 'bold' }}>合計</div>
-                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>{total}</div>
+                        <div className="num" style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--primary)', lineHeight: 1 }}>{total}</div>
                     </div>
                 </div>
 
@@ -152,7 +152,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                             style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', cursor: onSelect ? 'pointer' : 'default', padding: '4px', borderRadius: '4px' }}>
                             <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: s.color }}></div>
                             <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.key}</span>
-                            <span style={{ fontWeight: 'bold', minWidth: '35px', textAlign: 'right' }}>{Math.round((s.val / total) * 100)}%</span>
+                            <span className="num" style={{ fontWeight: 'bold', minWidth: '35px', textAlign: 'right' }}>{Math.round((s.val / total) * 100)}%</span>
                         </div>
                     ))}
                 </div>
@@ -171,8 +171,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                 style={{ marginBottom: '12px', padding: '4px 6px', cursor: onSelect ? 'pointer' : 'default' }}
                 onClick={() => onSelect?.(key)}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: '500', color: 'var(--text)' }}>{key}</span>
-                    <span style={{ color: 'var(--muted)' }}>{val}件</span>
+                    <span style={{ fontWeight: 400, color: 'var(--text)' }}>{key}</span>
+                    <span className="num" style={{ color: 'var(--muted)' }}>{val}件</span>
                 </div>
                 <div style={{ width: '100%', height: '8px', background: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
                     <div style={{
@@ -209,7 +209,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                                     className={`cursor-hint-pill${timeRange === r ? ' is-active' : ''}`}
                                     style={{
                                         padding: '6px 12px', border: 'none', borderRadius: '6px', cursor: 'pointer',
-                                        fontSize: '0.85rem', fontWeight: '500',
+                                        fontSize: '0.85rem', fontWeight: 400,
                                         background: timeRange === r ? 'var(--card-bg)' : 'transparent',
                                         color: timeRange === r ? 'var(--primary)' : 'var(--muted)',
                                         boxShadow: timeRange === r ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
@@ -277,7 +277,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                         <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: 'var(--text)', borderBottom: '2px solid var(--border)', paddingBottom: '10px' }}>
                             <Hash size={20} color="#8b5cf6" /> タグ別
                             <span style={{ marginLeft: 'auto', fontSize: '0.78rem', fontWeight: 'normal', color: 'var(--muted)' }}>
-                                全 {Object.keys(stats.tagCounts).length} 種
+                                全 <span className="num">{Object.keys(stats.tagCounts).length}</span> 種
                             </span>
                         </h3>
                         {chartType === 'bar' ? (

@@ -165,7 +165,7 @@ export const Activity: React.FC<ActivityProps> = ({ onBack, onOpenKnowledge }) =
                     <strong>{actorName}</strong> が {body}
                 </div>
                 {/* 相対時刻 */}
-                <span style={{
+                <span className="num" style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     height: '28px', padding: '0 10px', boxSizing: 'border-box',
                     fontSize: '0.75rem', color: 'var(--muted)',

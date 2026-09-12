@@ -50,14 +50,16 @@
 
 ### Typography
 
-現状の `Plus Jakarta Sans + Inter` は AI リフレックスフォントのため **刷新する**。和文フォント選定も必須。
+**BIZ UD ファミリーに統一**（2026-09-11 決定。Avenir / Nunito / Meiryo UI / JetBrains Mono から移行）。本文・見出し・コード表示は BIZ UDPゴシック、数値だけ同じファミリーの等幅版 BIZ UDゴシック。ほかの書体との組み合わせ（ペアリング）はしない。
 
-- **推奨ペア (デフォルト)**:
-  - **欧文**: **Mona Sans** (GitHub 製、OFL、可変フォント、参照アセスメントと整合)。代替案として **Hanken Grotesk** (humanist、UI 適性高)。
-  - **和文**: **BIZ UDPGothic** (Universal Design 設計、高齢ユーザー配慮、Google Fonts で無償)。代替案として **Zen Kaku Gothic New**。
-  - モノスペース (コードブロック等): **JetBrains Mono** もしくは **Geist Mono**。 `Space Mono` / `IBM Plex Mono` は禁止。
+- **指定**: `src/index.css` の `:root` で `--font-sans: "BIZ UDPGothic", "BIZ UDPゴシック", sans-serif;` と `--font-num: "BIZ UDGothic", "BIZ UDゴシック", sans-serif;`
+- **読み込み**: `index.html` で Google Fonts の `family=BIZ+UDPGothic:wght@400;700&family=BIZ+UDGothic:wght@400;700` の 1 本のみ。他の Web フォント・等幅フォント・アイコンフォントは読み込まない（アイコンは Lucide-React）。
+- **継承**: `button` / `input` / `select` / `textarea` / `code` / `pre` などは UA 既定の書体が残るため `font-family: inherit` を明示。インラインで `fontFamily: 'monospace'` などを書かない。
+- **太さ**: 400 / 700 の 2 段のみ（500 / 600 / 800 は使わない）。階層はサイズと太さで作る。
+- **数値**: 件数・%・日付・時刻には `.num` クラス（`--font-num` + `tabular-nums`）を付ける。BIZ UDPゴシックは「1」だけ幅が狭く（0.63em、他は 0.76em）`tabular-nums` も効かないため、数値を本文書体のままにしない。数値専用の列は右揃え。
+- **字幅**: Avenir / Meiryo UI より広い。固定幅の列・28px バッジ・ボタン・サイドバーは幅や `minmax(0, 1fr)` で収める。文字サイズを読みにくい大きさまで下げて逃げない。名前・ID など識別系テキストは省略記号にせず折り返す。
 - **スケール**: アプリ UI なので **固定 rem スケール**。`12 / 14 / 16 / 20 / 24 / 32` を基本階段 (1.25x 近似)。ヘッダー見出しのみ clamp() で微流動可。
-- **行間**: 本文 `line-height: 1.7` (日本語含みで余裕を持たせる)、ダーク時は `+0.05`。
+- **行間**: 本文 `line-height: 1.7` (日本語含みで余裕を持たせる)、ダーク時は `+0.05`。`button` / `input` / `select` / `textarea` は `1.4`。`normal` のままにしない（BIZ UDPゴシックの normal は約 1.0em で、ボタンが 3px ほど低くなる）。
 - **行長**: 本文は `max-width: 68ch` を上限に。Markdown 閲覧領域では厳守。
 
 ### Design Principles

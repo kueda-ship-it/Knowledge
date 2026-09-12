@@ -71,7 +71,7 @@ body[data-theme="light"] {
   --modal-bg: rgba(255,255,255,0.94);
   --modal-shadow: 0 24px 64px rgba(15,23,42,0.18), 0 8px 20px rgba(15,23,42,0.08);
   /* 淡いアクセント色の文字を白背景で読める濃さにする（本文色と混ぜる割合） */
-  --accent-text-mix: 35%;
+  --accent-text-mix: 25%;
 
   /* 状態色: 本体色 / 薄い背景色 / 枠線色 の3段（--danger 本体は上で定義済み） */
   --success:        oklch(0.57 0.09 145);
@@ -85,6 +85,13 @@ body[data-theme="light"] {
   --info:           oklch(0.58 0.07 230);
   --info-soft:      oklch(0.94 0.03 230);
   --info-border:    oklch(0.78 0.06 230);
+}
+
+/* 明色のモーダル・トーストは小さい補足文字が色付きの背景に載るため、補足色を濃くして 4.5:1 を確保する */
+body[data-theme="light"] .glass-modal,
+body[data-theme="light"] .toast-item {
+  --muted: #475569;
+  --text-secondary: #475569;
 }
 
 /* ---------- Dark テーマ ---------- */

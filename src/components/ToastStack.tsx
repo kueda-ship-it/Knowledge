@@ -31,6 +31,7 @@ const ToastItem: React.FC<{
     return (
         <div
             role="status"
+            className="toast-item"
             onClick={() => onOpen?.(note)}
             style={{
                 display: 'flex', alignItems: 'flex-start', gap: '12px',

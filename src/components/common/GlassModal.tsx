@@ -42,6 +42,7 @@ export const GlassModal: React.FC<Props> = ({ open, title, icon, onClose, childr
         >
             <div
                 role="dialog"
+                className="glass-modal"
                 aria-modal="true"
                 aria-label={title}
                 onClick={e => e.stopPropagation()}

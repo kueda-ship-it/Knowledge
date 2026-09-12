@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { MasterData, User } from '../types';
-import { Save, Trash2, Plus, Users, LayoutGrid, ShieldCheck, Mail, Info, ChevronRight, UsersRound } from 'lucide-react';
-import { apiClient } from '../api/client';
+import { Save, Trash2, Plus, Users, LayoutGrid, ShieldCheck, Mail, Info, ChevronRight, UsersRound, Loader, Lock } from 'lucide-react';
+import { apiClient, describeWriteError } from '../api/client';
 import { BackButton } from '../components/common/BackButton';
 import { GroupsManager } from '../components/GroupsManager';
 import { GlassModal } from '../components/common/GlassModal';
-import { GlassSelect } from '../components/common/GlassSelect';
-import { ROLE_OPTIONS, ROLE_META, isManagerOrAbove } from '../constants/roles';
+import { GlassSelect, type GlassSelectOption } from '../components/common/GlassSelect';
+import { StatusToast, type StatusToastState } from '../components/common/StatusToast';
+import { ROLE_OPTIONS, ROLE_META, isManagerOrAbove, isAdminRole } from '../constants/roles';
 import { loadCache, saveCache } from '../utils/cache';
 
 interface AdminProps {
@@ -16,16 +17,20 @@ interface AdminProps {
 
 const MASTERS_CACHE_KEY = 'knowledge_masters_v2';
 
+const ELEVATED_ROLE_REASON = 'manager 以上のロールを付けたり変えたりできるのは Admin だけです';
+
 const getInitial = (name: string) => (name || '?').charAt(0).toUpperCase();
 
 interface UserRowProps {
     user: User;
     index: number;
+    roleOptions: GlassSelectOption[];
+    roleLocked: boolean;
     onChangeName: (index: number, val: string) => void;
     onChangeRole: (index: number, val: string) => void;
 }
 
-const UserRow = React.memo(function UserRow({ user: u, index: i, onChangeName, onChangeRole }: UserRowProps) {
+const UserRow = React.memo(function UserRow({ user: u, index: i, roleOptions, roleLocked, onChangeName, onChangeRole }: UserRowProps) {
     const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         onChangeName(i, e.target.value);
     }, [i, onChangeName]);
@@ -59,13 +64,15 @@ const UserRow = React.memo(function UserRow({ user: u, index: i, onChangeName, o
                 </div>
             </td>
             <td>
-                <div className="role-select-wrapper">
+                <div className={`role-select-wrapper${roleLocked ? ' is-locked' : ''}`}>
                     <ShieldCheck size={14} className={`role-icon role-${u.role}`} />
                     <GlassSelect
                         value={u.role}
-                        options={ROLE_OPTIONS}
+                        options={roleOptions}
                         onChange={handleRoleChange}
                         compact
+                        disabled={roleLocked}
+                        disabledReason={ELEVATED_ROLE_REASON}
                     />
                 </div>
             </td>
@@ -75,11 +82,24 @@ const UserRow = React.memo(function UserRow({ user: u, index: i, onChangeName, o
 
 export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     const isFullAdmin = isManagerOrAbove(user.role);
+    const canChangeElevated = isAdminRole(user.role);
     const [masterData, setMasterData] = useState<MasterData>(() =>
         loadCache<MasterData>(MASTERS_CACHE_KEY, { incidents: [], categories: [], users: [] })
     );
     const [isDirty, setIsDirty] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [toast, setToast] = useState<StatusToastState | null>(null);
+
+    const showToast = useCallback((kind: StatusToastState['kind'], text: string) => {
+        setToast({ id: Date.now(), kind, text });
+    }, []);
+
+    // manager は manager 以上のロールを選べない（DB の knl_update_masters と同じ判定を先に画面で見せる）
+    const roleOptions = useMemo<GlassSelectOption[]>(() => ROLE_OPTIONS.map(o => ({
+        ...o,
+        disabled: !canChangeElevated && isManagerOrAbove(o.value),
+        disabledReason: ELEVATED_ROLE_REASON,
+    })), [canChangeElevated]);
 
     // Inputs
     const [newCat, setNewCat] = useState('');
@@ -132,16 +152,18 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
         }
     };
 
+    // 保存 → 保存中 → 完了の1回で終える。失敗時は再読み込みせず、編集中の内容を残したまま理由をトーストで出す
     const handleSave = async () => {
+        if (isSaving) return;
+        setIsSaving(true);
         try {
-            setIsSaving(true);
             await apiClient.updateMasters(masterData);
-            await loadMasters(); // Reload to sync with DB (IDs etc)
+            await loadMasters(true); // Reload to sync with DB (IDs etc)
             setIsDirty(false);
-            alert("設定を保存しました。");
+            showToast('success', '変更を保存しました。');
         } catch (e) {
             console.error("Save error:", e);
-            alert("保存に失敗しました。詳細についてはコンソールをご確認ください。");
+            showToast('error', describeWriteError(e, '保存'));
         } finally {
             setIsSaving(false);
         }
@@ -200,7 +222,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     const bulkPromoteViewers = () => {
         const viewerCount = masterData.users.filter(u => u.role === 'viewer').length;
         if (viewerCount === 0) {
-            alert('閲覧者は現在いません。');
+            showToast('error', '閲覧者は現在いません。');
             return;
         }
         if (!confirm(`閲覧者 ${viewerCount} 人を全員「編集者 (USER)」に変更します。よろしいですか？\n※「変更を保存」を押すまでDBには反映されません。`)) return;
@@ -213,12 +235,12 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
 
     const handleAddUser = () => {
         if (!newUserName.trim() || !newUserEmail.trim()) {
-            alert("名前とメールアドレスを入力してください。");
+            showToast('error', '名前とメールアドレスを入力してください。');
             return;
         }
         const email = newUserEmail.trim().toLowerCase();
         if (masterData.users.some(u => (u.email ?? '').toLowerCase() === email)) {
-            alert("このメールアドレスは既に登録されています。");
+            showToast('error', 'このメールアドレスは既に登録されています。');
             return;
         }
         const newUser: User = {
@@ -256,16 +278,17 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                         {isDirty && <span className="dirty-indicator">未保存の変更があります</span>}
                         <button 
                             onClick={handleSave} 
-                            className={`save-btn ${isDirty ? 'pulse' : ''}`}
-                            disabled={!isDirty}
+                            className={`save-btn ${isDirty && !isSaving ? 'pulse' : ''}`}
+                            disabled={!isDirty || isSaving}
+                            aria-busy={isSaving}
                         >
-                            <Save size={18} />
-                            <span>変更を保存</span>
+                            {isSaving ? <Loader size={18} className="save-btn-spin" /> : <Save size={18} />}
+                            <span>{isSaving ? '保存中…' : '変更を保存'}</span>
                         </button>
                     </div>
                 </header>
 
-                <main className="admin-content-grid">
+                <main className={`admin-content-grid${isSaving ? ' is-saving' : ''}`} aria-busy={isSaving}>
                     {/* Master Sections Container */}
                     <div className="master-data-columns">
                         {/* Categories Master - Summary card */}
@@ -313,6 +336,12 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                 <div className="header-text">
                                     <h3>ユーザーロール管理</h3>
                                     <p>SSOサインイン済みユーザーのアクセス権限を制御します</p>
+                                    {!canChangeElevated && (
+                                        <p className="role-lock-note">
+                                            <Lock size={12} />
+                                            <span>{ELEVATED_ROLE_REASON}（該当する行と選択肢は変更できません）</span>
+                                        </p>
+                                    )}
                                 </div>
                                 <button
                                     onClick={bulkPromoteViewers}
@@ -352,7 +381,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                         <ShieldCheck size={14} className={`role-icon role-${newUserRole}`} />
                                         <GlassSelect
                                             value={newUserRole}
-                                            options={ROLE_OPTIONS}
+                                            options={roleOptions}
                                             onChange={(v) => setNewUserRole(v as User['role'])}
                                         />
                                     </div>
@@ -400,6 +429,8 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                                                 key={u.id}
                                                 user={u}
                                                 index={origIdx}
+                                                roleOptions={roleOptions}
+                                                roleLocked={!canChangeElevated && isManagerOrAbove(u.role)}
                                                 onChangeName={handleUserNameChange}
                                                 onChangeRole={handleUserRoleChange}
                                             />
@@ -409,14 +440,22 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                             </div>
                         </section>
                     )}
+
+                    {!isFullAdmin && (
+                        <section className="glass-card role-locked-card" aria-label="ユーザーロール管理">
+                            <div className="card-header">
+                                <div className="card-icon user-icon"><Lock size={18} /></div>
+                                <div className="header-text">
+                                    <h3>ユーザーロール管理</h3>
+                                    <p>ユーザーの追加・権限の変更は manager 以上のロールで行えます。変更が必要な場合は管理者に依頼してください。</p>
+                                </div>
+                            </div>
+                        </section>
+                    )}
                 </main>
             </div>
 
-            {isSaving && (
-                <div className="loading-overlay">
-                    <div className="spinner"></div>
-                </div>
-            )}
+            <StatusToast toast={toast} onDismiss={() => setToast(null)} />
 
             {/* Categories Edit Modal */}
             <GlassModal
@@ -949,12 +988,36 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
 
                 .role-select-wrapper:focus-within { border-color: var(--primary); }
 
+                .role-select-wrapper.is-locked { background: transparent; border-style: dashed; }
+
                 .role-icon { opacity: 0.8; flex-shrink: 0; }
                 /* Keep in sync with src/constants/roles.ts (ROLE_META.*.color) */
                 .role-viewer { color: #94a3b8; }
                 .role-user { color: #3b82f6; }
                 .role-manager { color: #8b5cf6; }
-                .role-master { color: #f59e0b; }
+                .role-admin, .role-master { color: #f59e0b; }
+
+                .role-lock-note {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    margin: 6px 0 0 0 !important;
+                    font-size: 0.78rem;
+                    line-height: 1.4;
+                    color: var(--muted);
+                    min-width: 0;
+                }
+                .role-lock-note svg { flex-shrink: 0; }
+                .role-lock-note span { min-width: 0; overflow-wrap: anywhere; }
+
+                .role-locked-card { align-self: start; }
+                .role-locked-card .header-text { min-width: 0; }
+                .role-locked-card .header-text p { margin: 2px 0 0 0; font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+
+                /* 保存中は編集を受け付けない（保存対象と画面の内容がずれないように） */
+                .admin-content-grid.is-saving { pointer-events: none; opacity: 0.7; transition: opacity 0.15s; }
+                .save-btn:disabled[aria-busy="true"] { background: var(--primary); opacity: 0.85; cursor: progress; }
+                .save-btn-spin { animation: spin 1s linear infinite; }
 
                 /* Buttons */
                 .glass-icon-btn {

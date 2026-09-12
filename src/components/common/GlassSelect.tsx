@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, Lock } from 'lucide-react';
 
 export interface GlassSelectOption {
     value: string;
     label: string;
     color?: string;
     icon?: React.ReactNode; // 任意。ラベル左に表示 (アバター等)
+    disabled?: boolean;
+    disabledReason?: string; // 選べない理由。ホバーで表示
 }
 
 interface Props {
@@ -15,9 +17,11 @@ interface Props {
     onChange: (value: string) => void;
     placeholder?: string;
     compact?: boolean;
+    disabled?: boolean;
+    disabledReason?: string;
 }
 
-export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact }) => {
+export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact, disabled, disabledReason }) => {
     const [open, setOpen] = useState(false);
     const [rect, setRect] = useState<DOMRect | null>(null);
     const btnRef = useRef<HTMLButtonElement>(null);
@@ -49,7 +53,12 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
         };
     }, [open]);
 
+    useEffect(() => {
+        if (disabled) setOpen(false);
+    }, [disabled]);
+
     const handleToggle = () => {
+        if (disabled) return;
         if (!open && btnRef.current) {
             setRect(btnRef.current.getBoundingClientRect());
         }
@@ -68,18 +77,24 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
                 ref={btnRef}
                 type="button"
                 onClick={handleToggle}
+                disabled={disabled}
+                aria-disabled={disabled}
+                title={disabled ? disabledReason : undefined}
                 style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: 8,
                     width: '100%',
+                    minWidth: 0,
                     background: 'transparent',
                     border: 'none',
                     color: 'var(--text)',
                     fontSize,
+                    fontFamily: 'inherit',
                     padding: `${padY}px ${padX}px`,
-                    cursor: 'pointer',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    opacity: disabled ? 0.6 : 1,
                     textAlign: 'left',
                 }}
             >
@@ -87,7 +102,9 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
                     {selected?.icon}
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected?.label || '選択...'}</span>
                 </span>
-                <ChevronDown size={14} style={{ opacity: 0.6, transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none', flexShrink: 0 }} />
+                {disabled
+                    ? <Lock size={12} style={{ opacity: 0.7, flexShrink: 0 }} />
+                    : <ChevronDown size={14} style={{ opacity: 0.6, transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none', flexShrink: 0 }} />}
             </button>
 
             {open && rect && (() => {
@@ -123,10 +140,15 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
                 >
                     {options.map(opt => {
                         const isSel = opt.value === value;
+                        const isOff = !!opt.disabled && !isSel;
                         return (
                             <div
                                 key={opt.value}
-                                onClick={() => { onChange(opt.value); setOpen(false); }}
+                                role="option"
+                                aria-selected={isSel}
+                                aria-disabled={isOff}
+                                title={isOff ? opt.disabledReason : undefined}
+                                onClick={() => { if (isOff) return; onChange(opt.value); setOpen(false); }}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -134,21 +156,23 @@ export const GlassSelect: React.FC<Props> = ({ value, options, onChange, compact
                                     gap: 10,
                                     padding: '10px 14px',
                                     borderRadius: 10,
-                                    cursor: 'pointer',
+                                    cursor: isOff ? 'not-allowed' : 'pointer',
                                     fontSize: '0.88rem',
                                     color: opt.color || 'rgba(255,255,255,0.95)',
+                                    opacity: isOff ? 0.45 : 1,
                                     background: isSel ? 'color-mix(in oklab, var(--primary) 20%, transparent)' : 'transparent',
                                     transition: 'background 0.12s',
                                     fontWeight: isSel ? 700 : 400,
                                 }}
-                                onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                                onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}
+                                onMouseEnter={e => { if (!isSel && !isOff) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                                onMouseLeave={e => { if (!isSel && !isOff) e.currentTarget.style.background = 'transparent'; }}
                             >
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                                     {opt.icon}
                                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opt.label}</span>
                                 </span>
                                 {isSel && <Check size={14} style={{ flexShrink: 0, opacity: 0.9 }} />}
+                                {isOff && <Lock size={12} style={{ flexShrink: 0, opacity: 0.9 }} />}
                             </div>
                         );
                     })}

@@ -1,12 +1,15 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { claimProfile, describeWriteError } from '../api/client'
 import type { User } from '../types'
 
 interface AuthContextType {
   user: User | null
   session: Session | null
   isLoading: boolean
+  profileError: string | null
+  retryProfile: () => Promise<void>
   signInWithMicrosoft: () => void
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>
   signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null }>
@@ -17,15 +20,17 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   isLoading: true,
+  profileError: null,
+  retryProfile: async () => {},
   signInWithMicrosoft: () => {},
   signInWithEmail: async () => ({ error: null }),
   signUpWithEmail: async () => ({ error: null }),
   signOut: () => {},
 })
 
-async function fetchProfile(session: Session): Promise<User | null> {
-  const sessionEmail = (session.user.email ?? '').toLowerCase()
+type ProfileResult = { user: User | null; error: string | null }
 
+async function fetchProfile(session: Session): Promise<ProfileResult> {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, display_name, knl_role, email, avatar_url')
@@ -34,77 +39,38 @@ async function fetchProfile(session: Session): Promise<User | null> {
 
   if (data && !error) {
     return {
-      id: data.id,
-      name: data.display_name ?? session.user.email ?? '不明',
-      email: data.email ?? session.user.email,
-      role: (data.knl_role as User['role']) ?? 'viewer',
-      avatarUrl: data.avatar_url ?? undefined,
-      categories: [],
+      user: {
+        id: data.id,
+        name: data.display_name ?? session.user.email ?? '不明',
+        email: data.email ?? session.user.email,
+        role: (data.knl_role as User['role']) ?? 'viewer',
+        avatarUrl: data.avatar_url ?? undefined,
+        categories: [],
+      },
+      error: null,
     }
   }
 
-  // id 一致なし → email でadmin事前登録行を探して claim する（id を差し替え）
-  if (sessionEmail) {
-    const { data: byEmail } = await supabase
-      .from('profiles')
-      .select('id, display_name, knl_role, email, avatar_url')
-      .ilike('email', sessionEmail)
-      .maybeSingle()
-
-    if (byEmail) {
-      console.log('[Auth] Claiming pre-seeded profile by email:', sessionEmail)
-      const { data: claimed, error: claimErr } = await supabase
-        .from('profiles')
-        .update({
-          id: session.user.id,
-          display_name: byEmail.display_name || session.user.user_metadata?.full_name || sessionEmail.split('@')[0],
-          avatar_url: byEmail.avatar_url ?? session.user.user_metadata?.avatar_url ?? null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', byEmail.id)
-        .select()
-        .single()
-
-      if (!claimErr && claimed) {
-        return {
-          id: claimed.id,
-          name: claimed.display_name ?? session.user.email ?? '不明',
-          email: claimed.email ?? session.user.email,
-          role: (claimed.knl_role as User['role']) ?? 'viewer',
-          avatarUrl: claimed.avatar_url ?? undefined,
-          categories: [],
-        }
-      }
-      console.error('[Auth] Claim by email failed, falling back to insert:', claimErr)
+  // id 一致なし → RPC で事前登録行（メール完全一致）を claim するか、viewer で新規作成する
+  try {
+    const claimed = await claimProfile()
+    if (!claimed) {
+      return { user: null, error: 'プロフィールを準備できませんでした。もう一度お試しください。' }
     }
-  }
-
-  console.log('[Auth] Profile not found, creating new profile for:', session.user.email)
-
-  const { data: inserted, error: insertError } = await supabase
-    .from('profiles')
-    .insert({
-      id: session.user.id,
-      email: sessionEmail || session.user.email,
-      display_name: session.user.user_metadata?.full_name || sessionEmail.split('@')[0] || '新規ユーザー',
-      avatar_url: session.user.user_metadata?.avatar_url || null,
-      knl_role: 'viewer'
-    })
-    .select()
-    .single()
-
-  if (insertError) {
-    console.error('[Auth] Initial registration failed:', insertError)
-    return null
-  }
-
-  return {
-    id: inserted.id,
-    name: inserted.display_name ?? session.user.email ?? '不明',
-    email: inserted.email ?? session.user.email,
-    role: (inserted.knl_role as User['role']) ?? 'viewer',
-    avatarUrl: inserted.avatar_url ?? undefined,
-    categories: [],
+    return {
+      user: {
+        id: claimed.id,
+        name: claimed.display_name ?? session.user.email ?? '不明',
+        email: claimed.email ?? session.user.email,
+        role: (claimed.knl_role as User['role']) ?? 'viewer',
+        avatarUrl: claimed.avatar_url ?? undefined,
+        categories: [],
+      },
+      error: null,
+    }
+  } catch (e) {
+    console.error('[Auth] claimProfile failed:', e)
+    return { user: null, error: describeWriteError(e, 'プロフィールの準備') }
   }
 }
 
@@ -112,6 +78,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [profileError, setProfileError] = useState<string | null>(null)
+
+  const applyProfile = useCallback(async (s: Session) => {
+    const result = await fetchProfile(s).catch((e): ProfileResult => {
+      console.error('[Auth] fetchProfile error:', e)
+      return { user: null, error: describeWriteError(e, 'プロフィールの読み込み') }
+    })
+    setUser(result.user)
+    setProfileError(result.error)
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -136,12 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.session?.provider_token) {
           sessionStorage.setItem('microsoft_graph_token', data.session.provider_token)
         }
-        if (data.session) {
-          const profile = await fetchProfile(data.session).catch((e) => {
-            console.error('[Auth] fetchProfile error:', e)
-            return null
-          })
-          if (mounted) setUser(profile)
+        if (data.session && mounted) {
+          await applyProfile(data.session)
         }
       } catch (e) {
         console.error('[Auth] init error:', e)
@@ -159,12 +131,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session.provider_token) {
           sessionStorage.setItem('microsoft_graph_token', session.provider_token)
         }
-        const profile = await fetchProfile(session).catch(() => null)
-        setUser(profile)
+        await applyProfile(session)
       } else {
         sessionStorage.removeItem('microsoft_graph_token')
         localStorage.removeItem('microsoft_graph_token') // 旧保管先の掃除
         setUser(null)
+        setProfileError(null)
       }
     })
 
@@ -173,7 +145,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(fallback)
       subscription.unsubscribe()
     }
-  }, [])
+  }, [applyProfile])
+
+  const retryProfile = useCallback(async () => {
+    if (!session) return
+    await applyProfile(session)
+  }, [session, applyProfile])
 
   // セッションを「新鮮」に保つ。タブを開いた/復帰した時点で access token が
   // 期限切れ/間近なら先回りで更新しておく。これにより「最初に開いて最初の保存」で
@@ -280,7 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signInWithMicrosoft, signInWithEmail, signUpWithEmail, signOut }}>
+    <AuthContext.Provider value={{ user, session, isLoading, profileError, retryProfile, signInWithMicrosoft, signInWithEmail, signUpWithEmail, signOut }}>
       {children}
     </AuthContext.Provider>
   )

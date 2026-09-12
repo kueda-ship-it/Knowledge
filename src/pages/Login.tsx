@@ -1,17 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { Mail, Lock, ArrowRight, Loader } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Loader, RotateCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 type Mode = 'select' | 'login' | 'signup';
 
 export const Login: React.FC = () => {
-    const { signInWithMicrosoft, signInWithEmail, signUpWithEmail } = useAuth();
+    const { session, profileError, retryProfile, signOut, signInWithMicrosoft, signInWithEmail, signUpWithEmail } = useAuth();
     const [mode, setMode] = useState<Mode>('select');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [retrying, setRetrying] = useState(false);
+
+    const handleRetryProfile = async () => {
+        setRetrying(true);
+        try {
+            await retryProfile();
+        } finally {
+            setRetrying(false);
+        }
+    };
 
     // OAuth リダイレクト失敗時、Supabase は ?error=...&error_code=...&error_description=...
     // を query または hash に付けて戻す（例: 2026-07-28 Azure クライアントシークレット失効）。
@@ -102,7 +112,31 @@ export const Login: React.FC = () => {
                         Knowledge DB
                     </h1>
 
-                    {mode === 'select' && (
+                    {mode === 'select' && session && profileError && (
+                        <>
+                            <p style={{ color: 'var(--muted)', marginBottom: '20px', fontSize: '0.9rem' }}>
+                                サインインは完了しましたが、プロフィールを準備できませんでした
+                            </p>
+                            <div role="alert" className="auth-error" style={{ marginTop: 0, marginBottom: '20px' }}>
+                                {profileError}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleRetryProfile}
+                                disabled={retrying}
+                                className="auth-submit-btn"
+                            >
+                                {retrying
+                                    ? <><Loader size={18} style={{ animation: 'spin 1s linear infinite' }} />準備中…</>
+                                    : <><RotateCw size={16} />もう一度試す</>}
+                            </button>
+                            <button type="button" onClick={signOut} className="auth-back-link" style={{ marginLeft: 'auto', marginRight: 'auto' }}>
+                                別のアカウントでサインインする
+                            </button>
+                        </>
+                    )}
+
+                    {mode === 'select' && !(session && profileError) && (
                         <>
                             <p style={{ color: 'var(--muted)', marginBottom: '32px', fontSize: '0.9rem' }}>
                                 アカウントでサインインしてください

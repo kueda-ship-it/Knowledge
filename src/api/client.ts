@@ -119,7 +119,7 @@ async function forceRefresh(): Promise<string | null> {
 // 二段の安全網: (1) 叩く前に期限切れトークンを先回り更新、(2) それでも 401 なら強制更新して 1 回再試行。
 async function rawRest(
     path: string,
-    init: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: unknown; prefer?: string }
+    init: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: unknown; prefer?: string; signal?: AbortSignal }
 ): Promise<Response> {
     const url = (import.meta as any).env.VITE_SUPABASE_URL as string;
     const anonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY as string;
@@ -135,6 +135,7 @@ async function rawRest(
             method: init.method,
             headers,
             body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+            signal: init.signal,
         });
     };
 
@@ -148,6 +149,78 @@ async function rawRest(
         }
     }
     return res;
+}
+
+const WRITE_TIMEOUT_MS = 15000;
+
+export type WriteErrorKind = 'timeout' | 'forbidden' | 'conflict' | 'failed';
+
+export class WriteError extends Error {
+    readonly kind: WriteErrorKind;
+    constructor(kind: WriteErrorKind, message: string) {
+        super(message);
+        this.name = 'WriteError';
+        this.kind = kind;
+    }
+}
+
+// 書き込みは 15 秒で通信そのものを中止する（Promise.race で待つのをやめるだけだと、裏で書き込みが続くため）。
+async function restWrite(
+    path: string,
+    init: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: unknown; prefer?: string },
+): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), WRITE_TIMEOUT_MS);
+    try {
+        const res = await rawRest(path, { ...init, signal: controller.signal });
+        if (res.ok) return res;
+        const raw = await res.text().catch(() => '');
+        let code = '';
+        let message = raw;
+        try {
+            const parsed = JSON.parse(raw);
+            code = parsed?.code ?? '';
+            message = parsed?.message ?? raw;
+        } catch { /* JSON 以外はそのまま */ }
+        const kind: WriteErrorKind =
+            code === '42501' || res.status === 401 || res.status === 403 ? 'forbidden'
+            : code === 'P0001' ? 'conflict'
+            : 'failed';
+        throw new WriteError(kind, message || `HTTP ${res.status}`);
+    } catch (e) {
+        if (e instanceof WriteError) throw e;
+        if ((e as { name?: string })?.name === 'AbortError') {
+            throw new WriteError('timeout', `${WRITE_TIMEOUT_MS / 1000}秒以内に応答がありませんでした`);
+        }
+        throw new WriteError('failed', (e as Error)?.message ?? String(e));
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+// 画面に出す文言。action は「保存」「プロフィールの準備」など、何が失敗したかを表す語。
+export function describeWriteError(e: unknown, action: string): string {
+    if (e instanceof WriteError) {
+        switch (e.kind) {
+            case 'timeout':
+                return `${action}が15秒以内に終わらなかったため中止しました。通信状況を確認して、もう一度お試しください（反映されたかは再読み込みで確認できます）。`;
+            case 'forbidden':
+                return `権限がないため${action}できませんでした。manager 以上のロールを付けたり変えたりできるのは Admin だけです。`;
+            case 'conflict':
+                return `${action}できませんでした。同じメールアドレスのプロフィールが複数あります。Admin に連絡してください。`;
+            default:
+                return `${action}に失敗しました（${e.message}）。`;
+        }
+    }
+    return `${action}に失敗しました（${(e as Error)?.message ?? String(e)}）。`;
+}
+
+// profiles は共有 Supabase の FDW 外部テーブルで RLS が効かないため、書き込みは権限チェック付きの RPC だけにする。
+// 自分の行が無いとき、メール完全一致の事前登録行を claim するか、viewer で新規作成する。
+export async function claimProfile(): Promise<Record<string, any> | null> {
+    const res = await restWrite('/rest/v1/rpc/knl_claim_profile', { method: 'POST', body: {} });
+    const rows = await res.json();
+    return Array.isArray(rows) ? (rows[0] ?? null) : (rows ?? null);
 }
 
 // タイムライン用サムネを Supabase Storage (knowledge-thumbs / 公開読み取り) に置く。
@@ -710,27 +783,28 @@ export const apiClient = {
     },
 
     async updateMasters(data: { incidents: string[]; categories: string[]; users: User[] }): Promise<void> {
-        console.log("Updating masters with data:", data);
-        
-        // 1. Sync Incidents
-        try {
-            const { data: currentIncidents, error: curIncErr } = await supabase.from('master_incidents').select('name');
-            if (curIncErr) throw curIncErr;
-            const currentNames = (currentIncidents ?? []).map(r => r.name);
-            
-            // 削除対象: 現在のリストにあるが、新しいデータにはないもの
-            const toDelete = currentNames.filter(n => !data.incidents.includes(n));
-            // 追加対象: 新しいデータにあるが、現在のリストにはないもの
-            const toAdd = data.incidents.filter(n => !currentNames.includes(n));
+        // 書き込みはすべて restWrite（15 秒で中止）。失敗は WriteError のまま呼び出し側へ返し、画面で理由を出す
+        // PostgREST の in.() は値をダブルクォートで囲み、" と \ をエスケープする（カンマや括弧を含む名前のため）
+        const inList = (vals: string[]) =>
+            encodeURIComponent(`(${vals.map(v => `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',')})`);
 
+        const syncNames = async (table: 'master_incidents' | 'master_categories', next: string[]) => {
+            const res = await restWrite(`/rest/v1/${table}?select=name`, { method: 'GET' });
+            const currentNames = ((await res.json()) as { name: string }[]).map(r => r.name);
+            // 削除対象: 現在のリストにあるが、新しいデータにはないもの / 追加対象: その逆
+            const toDelete = currentNames.filter(n => !next.includes(n));
+            const toAdd = next.filter(n => !currentNames.includes(n));
             if (toDelete.length > 0) {
-                const { error } = await supabase.from('master_incidents').delete().in('name', toDelete);
-                if (error) throw error;
+                await restWrite(`/rest/v1/${table}?name=in.${inList(toDelete)}`, { method: 'DELETE' });
             }
             if (toAdd.length > 0) {
-                const { error } = await supabase.from('master_incidents').insert(toAdd.map(name => ({ name })));
-                if (error) throw error;
+                await restWrite(`/rest/v1/${table}`, { method: 'POST', body: toAdd.map(name => ({ name })), prefer: 'return=minimal' });
             }
+        };
+
+        // 1. Sync Incidents
+        try {
+            await syncNames('master_incidents', data.incidents);
         } catch (e) {
             console.error("Failed to sync incidents:", e);
             throw e;
@@ -738,67 +812,27 @@ export const apiClient = {
 
         // 2. Sync Categories
         try {
-            const { data: currentCats, error: curCatErr } = await supabase.from('master_categories').select('name');
-            if (curCatErr) throw curCatErr;
-            const currentCatNames = (currentCats ?? []).map(r => r.name);
-            
-            const toDeleteCat = currentCatNames.filter(n => !data.categories.includes(n));
-            const toAddCat = data.categories.filter(n => !currentCatNames.includes(n));
-
-            if (toDeleteCat.length > 0) {
-                const { error } = await supabase.from('master_categories').delete().in('name', toDeleteCat);
-                if (error) throw error;
-            }
-            if (toAddCat.length > 0) {
-                const { error } = await supabase.from('master_categories').insert(toAddCat.map(name => ({ name })));
-                if (error) throw error;
-            }
+            await syncNames('master_categories', data.categories);
         } catch (e) {
             console.error("Failed to sync categories:", e);
             throw e;
         }
 
         // 3. Sync Users (Profiles)
-        // profiles は FDW foreign table のため ON CONFLICT 非対応。UPDATE/INSERT を分岐。
+        // 書き込みは knl_update_masters RPC に一本化（変化の無い行は書かない・manager 以上の付与は admin のみ）。
+        // グループ所属は GroupsManager 側で個別に扱うため、ここでは触らない
         try {
-            for (const u of data.users) {
-                const isNew = u.id.startsWith('new-');
-                const normalizedEmail = (u.email ?? '').trim().toLowerCase();
-                const payload: any = {
-                    email: normalizedEmail,
-                    display_name: u.name,
-                    knl_role: u.role,
-                    updated_at: new Date().toISOString(),
-                };
-
-                if (isNew) {
-                    // 既に同じメールの事前登録行があるなら UPDATE（claim 前提）、無ければ INSERT
-                    const { data: existing } = await supabase
-                        .from('profiles')
-                        .select('id')
-                        .ilike('email', normalizedEmail)
-                        .maybeSingle();
-
-                    if (existing) {
-                        const { error: updErr } = await supabase
-                            .from('profiles')
-                            .update(payload)
-                            .eq('id', existing.id);
-                        if (updErr) throw updErr;
-                    } else {
-                        const cryptoObj: Crypto | undefined = (globalThis as any).crypto ?? (self as any).crypto;
-                        if (!cryptoObj?.randomUUID) throw new Error('crypto.randomUUID unavailable');
-                        payload.id = cryptoObj.randomUUID();
-                        const { error: insErr } = await supabase.from('profiles').insert(payload);
-                        if (insErr) throw insErr;
-                    }
-                } else {
-                    const { error: updErr } = await supabase.from('profiles').update(payload).eq('id', u.id);
-                    if (updErr) throw updErr;
-                }
-
-                // グループ所属は GroupsManager 側で個別に扱うため、ここでは触らない
-            }
+            await restWrite('/rest/v1/rpc/knl_update_masters', {
+                method: 'POST',
+                body: {
+                    p_users: data.users.map(u => ({
+                        id: u.id,
+                        email: (u.email ?? '').trim().toLowerCase(),
+                        name: u.name,
+                        role: u.role,
+                    })),
+                },
+            });
         } catch (e) {
             console.error("Failed to sync users:", e);
             throw e;

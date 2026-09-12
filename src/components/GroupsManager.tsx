@@ -108,7 +108,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                         >
                             <LayoutGrid size={14} style={{ opacity: isActive ? 1 : 0.6 }} />
                             <span style={{ flex: 1, minWidth: 0, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{c}</span>
-                            <span className="num" style={{ fontSize: '0.72rem', color: 'var(--muted)', background: 'var(--btn-icon-bg)', padding: '1px 7px', borderRadius: 8 }}>{count}</span>
+                            <span className="num" style={{ fontSize: '0.72rem', color: 'color-mix(in oklab, var(--muted) 75%, var(--text))', background: 'var(--btn-icon-bg)', padding: '1px 7px', borderRadius: 8 }}>{count}</span>
                         </button>
                     );
                 })}

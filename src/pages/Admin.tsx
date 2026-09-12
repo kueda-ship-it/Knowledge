@@ -433,8 +433,8 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                         placeholder="新しい区分を追加..."
                         style={{
                             flex: 1, padding: '10px 14px', borderRadius: 12,
-                            border: '1px solid rgba(255,255,255,0.12)',
-                            background: 'rgba(255,255,255,0.04)', color: 'var(--text)', fontSize: '0.9rem',
+                            border: '1px solid var(--input-border)',
+                            background: 'var(--input-bg)', color: 'var(--text)', fontSize: '0.9rem',
                         }}
                     />
                     <button onClick={() => addSimple('categories', newCat, setNewCat)} className="add-btn">
@@ -499,8 +499,8 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                         placeholder="新しい内容を追加..."
                         style={{
                             flex: 1, padding: '10px 14px', borderRadius: 12,
-                            border: '1px solid rgba(255,255,255,0.12)',
-                            background: 'rgba(255,255,255,0.04)', color: 'var(--text)', fontSize: '0.9rem',
+                            border: '1px solid var(--input-border)',
+                            background: 'var(--input-bg)', color: 'var(--text)', fontSize: '0.9rem',
                         }}
                     />
                     <button onClick={() => addSimple('incidents', newInc, setNewInc)} className="add-btn">
@@ -813,8 +813,8 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                     transition: transform 0.1s, filter 0.2s;
                 }
 
-                .add-btn:hover { filter: brightness(1.1); }
-                .add-btn:active { transform: scale(0.9); }
+                .add-btn:hover { filter: brightness(1.12); }
+                .add-btn:active { transform: translateY(1px); }
 
                 .item-list {
                     flex: 1;

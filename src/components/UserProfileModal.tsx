@@ -80,9 +80,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                             <span key={cat} style={{
                                 display: 'inline-flex', alignItems: 'center',
                                 height: '24px', padding: '0 10px', boxSizing: 'border-box', lineHeight: 1,
-                                fontSize: '0.75rem', color: 'rgba(255,255,255,0.75)',
-                                background: 'rgba(255,255,255,0.06)', borderRadius: '12px',
-                                border: '1px solid rgba(255,255,255,0.12)', whiteSpace: 'nowrap',
+                                fontSize: '0.75rem', color: 'var(--text-secondary)',
+                                background: 'var(--btn-icon-bg)', borderRadius: '12px',
+                                border: '1px solid var(--btn-icon-border)', whiteSpace: 'nowrap',
                             }}>{cat}</span>
                         ))}
                     </div>
@@ -97,11 +97,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                             background: `rgba(${rgb}, 0.08)`,
                             border: `1px solid rgba(${rgb}, 0.3)`,
                         }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: `rgb(${rgb})` }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: `color-mix(in oklab, rgb(${rgb}) var(--accent-text-mix), var(--text))` }}>
                                 <Icon size={14} />
                                 <span className="num" style={{ fontSize: '1.4rem', fontWeight: 700, lineHeight: 1 }}>{value}</span>
                             </div>
-                            <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>{label}</span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{label}</span>
                         </div>
                     ))}
                 </div>
@@ -118,7 +118,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                                     display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
                                     height: '28px', padding: '0 10px', boxSizing: 'border-box', lineHeight: 1,
                                     fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap',
-                                    color: `rgb(${meta.rgb})`,
+                                    color: `color-mix(in oklab, rgb(${meta.rgb}) var(--accent-text-mix), var(--text))`,
                                     background: `rgba(${meta.rgb}, 0.14)`,
                                     border: `1px solid rgba(${meta.rgb}, 0.4)`,
                                     borderRadius: '8px',
@@ -133,11 +133,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
                 {/* 投稿一覧 (作成日降順) */}
                 <div>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px' }}>
                         投稿したナレッジ・<span className="num">{myItems.length}</span>件
                     </div>
                     {myItems.length === 0 ? (
-                        <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', padding: '12px 0' }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--muted)', padding: '12px 0' }}>
                             まだ投稿はありません
                         </div>
                     ) : (
@@ -156,29 +156,29 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                                             columnGap: '10px',
                                             padding: '8px 10px',
                                             borderRadius: '10px',
-                                            background: 'rgba(255,255,255,0.04)',
-                                            border: '1px solid rgba(255,255,255,0.08)',
+                                            background: 'var(--btn-icon-bg)',
+                                            border: '1px solid var(--glass-border)',
                                             cursor: onItemClick ? 'pointer' : 'default',
                                         }}
                                     >
-                                        <span className="num" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', whiteSpace: 'nowrap' }}>
+                                        <span className="num" style={{ fontSize: '0.72rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                                             {new Date(item.createdAt ?? item.updatedAt).toLocaleDateString()}
                                         </span>
                                         <span style={{
-                                            fontSize: '0.85rem', fontWeight: 700, color: 'rgba(255,255,255,0.92)',
+                                            fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)',
                                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                         }}>
                                             {item.title.replace(/^\[.*?\]\s*/, '')}
                                         </span>
                                         <span style={{
                                             display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center',
-                                            fontSize: '0.75rem', color: rTotal > 0 ? '#ec4899' : 'rgba(255,255,255,0.4)', lineHeight: 1,
+                                            fontSize: '0.75rem', color: rTotal > 0 ? 'color-mix(in oklab, #ec4899 var(--accent-text-mix), var(--text))' : 'var(--muted)', lineHeight: 1,
                                         }}>
                                             <Heart size={11} /> <span className="num">{rTotal}</span>
                                         </span>
                                         <span style={{
                                             display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center',
-                                            fontSize: '0.75rem', color: vCount > 0 ? '#a78bfa' : 'rgba(255,255,255,0.4)', lineHeight: 1,
+                                            fontSize: '0.75rem', color: vCount > 0 ? 'color-mix(in oklab, #a78bfa var(--accent-text-mix), var(--text))' : 'var(--muted)', lineHeight: 1,
                                         }}>
                                             <Eye size={11} /> <span className="num">{vCount}</span>
                                         </span>

@@ -81,7 +81,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
     return (
         <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 20, minHeight: 360 }}>
             {/* 左: カテゴリ (グループ) リスト */}
-            <aside style={{ display: 'flex', flexDirection: 'column', gap: 4, borderRight: '1px solid rgba(255,255,255,0.08)', paddingRight: 12 }}>
+            <aside style={{ display: 'flex', flexDirection: 'column', gap: 4, borderRight: '1px solid var(--glass-border)', paddingRight: 12 }}>
                 <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 8px 8px' }}>
                     グループ (<span className="num">{categories.length}</span>)
                 </div>
@@ -98,7 +98,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                                 border: '1px solid transparent',
                                 borderRadius: 10,
                                 background: isActive ? 'rgba(99,102,241,0.16)' : 'transparent',
-                                color: isActive ? '#c7d2fe' : 'var(--text)',
+                                color: isActive ? 'color-mix(in oklab, #c7d2fe var(--accent-text-mix), var(--text))' : 'var(--text)',
                                 textAlign: 'left',
                                 cursor: 'pointer',
                                 fontSize: '0.88rem',
@@ -108,7 +108,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                         >
                             <LayoutGrid size={14} style={{ opacity: isActive ? 1 : 0.6 }} />
                             <span style={{ flex: 1, minWidth: 0, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{c}</span>
-                            <span className="num" style={{ fontSize: '0.72rem', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '1px 7px', borderRadius: 8 }}>{count}</span>
+                            <span className="num" style={{ fontSize: '0.72rem', color: 'var(--muted)', background: 'var(--btn-icon-bg)', padding: '1px 7px', borderRadius: 8 }}>{count}</span>
                         </button>
                     );
                 })}
@@ -131,7 +131,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                 </div>
 
                 {members.length === 0 ? (
-                    <div style={{ padding: '12px 14px', border: '1px dashed rgba(255,255,255,0.12)', borderRadius: 10, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                    <div style={{ padding: '12px 14px', border: '1px dashed var(--btn-icon-border)', borderRadius: 10, fontSize: '0.85rem', color: 'var(--muted)' }}>
                         まだメンバーがいません。下のリストから追加してください。
                     </div>
                 ) : (
@@ -140,8 +140,8 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                             <div key={m.id} style={{
                                 display: 'flex', alignItems: 'center', gap: 10,
                                 padding: '8px 12px', borderRadius: 10,
-                                background: 'rgba(255,255,255,0.03)',
-                                border: '1px solid rgba(255,255,255,0.06)',
+                                background: 'var(--btn-icon-bg)',
+                                border: '1px solid var(--glass-border)',
                             }}>
                                 {m.avatarUrl ? (
                                     <img
@@ -159,7 +159,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                                     <div style={{ fontSize: '0.72rem', color: 'var(--muted)', overflowWrap: 'anywhere' }}>{m.email}</div>
                                 </div>
                                 {(m.categories?.length ?? 0) > 1 && (
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: 6, marginRight: 4, flexShrink: 0 }}>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--muted)', background: 'var(--btn-icon-bg)', padding: '2px 8px', borderRadius: 6, marginRight: 4, flexShrink: 0 }}>
                                         他 {(m.categories?.length ?? 0) - 1} グループ
                                     </div>
                                 )}
@@ -172,7 +172,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                                         padding: '4px 10px',
                                         border: '1px solid rgba(239,68,68,0.35)',
                                         background: 'rgba(239,68,68,0.08)',
-                                        color: '#fca5a5', borderRadius: 8,
+                                        color: 'color-mix(in oklab, #fca5a5 var(--accent-text-mix), var(--text))', borderRadius: 8,
                                         fontSize: '0.75rem',
                                         cursor: busyUserId === m.id ? 'wait' : 'pointer',
                                     }}
@@ -208,7 +208,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                                     )}
                                     <span style={{ color: 'var(--text)', lineHeight: 1.3, overflowWrap: 'anywhere', minWidth: 0 }}>{u.name}</span>
                                     {(u.categories?.length ?? 0) > 0 && (
-                                        <span style={{ fontSize: '0.7rem', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '1px 7px', borderRadius: 6, flexShrink: 0 }}>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--muted)', background: 'var(--btn-icon-bg)', padding: '1px 7px', borderRadius: 6, flexShrink: 0 }}>
                                             所属: {(u.categories ?? []).join(', ')}
                                         </span>
                                     )}
@@ -221,7 +221,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                                         padding: '4px 10px',
                                         border: '1px solid rgba(99,102,241,0.4)',
                                         background: 'rgba(99,102,241,0.1)',
-                                        color: '#c7d2fe', borderRadius: 8,
+                                        color: 'color-mix(in oklab, #c7d2fe var(--accent-text-mix), var(--text))', borderRadius: 8,
                                         fontSize: '0.75rem',
                                         cursor: busyUserId === u.id ? 'wait' : 'pointer',
                                     }}

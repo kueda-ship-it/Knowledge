@@ -70,6 +70,8 @@ body[data-theme="light"] {
   --modal-scrim: rgba(15,23,42,0.35);
   --modal-bg: rgba(255,255,255,0.94);
   --modal-shadow: 0 24px 64px rgba(15,23,42,0.18), 0 8px 20px rgba(15,23,42,0.08);
+  /* 淡いアクセント色の文字を白背景で読める濃さにする（本文色と混ぜる割合） */
+  --accent-text-mix: 35%;
 
   /* 状態色: 本体色 / 薄い背景色 / 枠線色 の3段（--danger 本体は上で定義済み） */
   --success:        oklch(0.57 0.09 145);
@@ -119,6 +121,7 @@ body[data-theme="dark"] {
   --modal-scrim: rgba(2,6,23,0.55);
   --modal-bg: rgba(24,32,48,0.94);
   --modal-shadow: 0 24px 64px rgba(0,0,0,0.55), 0 8px 20px rgba(0,0,0,0.3);
+  --accent-text-mix: 100%;
 
   --success:        oklch(0.76 0.10 145);
   --success-soft:   oklch(0.28 0.05 145);
@@ -212,6 +215,7 @@ body[data-theme="liquid"] {
   --modal-scrim: rgba(5,8,15,0.5);
   --modal-bg: linear-gradient(135deg, rgba(30,36,58,0.86), rgba(18,22,38,0.9));
   --modal-shadow: var(--lg-shadow), inset 0 1px 0 var(--lg-highlight);
+  --accent-text-mix: 100%;
 
   /* ガラス越しに背景が透けるよう、薄い背景色だけ半透明にする */
   --success:        oklch(0.78 0.10 145);

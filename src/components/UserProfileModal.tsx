@@ -97,7 +97,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                             background: `rgba(${rgb}, 0.08)`,
                             border: `1px solid rgba(${rgb}, 0.3)`,
                         }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: `rgb(${rgb})` }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: `color-mix(in oklab, rgb(${rgb}) var(--accent-text-mix), var(--text))` }}>
                                 <Icon size={14} />
                                 <span className="num" style={{ fontSize: '1.4rem', fontWeight: 700, lineHeight: 1 }}>{value}</span>
                             </div>
@@ -118,7 +118,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                                     display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '6px',
                                     height: '28px', padding: '0 10px', boxSizing: 'border-box', lineHeight: 1,
                                     fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap',
-                                    color: `rgb(${meta.rgb})`,
+                                    color: `color-mix(in oklab, rgb(${meta.rgb}) var(--accent-text-mix), var(--text))`,
                                     background: `rgba(${meta.rgb}, 0.14)`,
                                     border: `1px solid rgba(${meta.rgb}, 0.4)`,
                                     borderRadius: '8px',
@@ -172,13 +172,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                                         </span>
                                         <span style={{
                                             display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center',
-                                            fontSize: '0.75rem', color: rTotal > 0 ? '#ec4899' : 'var(--muted)', lineHeight: 1,
+                                            fontSize: '0.75rem', color: rTotal > 0 ? 'color-mix(in oklab, #ec4899 var(--accent-text-mix), var(--text))' : 'var(--muted)', lineHeight: 1,
                                         }}>
                                             <Heart size={11} /> <span className="num">{rTotal}</span>
                                         </span>
                                         <span style={{
                                             display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center',
-                                            fontSize: '0.75rem', color: vCount > 0 ? '#a78bfa' : 'var(--muted)', lineHeight: 1,
+                                            fontSize: '0.75rem', color: vCount > 0 ? 'color-mix(in oklab, #a78bfa var(--accent-text-mix), var(--text))' : 'var(--muted)', lineHeight: 1,
                                         }}>
                                             <Eye size={11} /> <span className="num">{vCount}</span>
                                         </span>

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { MasterData, User } from '../types';
 import { Save, Trash2, Plus, Users, LayoutGrid, ShieldCheck, Mail, Info, ChevronRight, UsersRound, Loader, Lock } from 'lucide-react';
-import { apiClient, describeWriteError } from '../api/client';
+import { apiClient, describeWriteError, PartialSaveError } from '../api/client';
 import { BackButton } from '../components/common/BackButton';
 import { GroupsManager } from '../components/GroupsManager';
 import { GlassModal } from '../components/common/GlassModal';
@@ -90,8 +90,8 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     const [isSaving, setIsSaving] = useState(false);
     const [toast, setToast] = useState<StatusToastState | null>(null);
 
-    const showToast = useCallback((kind: StatusToastState['kind'], text: string) => {
-        setToast({ id: Date.now(), kind, text });
+    const showToast = useCallback((kind: StatusToastState['kind'], text: string, action?: StatusToastState['action']) => {
+        setToast({ id: Date.now(), kind, text, action });
     }, []);
 
     // manager は manager 以上のロールを選べない（DB の knl_update_masters と同じ判定を先に画面で見せる）
@@ -125,9 +125,16 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
         };
     }, []);
 
+    // 保存時に変化のあったユーザーだけ送るため、読み込んだ時点の名前・ロールを控えておく
+    // （updateUser は行オブジェクトを直接書き換えるので、プリミティブで写しを取る）
+    const [loadedUsers, setLoadedUsers] = useState<Record<string, { name: string; role: string }>>({});
+
     const loadMasters = async (silent = false) => {
         try {
             const data = await apiClient.fetchMasters();
+            if ((data.users?.length ?? 0) > 0) {
+                setLoadedUsers(Object.fromEntries(data.users.map(u => [u.id, { name: u.name, role: u.role }])));
+            }
             // Guard: 直前まで非空だったのに全カテゴリが空で返ってきた場合は、
             // JWT 期限切れや一時的な RLS 拒否とみなしキャッシュを上書きしない。
             setMasterData(prev => {
@@ -152,22 +159,40 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
         }
     };
 
-    // 保存 → 保存中 → 完了の1回で終える。失敗時は再読み込みせず、編集中の内容を残したまま理由をトーストで出す
+    // 保存 → 保存中 → 完了の1回で終える。失敗時は再読み込みせず、編集中の内容を残したまま理由と再試行ボタンをトーストで出す
     const handleSave = async () => {
         if (isSaving) return;
         setIsSaving(true);
         try {
-            await apiClient.updateMasters(masterData);
+            const changedUsers = masterData.users.filter(u => {
+                const before = loadedUsers[u.id];
+                return !before || before.name !== u.name || before.role !== u.role;
+            });
+            await apiClient.updateMasters({ ...masterData, users: changedUsers });
             await loadMasters(true); // Reload to sync with DB (IDs etc)
             setIsDirty(false);
             showToast('success', '変更を保存しました。');
         } catch (e) {
             console.error("Save error:", e);
-            showToast('error', describeWriteError(e, '保存'));
+            if (e instanceof PartialSaveError) {
+                // 保存できた分は読み込み済みとして扱い、再試行では残りだけを送る
+                const saved = new Set(e.savedIds);
+                setLoadedUsers(prev => ({
+                    ...prev,
+                    ...Object.fromEntries(masterData.users.filter(u => saved.has(u.id)).map(u => [u.id, { name: u.name, role: u.role }])),
+                }));
+            }
+            showToast('error', describeWriteError(e, '保存'), {
+                label: e instanceof PartialSaveError ? '残りを保存し直す' : 'もう一度保存する',
+                onClick: () => { void handleSaveRef.current(); },
+            });
         } finally {
             setIsSaving(false);
         }
     };
+    // トーストの再試行ボタンから、最新の state を見た handleSave を呼ぶため
+    const handleSaveRef = useRef(handleSave);
+    handleSaveRef.current = handleSave;
 
     const addSimple = (type: 'incidents' | 'categories', val: string, setFunc: (s: string) => void) => {
         if (!val.trim()) return;
@@ -192,9 +217,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
     };
 
     const updateUser = useCallback((index: number, field: keyof User, val: string) => {
+        // 行オブジェクトを差し替える（直接書き換えると React.memo の UserRow が再描画されず、入力欄が元の値に戻って見える）
         setMasterData(prev => {
             const newUsers = [...prev.users];
-            (newUsers[index] as any)[field] = val;
+            newUsers[index] = { ...newUsers[index], [field]: val };
             return { ...prev, users: newUsers };
         });
         setIsDirty(true);

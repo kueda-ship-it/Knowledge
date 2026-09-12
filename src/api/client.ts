@@ -164,6 +164,19 @@ export class WriteError extends Error {
     }
 }
 
+// ユーザーを分割して送る途中で失敗したとき。savedIds の分は DB に反映済み、残りは未反映。
+// サーバーは変化のない行を書き戻さないので、同じ内容を送り直しても結果は変わらない。
+export class PartialSaveError extends WriteError {
+    readonly savedIds: string[];
+    readonly total: number;
+    constructor(cause: WriteError, savedIds: string[], total: number) {
+        super(cause.kind, cause.message);
+        this.name = 'PartialSaveError';
+        this.savedIds = savedIds;
+        this.total = total;
+    }
+}
+
 // 書き込みは 15 秒で通信そのものを中止する（Promise.race で待つのをやめるだけだと、裏で書き込みが続くため）。
 async function restWrite(
     path: string,
@@ -185,6 +198,7 @@ async function restWrite(
         const kind: WriteErrorKind =
             code === '42501' || res.status === 401 || res.status === 403 ? 'forbidden'
             : code === 'P0001' ? 'conflict'
+            : code === '57014' ? 'timeout'
             : 'failed';
         throw new WriteError(kind, message || `HTTP ${res.status}`);
     } catch (e) {
@@ -200,10 +214,18 @@ async function restWrite(
 
 // 画面に出す文言。action は「保存」「プロフィールの準備」など、何が失敗したかを表す語。
 export function describeWriteError(e: unknown, action: string): string {
+    if (e instanceof PartialSaveError) {
+        const saved = e.savedIds.length;
+        const reason = e.kind === 'timeout' ? '時間がかかりすぎた'
+            : e.kind === 'forbidden' ? '権限がない'
+            : e.kind === 'conflict' ? '同じメールアドレスのプロフィールが複数ある'
+            : `エラー（${e.message}）が起きた`;
+        return `${saved}人分は保存しました。残り ${e.total - saved}人分は、${reason}ため保存できませんでした。編集中の内容はそのまま残っています。`;
+    }
     if (e instanceof WriteError) {
         switch (e.kind) {
             case 'timeout':
-                return `${action}が15秒以内に終わらなかったため中止しました。通信状況を確認して、もう一度お試しください（反映されたかは再読み込みで確認できます）。`;
+                return `${action}に時間がかかりすぎたため中止しました。通信状況を確認して、もう一度お試しください（反映されたかは再読み込みで確認できます）。`;
             case 'forbidden':
                 return `権限がないため${action}できませんでした。manager 以上のロールを付けたり変えたりできるのは Admin だけです。`;
             case 'conflict':
@@ -821,18 +843,30 @@ export const apiClient = {
         // 3. Sync Users (Profiles)
         // 書き込みは knl_update_masters RPC に一本化（変化の無い行は書かない・manager 以上の付与は admin のみ）。
         // グループ所属は GroupsManager 側で個別に扱うため、ここでは触らない
+        // 呼び出し側は変化のあったユーザーだけを渡す。一括変更でも 1 回の RPC が DB の statement_timeout（8 秒）に収まるよう分けて送る
+        const USERS_PER_RPC = 15;
         try {
-            await restWrite('/rest/v1/rpc/knl_update_masters', {
-                method: 'POST',
-                body: {
-                    p_users: data.users.map(u => ({
-                        id: u.id,
-                        email: (u.email ?? '').trim().toLowerCase(),
-                        name: u.name,
-                        role: u.role,
-                    })),
-                },
-            });
+            const payload = data.users.map(u => ({
+                id: u.id,
+                email: (u.email ?? '').trim().toLowerCase(),
+                name: u.name,
+                role: u.role,
+            }));
+            const savedIds: string[] = [];
+            for (let i = 0; i < payload.length; i += USERS_PER_RPC) {
+                const chunk = payload.slice(i, i + USERS_PER_RPC);
+                try {
+                    await restWrite('/rest/v1/rpc/knl_update_masters', {
+                        method: 'POST',
+                        body: { p_users: chunk },
+                    });
+                } catch (e) {
+                    // 分割の途中で失敗したら、どこまで反映済みかを呼び出し側に伝える
+                    if (savedIds.length > 0 && e instanceof WriteError) throw new PartialSaveError(e, savedIds, payload.length);
+                    throw e;
+                }
+                savedIds.push(...chunk.map(c => c.id));
+            }
         } catch (e) {
             console.error("Failed to sync users:", e);
             throw e;

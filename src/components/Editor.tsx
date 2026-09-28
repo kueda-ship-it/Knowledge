@@ -1107,13 +1107,14 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
             <GlassModal
                 open={!!qualityIssues}
                 title="5W1H が不足しています"
-                icon={<AlertTriangle size={18} style={{ color: '#f59e0b' }} />}
+                icon={<AlertTriangle size={18} style={{ color: 'var(--warning)' }} />}
                 onClose={() => setQualityIssues(null)}
                 maxWidth={640}
                 footer={
                     <>
                         <button
                             type="button"
+                            className="secondary-btn"
                             onClick={() => {
                                 const first = qualityIssues?.[0]?.aspect;
                                 setQualityIssues(null);
@@ -1122,12 +1123,8 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                             style={{
                                 height: 36, padding: '0 16px', boxSizing: 'border-box',
                                 display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1,
-                                borderRadius: 10, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700,
-                                background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.9)',
-                                border: '1px solid rgba(255,255,255,0.18)',
+                                fontSize: '0.85rem',
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                         >
                             <RotateCcw size={14} /> 入力に戻る
                         </button>
@@ -1140,19 +1137,19 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                                     height: 36, padding: '0 16px', boxSizing: 'border-box',
                                     display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1,
                                     borderRadius: 10, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700,
-                                    background: 'transparent', color: '#fbbf24',
-                                    border: '1px solid rgba(251, 191, 36, 0.45)',
+                                    background: 'transparent', color: 'var(--text)',
+                                    border: '1px solid var(--warning-border)',
                                 }}
-                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(251, 191, 36, 0.12)'}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--warning-soft)'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             >
-                                <ShieldAlert size={14} /> 不足を承知で登録
+                                <ShieldAlert size={14} style={{ color: 'var(--warning)' }} /> 不足を承知で登録
                             </button>
                         )}
                     </>
                 }
             >
-                <div style={{ fontSize: '0.85rem', lineHeight: 1.5, color: 'rgba(255,255,255,0.78)', marginBottom: 14 }}>
+                <div style={{ fontSize: '0.85rem', lineHeight: 1.5, color: 'var(--text)', marginBottom: 14 }}>
                     後から読んだ人が同じ対応を再現できるよう、<strong>いつ / どこで / 誰が / 何を / なぜ / どのように</strong> が
                     本文から読み取れることを起票の条件にしています。
                     {qualityIssues?.some(i => i.source === 'ai')
@@ -1175,21 +1172,23 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                                     columnGap: 10, rowGap: 4, alignItems: 'center',
                                     padding: '10px 12px', borderRadius: 10, lineHeight: 1.5,
                                     cursor: ng ? 'pointer' : 'default',
-                                    background: ng ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.07)',
-                                    border: `1px solid ${ng ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.25)'}`,
+                                    background: ng ? 'var(--danger-soft)' : 'var(--success-soft)',
+                                    border: `1px solid ${ng ? 'var(--danger-border)' : 'var(--success-border)'}`,
                                 }}
                             >
                                 {ng
-                                    ? <AlertTriangle size={16} style={{ color: '#ef4444' }} />
-                                    : <Check size={16} style={{ color: '#22c55e' }} />}
-                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: ng ? '#fca5a5' : 'rgba(255,255,255,0.7)' }}>
+                                    ? <AlertTriangle size={16} style={{ color: 'var(--danger)' }} />
+                                    : <Check size={16} style={{ color: 'var(--success)' }} />}
+                                {/* 不足 / 充足の区別は背景・枠・アイコンで付ける。
+                                    文字を赤や緑にすると淡色テーマでコントラストが 4.5:1 を割るため常に --text */}
+                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>
                                     {meta.w}
                                 </span>
-                                <span style={{ fontSize: '0.85rem', minWidth: 0, overflowWrap: 'anywhere', color: ng ? '#fecaca' : 'rgba(255,255,255,0.55)' }}>
+                                <span style={{ fontSize: '0.85rem', minWidth: 0, overflowWrap: 'anywhere', color: 'var(--text)' }}>
                                     {ng ? issue!.reason : `${meta.label} は記載あり`}
                                 </span>
                                 {ng && (
-                                    <span style={{ gridColumn: 3, fontSize: '0.78rem', lineHeight: 1.5, color: 'rgba(255,255,255,0.58)', overflowWrap: 'anywhere' }}>
+                                    <span style={{ gridColumn: 3, fontSize: '0.78rem', lineHeight: 1.5, color: 'var(--text)', overflowWrap: 'anywhere' }}>
                                         {meta.hint}
                                     </span>
                                 )}

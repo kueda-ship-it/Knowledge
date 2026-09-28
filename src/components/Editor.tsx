@@ -14,6 +14,10 @@ import { TagStat } from '../utils/tagUtils';
 import { EncodedImage, encodeImageForExtraction, extractKnowledgeFromImages, mergeDraft, currentFromForm } from '../utils/screenshotExtract';
 import { EditorSnapshot, StoredDraft, isDirty, hasContent, saveDraft, loadDraft, clearDraft } from '../utils/editorDraft';
 import { getToken } from '../lib/microsoftGraph';
+import { GlassModal } from './common/GlassModal';
+import {
+    Aspect, AspectIssue, ASPECT_META, ASPECT_ORDER, QualityInput, checkByRule, checkByAi,
+} from '../utils/knowledge5w1h';
 
 interface EditorProps {
     item: KnowledgeItem | null;
@@ -47,6 +51,12 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
     const [showWrongDialog, setShowWrongDialog] = useState(false);
     const [wrongComment, setWrongComment] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // --- 5W1H 充足判定 (起票ガード) ---
+    // 不足があるとここに入り、保存を止めてダイアログを出す
+    const [qualityIssues, setQualityIssues] = useState<AspectIssue[] | null>(null);
+    // AI 判定中 (ルール判定は同期なのでフラグ不要)
+    const [checking, setChecking] = useState(false);
 
     // --- 閉じる確認 / 下書き復元 ---
     const [showCloseConfirm, setShowCloseConfirm] = useState(false);
@@ -157,9 +167,59 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         setSelectedIncidents(selectedIncidents.filter(i => i !== val));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    // 5W1H 判定。不足があればダイアログを出して false を返す。
+    // ルール判定 (即時) で欠落が出た時点で AI は呼ばない。AI 判定が落ちた場合は
+    // ルールを通っているので起票を通す (AI 障害で業務を止めない)。
+    const runQualityGate = async (): Promise<boolean> => {
+        const input: QualityInput = {
+            title: formData.title,
+            property: formData.property,
+            machine: formData.machine,
+            req_num: formData.req_num,
+            category: formData.category,
+            recordType: formData.recordType ?? 'trouble',
+            phenomenon: formData.phenomenon,
+            countermeasure: formData.countermeasure,
+            author: item?.author || user.name,
+        };
 
+        const ruleIssues = checkByRule(input);
+        if (ruleIssues.length > 0) {
+            setQualityIssues(ruleIssues);
+            return false;
+        }
+
+        setChecking(true);
+        try {
+            const aiIssues = await checkByAi(input);
+            if (aiIssues.length > 0) {
+                setQualityIssues(aiIssues);
+                return false;
+            }
+            return true;
+        } catch (e: any) {
+            console.warn('5W1H の AI 判定をスキップしました:', e?.message || e);
+            return true;
+        } finally {
+            setChecking(false);
+        }
+    };
+
+    // 不足指摘の該当欄にカーソルを移す
+    const focusAspectField = (aspect: Aspect) => {
+        const el = document.getElementById(ASPECT_META[aspect].field) as HTMLElement | null;
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        void submitKnowledge(false);
+    };
+
+    // skipQualityGate=true は manager 以上が「不足を承知で登録」を押した場合のみ
+    const submitKnowledge = async (skipQualityGate: boolean) => {
         const isConstruction = formData.category?.toLowerCase() === 'construction';
         
         // Basic validation
@@ -177,6 +237,14 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
         
         if (!hasValidReqNum) {
             return alert("依頼番号は半角数字11桁で入力してください");
+        }
+
+        // 5W1H が読み取れない起票は止める。
+        // ガードは新規起票のみ。既存ナレッジの軽微な修正 (誤字直し・ステータス変更) まで
+        // 止めると運用が回らないため、編集時は従来どおり必須チェックだけで通す。
+        if (isNewEditor && !skipQualityGate) {
+            const passed = await runQualityGate();
+            if (!passed) return;
         }
 
         // 半角 # / 全角 ＃ / 音楽記号 ♯ のいずれでも区切れるように正規化
@@ -909,12 +977,22 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div>
-                        <label>事象 <span style={{ color: 'red' }}>*</span></label>
-                        <textarea id="phenomenon" value={formData.phenomenon || ''} onChange={handleChange} placeholder="発生した事象・現象を記入してください" style={{ width: '100%', height: '150px', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)', resize: 'vertical' }}></textarea>
+                        <label>
+                            事象 <span style={{ color: 'red' }}>*</span>
+                            <span style={{ marginLeft: '8px', fontSize: '0.75rem', fontWeight: 400, color: 'var(--muted)', lineHeight: 1.5 }}>
+                                いつ / 誰が / 何を / なぜ（原因・推定・経緯）まで含める
+                            </span>
+                        </label>
+                        <textarea id="phenomenon" value={formData.phenomenon || ''} onChange={handleChange} placeholder="例）9/25 14:20 管理員より「1番機の全扉が開かない」と連絡。現地にて F7 ヒューズ切れを確認。列基板に焦げがあり、過電流によるものと推定。" style={{ width: '100%', height: '150px', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)', resize: 'vertical', lineHeight: 1.5 }}></textarea>
                     </div>
                     <div>
-                        <label>対処 <span style={{ color: 'red' }}>*</span></label>
-                        <textarea id="countermeasure" value={formData.countermeasure || ''} onChange={handleChange} placeholder="実施した対処・解決策を記入してください" style={{ width: '100%', height: '150px', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)', resize: 'vertical' }}></textarea>
+                        <label>
+                            対処 <span style={{ color: 'red' }}>*</span>
+                            <span style={{ marginLeft: '8px', fontSize: '0.75rem', fontWeight: 400, color: 'var(--muted)', lineHeight: 1.5 }}>
+                                どのように対処し、どうなったか（未完了なら次の予定・待ち事項）
+                            </span>
+                        </label>
+                        <textarea id="countermeasure" value={formData.countermeasure || ''} onChange={handleChange} placeholder="例）ヒューズと列基板を交換し、全扉の開閉動作を確認して復旧。基板は在庫品を使用、予備品の補充を手配済み。" style={{ width: '100%', height: '150px', padding: '8px', border: '1px solid var(--input-border)', borderRadius: '4px', background: 'var(--input-bg)', color: 'var(--text)', resize: 'vertical', lineHeight: 1.5 }}></textarea>
                     </div>
                 </div>
 
@@ -1013,17 +1091,113 @@ export const Editor: React.FC<EditorProps> = ({ item, masters, onSave, onDelete,
                 )}
                 <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
                     {canEdit && (
-                        <button type="submit" disabled={loading} className="primary-btn" style={{ flex: 1, padding: '12px' }}>
-                            {loading ? 'Processing...' : '保存'}
+                        <button type="submit" disabled={loading || checking} className="primary-btn" style={{ flex: 1, padding: '12px' }}>
+                            {checking ? '記入内容を判定中…' : loading ? 'Processing...' : '保存'}
                         </button>
                     )}
                     {canEdit && item && (
-                        <button type="button" onClick={handleDelete} disabled={loading} className="danger-btn" style={{ flex: 1, padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                        <button type="button" onClick={handleDelete} disabled={loading || checking} className="danger-btn" style={{ flex: 1, padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
                             <Trash2 size={16} /> 削除
                         </button>
                     )}
                 </div>
             </form>
+
+            {/* 5W1H 不足ダイアログ。ここで起票を止める。6 観点すべての充足状況を出して「あと何が足りないか」を一目で分かるようにする */}
+            <GlassModal
+                open={!!qualityIssues}
+                title="5W1H が不足しています"
+                icon={<AlertTriangle size={18} style={{ color: '#f59e0b' }} />}
+                onClose={() => setQualityIssues(null)}
+                maxWidth={640}
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const first = qualityIssues?.[0]?.aspect;
+                                setQualityIssues(null);
+                                if (first) setTimeout(() => focusAspectField(first), 0);
+                            }}
+                            style={{
+                                height: 36, padding: '0 16px', boxSizing: 'border-box',
+                                display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1,
+                                borderRadius: 10, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700,
+                                background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.9)',
+                                border: '1px solid rgba(255,255,255,0.18)',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                        >
+                            <RotateCcw size={14} /> 入力に戻る
+                        </button>
+                        {isManagerOrAbove(user.role) && (
+                            <button
+                                type="button"
+                                onClick={() => { setQualityIssues(null); void submitKnowledge(true); }}
+                                title="不足を承知のうえ登録します（管理者のみ）"
+                                style={{
+                                    height: 36, padding: '0 16px', boxSizing: 'border-box',
+                                    display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1,
+                                    borderRadius: 10, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700,
+                                    background: 'transparent', color: '#fbbf24',
+                                    border: '1px solid rgba(251, 191, 36, 0.45)',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(251, 191, 36, 0.12)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                                <ShieldAlert size={14} /> 不足を承知で登録
+                            </button>
+                        )}
+                    </>
+                }
+            >
+                <div style={{ fontSize: '0.85rem', lineHeight: 1.5, color: 'rgba(255,255,255,0.78)', marginBottom: 14 }}>
+                    後から読んだ人が同じ対応を再現できるよう、<strong>いつ / どこで / 誰が / 何を / なぜ / どのように</strong> が
+                    本文から読み取れることを起票の条件にしています。
+                    {qualityIssues?.some(i => i.source === 'ai')
+                        ? '（AI が記入内容を読んで判定しました）'
+                        : '（形式チェックで検出しました）'}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {ASPECT_ORDER.map(aspect => {
+                        const issue = qualityIssues?.find(i => i.aspect === aspect);
+                        const meta = ASPECT_META[aspect];
+                        const ng = !!issue;
+                        return (
+                            <div
+                                key={aspect}
+                                onClick={ng ? () => { setQualityIssues(null); setTimeout(() => focusAspectField(aspect), 0); } : undefined}
+                                title={ng ? 'クリックで該当の入力欄に移動' : undefined}
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '18px 100px minmax(0, 1fr)',
+                                    columnGap: 10, rowGap: 4, alignItems: 'center',
+                                    padding: '10px 12px', borderRadius: 10, lineHeight: 1.5,
+                                    cursor: ng ? 'pointer' : 'default',
+                                    background: ng ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.07)',
+                                    border: `1px solid ${ng ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.25)'}`,
+                                }}
+                            >
+                                {ng
+                                    ? <AlertTriangle size={16} style={{ color: '#ef4444' }} />
+                                    : <Check size={16} style={{ color: '#22c55e' }} />}
+                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: ng ? '#fca5a5' : 'rgba(255,255,255,0.7)' }}>
+                                    {meta.w}
+                                </span>
+                                <span style={{ fontSize: '0.85rem', minWidth: 0, overflowWrap: 'anywhere', color: ng ? '#fecaca' : 'rgba(255,255,255,0.55)' }}>
+                                    {ng ? issue!.reason : `${meta.label} は記載あり`}
+                                </span>
+                                {ng && (
+                                    <span style={{ gridColumn: 3, fontSize: '0.78rem', lineHeight: 1.5, color: 'rgba(255,255,255,0.58)', overflowWrap: 'anywhere' }}>
+                                        {meta.hint}
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </GlassModal>
         </div>
     );
 };

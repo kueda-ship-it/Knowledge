@@ -1377,13 +1377,13 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                     </div>
                 </aside>
             )}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '30px 40px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 24px' }}>
                 {fetchError && (
                     <div style={{
                         display: 'flex', alignItems: 'flex-start', gap: '14px',
                         padding: '20px 24px', borderRadius: '16px',
                         background: 'rgba(239,68,68,0.18)', border: '1.5px solid rgba(239,68,68,0.6)',
-                        color: '#fca5a5', fontSize: '0.9rem', maxWidth: 'clamp(720px, 80%, 1400px)', margin: '0 auto 24px',
+                        color: '#fca5a5', fontSize: '0.9rem', maxWidth: '1400px', margin: '0 auto 24px',
                         boxShadow: '0 4px 24px rgba(239,68,68,0.15)',
                     }}>
                         <AlertCircle size={22} style={{ flexShrink: 0, marginTop: '1px' }} />
@@ -1409,16 +1409,16 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                         <p>該当するチケットはありません</p>
                     </div>
                 ) : (
-                    <div className="proposal-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', maxWidth: 'clamp(720px, 80%, 1400px)', margin: '0 auto' }}>
+                    <div className="proposal-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', maxWidth: '1400px', margin: '0 auto' }}>
                         {filteredProposals.map(proposal => {
                             const catStyle = getCategoryStyles(proposal.category || '');
                             return (
                                 <div key={proposal.id} className="glass-card proposal-card animate-in"
                                     onClick={() => setSelectedProposal(proposal)}
                                     style={{
-                                        cursor: 'pointer', padding: '16px 24px',
+                                        cursor: 'pointer', padding: '14px 20px',
                                         display: 'grid',
-                                        gridTemplateColumns: '150px 70px 90px minmax(0, 1fr) 150px 140px 120px 32px',
+                                        gridTemplateColumns: '136px 56px 84px minmax(0, 1fr) 120px 110px 112px 24px',
                                         gridTemplateRows: 'auto auto',
                                         columnGap: '12px',
                                         rowGap: '4px',

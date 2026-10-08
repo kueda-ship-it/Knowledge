@@ -2791,7 +2791,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                 .badge-tab:not(.is-active):hover { background: rgba(255,255,255,0.1) !important; border-color: rgba(147,197,253,0.35) !important; color: #fff !important; }
                 .badge-tab.is-active:hover { filter: brightness(1.12); }
                 .badge-tab.active { background: rgba(99,102,241,0.5); color: #fff; border-color: rgba(99,102,241,0.8); font-weight: 700; box-shadow: 0 4px 15px rgba(99,102,241,0.3); }
-                .proposal-card:hover { transform: translateX(8px); }
+                .proposal-card:hover { transform: translateX(3px); }
                 .decided-card:hover { background: rgba(52,211,153,0.1) !important; border-color: rgba(52,211,153,0.45) !important; transform: translateX(-2px); }
                 .btn-ghost-glass:hover { background: rgba(255,255,255,0.12) !important; border-color: rgba(255,255,255,0.3) !important; color: #fff !important; transform: translateY(-1px); }
                 .btn-indigo-solid:hover { background: rgba(99,102,241,1) !important; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,0.55) !important; }

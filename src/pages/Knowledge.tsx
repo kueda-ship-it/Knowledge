@@ -54,7 +54,6 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
         loadCache<MasterData>(MASTERS_CACHE_KEY, { incidents: [], categories: [], users: [] })
     );
     const [loading, setLoading] = useState(false);
-    const [loadingMsg, setLoadingMsg] = useState('');
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -196,23 +195,10 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
 
         if (!silent && !hasCache) {
             setLoading(true);
-            setLoadingMsg('');
         } else {
             setRefreshing(true);
         }
 
-        // 初回（キャッシュなし）のみウェイクアップメッセージを表示。サイレント更新中は出さない
-        const timers: ReturnType<typeof setTimeout>[] = [];
-        if (!silent && !hasCache) {
-            timers.push(setTimeout(() => setLoadingMsg('接続中... Supabaseが起動中の場合は1分ほどかかります'), 8000));
-            timers.push(setTimeout(() => setLoadingMsg('もう少しお待ちください...'), 25000));
-            timers.push(setTimeout(() => setLoadingMsg('起動完了まで間もなくです...'), 45000));
-        }
-
-        const clearTimers = () => {
-            timers.forEach(clearTimeout);
-            setLoadingMsg('');
-        };
 
         // 独自タイムアウトを廃止し、ネットワーク・ブラウザの制限に任せる
         // 低速環境でもエラーで中断させないための処置
@@ -261,16 +247,13 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
             // 片方が失敗してももう片方を活かすため並列実行
             await Promise.allSettled([fetchKnowledge(), fetchMasters(), fetchCommentCounts(), fetchViewCounts()]);
             
-            clearTimers();
             setLoading(false);
             setRefreshing(false);
         } catch (e: unknown) {
-            clearTimers();
             if (!silent) console.error("Failed to load data", e);
             if (!hasCache) {
                 setError('データの読み込みに失敗しました。ネットワーク環境を確認してください。');
             }
-            setLoadingMsg('');
             setLoading(false);
             setRefreshing(false);
         }
@@ -449,7 +432,6 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
                                 );
                             }}
                             loading={loading}
-                            loadingMsg={loadingMsg}
                             users={masterData.users}
                         />
                         </>

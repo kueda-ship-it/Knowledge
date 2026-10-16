@@ -101,7 +101,6 @@ interface KnowledgeListProps {
     selectedCategories: string[];
     onCategoryToggle: (cat: string) => void;
     loading?: boolean;
-    loadingMsg?: string;
     users: User[];
 }
 
@@ -125,7 +124,6 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
     selectedCategories,
     onCategoryToggle,
     loading,
-    loadingMsg,
     users
 }) => {
     const getCategoryBadgeClass = (category: string): string => {
@@ -309,10 +307,8 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
             {/* フィード: 中央寄せしつつ画面幅に追従 (狭い画面では全幅、広い画面では 76% を上限 1240px まで) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: 'clamp(720px, 76%, 1240px)', margin: '0 auto' }}>
                 {loading ? (
-                    <div style={{ textAlign: 'center', marginTop: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ marginTop: '60px' }}>
                         <SpinnerBlock />
-                        {/* 輪だけを出す。起動待ちが長いとき（8 秒〜）だけ理由を添える */}
-                        {loadingMsg && <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>{loadingMsg}</span>}
                     </div>
                 ) : data.length === 0 ? (
                     <p style={{ textAlign: 'center', color: '#94a3b8', marginTop: '40px' }}>データがありません</p>

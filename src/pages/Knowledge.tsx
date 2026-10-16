@@ -196,7 +196,7 @@ export const Knowledge: React.FC<KnowledgeProps> = ({ user, onBack, initialEditI
 
         if (!silent && !hasCache) {
             setLoading(true);
-            setLoadingMsg('データを読み込み中...');
+            setLoadingMsg('');
         } else {
             setRefreshing(true);
         }

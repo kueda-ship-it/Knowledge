@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, Clock, AlertCircle, User as UserIcon, Calendar, MessageSquare, Tag, ArrowUpDown, Hash, Plus, ArrowLeft, Edit2, Send, X, Check, Gavel, Trash2, RotateCcw, CheckSquare, Square, ListChecks, UserCheck, ImagePlus, Image as ImageIcon } from 'lucide-react';
 import { apiClient, uploadProposalImage } from '../api/client';
+import { Spinner, SpinnerBlock } from '../components/shared/Spinner';
 import { makeThumbnail } from '../utils/imageThumbnail';
 import { hasInlineImage, insertImageMarkup, splitInlineImages, stripInlineImages } from '../utils/inlineImages';
 import { supabase } from '../lib/supabase';
@@ -1401,7 +1402,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                 )}
                 {loading ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                        <div className="loading-spinner" />
+                        <SpinnerBlock />
                     </div>
                 ) : !fetchError && filteredProposals.length === 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', color: 'var(--text-dim)', textAlign: 'center' }}>
@@ -1855,7 +1856,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                     </div>
                                                 )}
                                                 {problemsLoading ? (
-                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>読み込み中…</div>
+                                                    <div style={{ display: 'flex' }}><Spinner size={16} /></div>
                                                 ) : (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                                         {problems.map(p => (
@@ -2280,7 +2281,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                             </div>
 
                             {commentsLoading ? (
-                                <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>読み込み中…</div>
+                                <div style={{ display: 'flex' }}><Spinner size={16} /></div>
                             ) : comments.length === 0 ? (
                                 <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>まだコメントはありません。</div>
                             ) : (

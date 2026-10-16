@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { KnowledgeItem, User, ReactionType, Attachment } from '../types';
+import { SpinnerBlock } from './shared/Spinner';
 import { RotateCcw, Check, Paperclip, AlertCircle, ChevronDown, ChevronUp, Edit3, AlertOctagon, Wrench, Siren, MessageSquare, Eye } from 'lucide-react';
 import { ReactionBar } from './ReactionBar';
 import { KnowledgeComments } from './KnowledgeComments';
@@ -309,8 +310,9 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: 'clamp(720px, 76%, 1240px)', margin: '0 auto' }}>
                 {loading ? (
                     <div style={{ textAlign: 'center', marginTop: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                        <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>{loadingMsg || 'データを読み込み中...'}</span>
+                        <SpinnerBlock />
+                        {/* 輪だけを出す。起動待ちが長いとき（8 秒〜）だけ理由を添える */}
+                        {loadingMsg && <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>{loadingMsg}</span>}
                     </div>
                 ) : data.length === 0 ? (
                     <p style={{ textAlign: 'center', color: '#94a3b8', marginTop: '40px' }}>データがありません</p>

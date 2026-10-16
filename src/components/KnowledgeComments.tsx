@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { MessageSquare, Send, Trash2 } from 'lucide-react';
+import { Spinner } from './shared/Spinner';
 import { KnowledgeComment, User } from '../types';
 import { apiClient } from '../api/client';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
@@ -136,7 +137,7 @@ export const KnowledgeComments: React.FC<KnowledgeCommentsProps> = ({ knowledgeI
             </div>
 
             {loading ? (
-                <div style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>読み込み中...</div>
+                <div style={{ display: 'flex' }}><Spinner size={16} /></div>
             ) : comments.length === 0 ? (
                 <div style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>
                     まだコメントはありません。「助かりました」「うちでも同じ事象がありました」など気軽にどうぞ。

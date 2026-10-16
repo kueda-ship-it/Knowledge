@@ -18,6 +18,7 @@ import { useRealtimeChannel } from './hooks/useRealtimeChannel';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import { UpdateBanner } from './components/UpdateBanner';
 import { ToastStack } from './components/ToastStack';
+import { SpinnerBlock } from './components/shared/Spinner';
 import { searchKnowledge } from './utils/searchUtils';
 import { encodeImageForExtraction } from './utils/screenshotExtract';
 
@@ -338,7 +339,7 @@ function App() {
     if (isLoading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                <div>読み込み中...</div>
+                <SpinnerBlock />
             </div>
         );
     }
@@ -451,7 +452,7 @@ function App() {
 
             {dashboardLoading && (
                 <div className="loading-overlay" style={{ zIndex: 9999 }}>
-                    <div style={{ color: 'var(--text)' }}>Loading...</div>
+                    <SpinnerBlock />
                 </div>
             )}
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Radio, FileText, MessageSquare } from 'lucide-react';
+import { SpinnerBlock } from '../components/shared/Spinner';
 import { ActivityEvent, MasterData, ReactionType } from '../types';
 import { apiClient } from '../api/client';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
@@ -196,9 +197,8 @@ export const Activity: React.FC<ActivityProps> = ({ onBack, onOpenKnowledge }) =
                     </div>
 
                     {loading ? (
-                        <div style={{ textAlign: 'center', marginTop: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                            <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>アクティビティを読み込み中...</span>
+                        <div style={{ marginTop: '60px' }}>
+                            <SpinnerBlock />
                         </div>
                     ) : events.length === 0 ? (
                         <p style={{ textAlign: 'center', color: '#94a3b8', marginTop: '40px' }}>まだアクティビティがありません</p>

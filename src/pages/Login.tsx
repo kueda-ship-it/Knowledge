@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Mail, Lock, ArrowRight, Loader, RotateCw } from 'lucide-react';
+import { Mail, Lock, ArrowRight, RotateCw } from 'lucide-react';
+import { Spinner } from '../components/shared/Spinner';
 import { useAuth } from '../contexts/AuthContext';
 
 type Mode = 'select' | 'login' | 'signup';
@@ -127,7 +128,7 @@ export const Login: React.FC = () => {
                                 className="auth-submit-btn"
                             >
                                 {retrying
-                                    ? <><Loader size={18} style={{ animation: 'spin 1s linear infinite' }} />準備中…</>
+                                    ? <><Spinner size={16} />準備中…</>
                                     : <><RotateCw size={16} />もう一度試す</>}
                             </button>
                             <button type="button" onClick={signOut} className="auth-back-link" style={{ marginLeft: 'auto', marginRight: 'auto' }}>
@@ -230,7 +231,7 @@ export const Login: React.FC = () => {
                                     style={{ marginTop: '20px' }}
                                 >
                                     {loading
-                                        ? <Loader size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                                        ? <Spinner size={16} />
                                         : mode === 'login' ? 'ログイン' : 'アカウント登録'
                                     }
                                 </button>
@@ -396,10 +397,6 @@ export const Login: React.FC = () => {
                 }
                 .auth-back-link:hover {
                     color: #60a5fa;
-                }
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
                 }
             `}</style>
         </div>

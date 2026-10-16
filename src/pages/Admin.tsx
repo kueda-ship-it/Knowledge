@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { MasterData, User } from '../types';
-import { Save, Trash2, Plus, Users, LayoutGrid, ShieldCheck, Mail, Info, ChevronRight, UsersRound, Loader, Lock } from 'lucide-react';
+import { Save, Trash2, Plus, Users, LayoutGrid, ShieldCheck, Mail, Info, ChevronRight, UsersRound, Lock } from 'lucide-react';
+import { Spinner } from '../components/shared/Spinner';
 import { apiClient, describeWriteError, PartialSaveError } from '../api/client';
 import { BackButton } from '../components/common/BackButton';
 import { GroupsManager } from '../components/GroupsManager';
@@ -308,7 +309,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                             disabled={!isDirty || isSaving}
                             aria-busy={isSaving}
                         >
-                            {isSaving ? <Loader size={18} className="save-btn-spin" /> : <Save size={18} />}
+                            {isSaving ? <Spinner size={16} /> : <Save size={18} />}
                             <span>{isSaving ? '保存中…' : '変更を保存'}</span>
                         </button>
                     </div>
@@ -1043,7 +1044,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 /* 保存中は編集を受け付けない（保存対象と画面の内容がずれないように） */
                 .admin-content-grid.is-saving { pointer-events: none; opacity: 0.7; transition: opacity 0.15s; }
                 .save-btn:disabled[aria-busy="true"] { background: var(--primary); opacity: 0.85; cursor: progress; }
-                .save-btn-spin { animation: spin 1s linear infinite; }
 
                 /* Buttons */
                 .glass-icon-btn {
@@ -1104,16 +1104,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
 
                 .pulse {
                     animation: pulse 2s infinite;
-                }
-
-                /* Spinner locally defined as well just in case */
-                .spinner {
-                    width: 40px;
-                    height: 40px;
-                    border: 4px solid rgba(255,255,255,0.1);
-                    border-left-color: var(--primary);
-                    border-radius: 50%;
-                    animation: spin 1s linear infinite;
                 }
 
                 @media (max-width: 1400px) {

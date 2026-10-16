@@ -1,4 +1,5 @@
 import React from 'react';
+import { Spinner } from '../shared/Spinner';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -33,16 +34,7 @@ export const Button: React.FC<ButtonProps> = ({
         >
             {icon && <span style={{ display: 'flex' }}>{icon}</span>}
             {children}
-            {loading && (
-                <div style={{
-                    width: '14px',
-                    height: '14px',
-                    border: '2px solid currentColor',
-                    borderTopColor: 'transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 0.8s linear infinite'
-                }} />
-            )}
+            {loading && <Spinner size={16} />}
         </button>
     );
 };

@@ -237,8 +237,15 @@ export function describeWriteError(e: unknown, action: string): string {
     return `${action}に失敗しました（${(e as Error)?.message ?? String(e)}）。`;
 }
 
+// Knowledge のログイン ID が共有 profiles.id とずれていたら、Knowledge 側の auth ユーザーを共有 id に付け替える。
+// 'realigned' のときは今のセッションが使えなくなるので、サインインし直す。
+export async function realignAuthId(): Promise<'ok' | 'none' | 'realigned'> {
+    const res = await restWrite('/rest/v1/rpc/knl_realign_auth_id', { method: 'POST', body: {} });
+    return await res.json();
+}
+
 // profiles は共有 Supabase の FDW 外部テーブルで RLS が効かないため、書き込みは権限チェック付きの RPC だけにする。
-// 自分の行が無いとき、メール完全一致の事前登録行を claim するか、viewer で新規作成する。
+// 自分の行が無いとき、viewer で新規作成する（共有側の行の id は書き換えない）。
 export async function claimProfile(): Promise<Record<string, any> | null> {
     const res = await restWrite('/rest/v1/rpc/knl_claim_profile', { method: 'POST', body: {} });
     const rows = await res.json();

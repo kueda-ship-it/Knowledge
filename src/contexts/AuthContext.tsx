@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import { claimProfile, describeWriteError } from '../api/client'
+import { claimProfile, describeWriteError, realignAuthId } from '../api/client'
 import type { User } from '../types'
 
 interface AuthContextType {
@@ -28,7 +28,33 @@ const AuthContext = createContext<AuthContextType>({
   signOut: () => {},
 })
 
-type ProfileResult = { user: User | null; error: string | null }
+type ProfileResult = { user: User | null; error: string | null; reSignIn?: boolean }
+
+// ID の付け替え後に自動でサインインし直したか。2 回目は付け替えずにエラーを出す（無限リダイレクト防止）
+const REALIGN_KEY = 'knl_auth_realigned'
+
+function startMicrosoftSignIn() {
+  supabase.auth.signInWithOAuth({
+    provider: 'azure',
+    options: {
+      scopes: 'email profile openid Files.ReadWrite User.Read',
+      redirectTo: window.location.origin,
+      queryParams: { response_type: 'code' },
+    },
+  })
+}
+
+// supabase-js の auth ロックが詰まると signOut も返ってこないため、ローカルのセッションは同期的に消す
+function clearLocalAuth() {
+  try {
+    const keys = Object.keys(localStorage)
+    for (const k of keys) {
+      if (k.startsWith('sb-') || k === 'supabase.auth.token') localStorage.removeItem(k)
+    }
+    sessionStorage.removeItem('microsoft_graph_token')
+    localStorage.removeItem('microsoft_graph_token')
+  } catch { /* noop */ }
+}
 
 async function fetchProfile(session: Session): Promise<ProfileResult> {
   const { data, error } = await supabase
@@ -51,8 +77,11 @@ async function fetchProfile(session: Session): Promise<ProfileResult> {
     }
   }
 
-  // id 一致なし → RPC で事前登録行（メール完全一致）を claim するか、viewer で新規作成する
+  // id 一致なし → 共有側にメール一致の行があれば Knowledge のログイン ID をその id に付け替える。無ければ viewer で新規作成
   try {
+    if (await realignAuthId() === 'realigned') {
+      return { user: null, error: null, reSignIn: true }
+    }
     const claimed = await claimProfile()
     if (!claimed) {
       return { user: null, error: 'プロフィールを準備できませんでした。もう一度お試しください。' }
@@ -69,7 +98,7 @@ async function fetchProfile(session: Session): Promise<ProfileResult> {
       error: null,
     }
   } catch (e) {
-    console.error('[Auth] claimProfile failed:', e)
+    console.error('[Auth] profile setup failed:', e)
     return { user: null, error: describeWriteError(e, 'プロフィールの準備') }
   }
 }
@@ -80,13 +109,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [profileError, setProfileError] = useState<string | null>(null)
 
-  const applyProfile = useCallback(async (s: Session) => {
-    const result = await fetchProfile(s).catch((e): ProfileResult => {
+  // 戻り値 true = サインインし直すために画面を離れる
+  const applyProfile = useCallback(async (s: Session): Promise<boolean> => {
+    let result = await fetchProfile(s).catch((e): ProfileResult => {
       console.error('[Auth] fetchProfile error:', e)
       return { user: null, error: describeWriteError(e, 'プロフィールの読み込み') }
     })
+    if (result.reSignIn) {
+      if (!sessionStorage.getItem(REALIGN_KEY)) {
+        sessionStorage.setItem(REALIGN_KEY, '1')
+        setIsLoading(true)
+        clearLocalAuth()
+        startMicrosoftSignIn()
+        return true
+      }
+      result = { user: null, error: 'サインインし直しても社員マスタの ID とそろいませんでした。Admin に連絡してください。' }
+    }
+    if (result.user) sessionStorage.removeItem(REALIGN_KEY)
     setUser(result.user)
     setProfileError(result.error)
+    return false
   }, [])
 
   useEffect(() => {
@@ -105,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const init = async () => {
+      let redirecting = false
       try {
         const { data } = await supabase.auth.getSession()
         if (!mounted) return
@@ -113,13 +156,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           sessionStorage.setItem('microsoft_graph_token', data.session.provider_token)
         }
         if (data.session && mounted) {
-          await applyProfile(data.session)
+          redirecting = await applyProfile(data.session)
         }
       } catch (e) {
         console.error('[Auth] init error:', e)
       } finally {
         clearTimeout(fallback)
-        if (mounted) setIsLoading(false)
+        if (mounted && !redirecting) setIsLoading(false)
       }
     }
 
@@ -188,16 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const signInWithMicrosoft = () => {
-    supabase.auth.signInWithOAuth({
-      provider: 'azure',
-      options: {
-        scopes: 'email profile openid Files.ReadWrite User.Read',
-        redirectTo: window.location.origin,
-        queryParams: { response_type: 'code' },
-      },
-    })
-  }
+  const signInWithMicrosoft = startMicrosoftSignIn
 
   const signInWithEmail = async (email: string, password: string): Promise<{ error: string | null }> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -239,15 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ローカルのセッションストレージを同期的に消してから再読み込みすることで、
   // どんな状態からでも確実にログイン画面に戻れるようにする。
   const signOut = () => {
-    try {
-      // sb-<ref>-auth-token など supabase 由来の localStorage キーを全消し
-      const keys = Object.keys(localStorage)
-      for (const k of keys) {
-        if (k.startsWith('sb-') || k === 'supabase.auth.token') localStorage.removeItem(k)
-      }
-      sessionStorage.removeItem('microsoft_graph_token')
-      localStorage.removeItem('microsoft_graph_token')
-    } catch { /* noop */ }
+    clearLocalAuth()
 
     // サインアウトを fire-and-forget でサーバーにも通知 (失敗しても気にしない)
     supabase.auth.signOut().catch(() => { /* noop */ })

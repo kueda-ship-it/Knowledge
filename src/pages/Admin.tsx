@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { MasterData, User } from '../types';
 import { Save, Trash2, Plus, Users, LayoutGrid, ShieldCheck, Mail, Info, ChevronRight, UsersRound, Lock } from 'lucide-react';
 import { Spinner } from '../components/shared/Spinner';
+import { Avatar } from '../components/shared/Avatar';
 import { apiClient, describeWriteError, PartialSaveError } from '../api/client';
 import { BackButton } from '../components/common/BackButton';
 import { GroupsManager } from '../components/GroupsManager';
@@ -19,8 +20,6 @@ interface AdminProps {
 const MASTERS_CACHE_KEY = 'knowledge_masters_v2';
 
 const ELEVATED_ROLE_REASON = 'manager 以上のロールを付けたり変えたりできるのは Admin だけです';
-
-const getInitial = (name: string) => (name || '?').charAt(0).toUpperCase();
 
 interface UserRowProps {
     user: User;
@@ -43,11 +42,7 @@ const UserRow = React.memo(function UserRow({ user: u, index: i, roleOptions, ro
         <tr>
             <td>
                 <div className="user-info-cell">
-                    {u.avatarUrl ? (
-                        <img src={u.avatarUrl} alt="" className="avatar-img" />
-                    ) : (
-                        <div className="avatar-initials">{getInitial(u.name)}</div>
-                    )}
+                    <Avatar name={u.name} url={u.avatarUrl} size="lg" />
                     <input
                         type="text"
                         className="user-name user-name-input"
@@ -979,25 +974,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onBack }) => {
                 }
 
                 .user-name { font-weight: 700; font-size: 0.9rem; }
-
-                .avatar-img, .avatar-initials {
-                    width: 36px;
-                    height: 36px;
-                    border-radius: 50%;
-                    object-fit: cover;
-                    flex-shrink: 0;
-                }
-
-                .avatar-initials {
-                    background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 75%, white), var(--primary));
-                    color: white;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 0.8rem;
-                    font-weight: 700;
-                    border: 2px solid var(--glass-border);
-                }
 
                 .email-cell { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.85rem; }
                 .muted-icon { opacity: 0.6; }

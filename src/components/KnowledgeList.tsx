@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KnowledgeItem, User, ReactionType, Attachment } from '../types';
 import { SpinnerBlock } from './shared/Spinner';
+import { Avatar } from './shared/Avatar';
 import { RotateCcw, Check, Paperclip, AlertCircle, ChevronDown, ChevronUp, Edit3, AlertOctagon, Wrench, Siren, MessageSquare, Eye } from 'lucide-react';
 import { ReactionBar } from './ReactionBar';
 import { KnowledgeComments } from './KnowledgeComments';
@@ -142,8 +143,6 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
         const u = users.find(user => user.name === name);
         return u?.avatarUrl;
     };
-
-    const getInitial = (name: string) => name.charAt(0).toUpperCase();
 
     // カードの展開状態 (展開すると事象・対処が読み取り専用で見える)
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -356,13 +355,7 @@ export const KnowledgeList: React.FC<KnowledgeListProps> = ({
                                             minWidth: 0, overflow: 'hidden', flexShrink: 1,
                                             cursor: onAuthorClick ? 'pointer' : 'default',
                                         }}>
-                                        {getAuthorAvatar(item.author) ? (
-                                            <img src={getAuthorAvatar(item.author)} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                                        ) : (
-                                            <div className="user-avatar-fallback" style={{ width: '36px', height: '36px', fontSize: '0.95rem', flexShrink: 0 }}>
-                                                {getInitial(item.author)}
-                                            </div>
-                                        )}
+                                        <Avatar name={item.author} url={getAuthorAvatar(item.author)} size="lg" />
                                         <div style={{ minWidth: 0, overflow: 'hidden' }}>
                                             <div style={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.3, color: '#e2e8f0', overflowWrap: 'anywhere' }}>{item.author}</div>
                                             <div className="num" style={{ fontSize: '0.72rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>

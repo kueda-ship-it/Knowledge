@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MessageSquare, Send, Trash2 } from 'lucide-react';
 import { Spinner } from './shared/Spinner';
+import { Avatar } from './shared/Avatar';
 import { KnowledgeComment, User } from '../types';
 import { apiClient } from '../api/client';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
@@ -28,8 +29,6 @@ interface KnowledgeCommentsProps {
     // 件数変化を親へ通知 (一覧カードのバッジ更新用、省略可)
     onCountChange?: (count: number) => void;
 }
-
-const getInitial = (name: string) => name.charAt(0).toUpperCase();
 
 export const KnowledgeComments: React.FC<KnowledgeCommentsProps> = ({ knowledgeId, user, usersMaster, onCountChange }) => {
     const [comments, setComments] = useState<KnowledgeComment[]>([]);
@@ -149,13 +148,7 @@ export const KnowledgeComments: React.FC<KnowledgeCommentsProps> = ({ knowledgeI
                         const avatar = avatarOf(c.author_id);
                         return (
                             <div key={c.id} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                                {avatar ? (
-                                    <img src={avatar} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, marginTop: '2px' }} />
-                                ) : (
-                                    <div className="user-avatar-fallback" style={{ width: 24, height: 24, fontSize: '0.7rem', flexShrink: 0, marginTop: '2px' }}>
-                                        {getInitial(name)}
-                                    </div>
-                                )}
+                                <Avatar name={name} url={avatar} size="md" />
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)' }}>{name}</span>

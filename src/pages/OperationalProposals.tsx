@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, Clock, AlertCircle, User as UserIcon, Calendar, MessageSquare, Tag, ArrowUpDown, Hash, Plus, ArrowLeft, Edit2, Send, X, Check, Gavel, Trash2, RotateCcw, CheckSquare, Square, ListChecks, UserCheck, ImagePlus, Image as ImageIcon } from 'lucide-react';
 import { apiClient, uploadProposalImage } from '../api/client';
 import { Spinner, SpinnerBlock } from '../components/shared/Spinner';
+import { Avatar, type AvatarSize } from '../components/shared/Avatar';
 import { makeThumbnail } from '../utils/imageThumbnail';
 import { hasInlineImage, insertImageMarkup, splitInlineImages, stripInlineImages } from '../utils/inlineImages';
 import { supabase } from '../lib/supabase';
@@ -936,11 +937,9 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
     const isProposalAuthor = !!user && !!selectedProposal && (selectedProposal.author?.trim() === user.name?.trim());
 
     // プルダウン用のアバターノード (画像 or 頭文字フォールバック)
-    const userAvatarNode = (u: User | undefined, size = 20): React.ReactNode => {
+    const userAvatarNode = (u: User | undefined, size: AvatarSize = 'sm'): React.ReactNode => {
         if (!u) return null;
-        return u.avatarUrl
-            ? <img src={u.avatarUrl} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-            : <div className="user-avatar-fallback" style={{ width: size, height: size, fontSize: size * 0.45, flexShrink: 0 }}>{(u.name || '?').charAt(0)}</div>;
+        return <Avatar name={u.name} url={u.avatarUrl} size={size} />;
     };
 
     // 担当プルダウンの選択肢 (アバター付き)。manager は候補プール、起案者本人は自分のみ。
@@ -949,7 +948,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         const toOpt = (u: User): GlassSelectOption => ({
             value: u.id,
             label: u.leader ? `${u.name}（${u.leader}）` : u.name,
-            icon: userAvatarNode(u, 20),
+            icon: userAvatarNode(u, 'sm'),
         });
         if (canAssignAny) {
             return [...base, ...assigneeCandidates(category).map(toOpt)];
@@ -1145,20 +1144,14 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
         <BackButton onClick={onClick} />
     );
 
-    const UserIdentity: React.FC<{ name: string | null | undefined; size?: number }> = ({ name, size = 20 }) => {
+    const UserIdentity: React.FC<{ name: string | null | undefined; size?: AvatarSize }> = ({ name, size = 'sm' }) => {
         const raw = (name ?? '').trim();
         const targetUser = raw ? resolveProfileByName(usersMaster, raw) : undefined;
         const displayName = targetUser?.name || raw || '—';
 
         return (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
-                {targetUser?.avatarUrl ? (
-                    <img src={targetUser.avatarUrl} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--glass-border)', flexShrink: 0 }} />
-                ) : (
-                    <div className="user-avatar-fallback" style={{ width: size, height: size, fontSize: size * 0.42, flexShrink: 0 }}>
-                        {displayName.charAt(0)}
-                    </div>
-                )}
+                <Avatar name={displayName} url={targetUser?.avatarUrl} size={size} />
                 <span style={{ fontSize: '0.85rem', lineHeight: 1.3, overflowWrap: 'anywhere', minWidth: 0 }}>{displayName}</span>
             </div>
         );
@@ -1506,7 +1499,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 )}
                                                 {/* 投稿者 (全行・左寄せ・名前は省略せず折り返す) */}
                                                 <div style={{ gridColumn: '5', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, color: 'var(--text-dim)' }}>
-                                                    <UserIdentity name={proposal.author} size={18} />
+                                                    <UserIdentity name={proposal.author} size="sm" />
                                                 </div>
                                                 {/* 担当者 (全行・左寄せ。割当後7日 未着手で点滅して督促) */}
                                                 <div style={{ gridColumn: '6', gridRow: spanRows, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
@@ -1520,13 +1513,10 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                                     display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0,
                                                                     ...(stale ? { animation: 'proposalStaleBlink 1.1s ease-in-out infinite' } : {}),
                                                                 }}>
-                                                                {a?.avatarUrl ? (
-                                                                    <img src={a.avatarUrl} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: stale ? '2px solid #f59e0b' : '1px solid var(--glass-border)' }} />
-                                                                ) : (
-                                                                    <div className="user-avatar-fallback" style={{ width: 22, height: 22, fontSize: '0.65rem', flexShrink: 0, border: stale ? '2px solid #f59e0b' : undefined }}>
-                                                                        {(a?.name ?? '?').charAt(0)}
-                                                                    </div>
-                                                                )}
+                                                                {/* 7日以上未着手は写真の外側に琥珀色の輪（Avatar 本体は共通のまま） */}
+                                                                <span style={{ display: 'inline-flex', flexShrink: 0, borderRadius: '50%', boxShadow: stale ? '0 0 0 2px #f59e0b' : undefined }}>
+                                                                    <Avatar name={a?.name} url={a?.avatarUrl} size="sm" />
+                                                                </span>
                                                                 <span style={{ fontSize: '0.78rem', lineHeight: 1.3, color: stale ? '#fbbf24' : 'var(--text-dim)', overflowWrap: 'anywhere', minWidth: 0 }}>{a?.name ?? '不明'}</span>
                                                                 {stale && <AlertCircle size={12} style={{ color: '#f59e0b', flexShrink: 0 }} />}
                                                             </div>
@@ -1907,7 +1897,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                                     </div>
                                                                 ) : p.assignee_id ? (
                                                                     <div style={{ flexShrink: 0 }}>
-                                                                        <UserIdentity name={usersMaster.find(u => u.id === p.assignee_id)?.name ?? ''} size={20} />
+                                                                        <UserIdentity name={usersMaster.find(u => u.id === p.assignee_id)?.name ?? ''} size="sm" />
                                                                     </div>
                                                                 ) : null}
                                                                 {/* 編集 (自分の項目 or 管理者) */}
@@ -2133,7 +2123,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 ) : (
                                                     <div style={{ ...blockStyle, border: '1px solid rgba(52,211,153,0.25)', background: 'rgba(52,211,153,0.05)', padding: '12px 28px' }}>
                                                         {assignee ? (
-                                                            <UserIdentity name={assignee.name} size={24} />
+                                                            <UserIdentity name={assignee.name} size="md" />
                                                         ) : (
                                                             <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>未割当</span>
                                                         )}
@@ -2241,7 +2231,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <span style={{ fontSize: '0.75rem' }}>起案者</span>
-                                    <UserIdentity name={selectedProposal.author} size={28} />
+                                    <UserIdentity name={selectedProposal.author} size="md" />
                                 </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2260,7 +2250,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                                             <span style={{ fontSize: '0.75rem' }}>最終更新</span>
-                                            <UserIdentity name={updater?.name ?? ''} size={28} />
+                                            <UserIdentity name={updater?.name ?? ''} size="md" />
                                             {updatedAt && (
                                                 <span className="num" style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '2px' }}>
                                                     {updatedAt.toLocaleDateString()} {updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -2296,7 +2286,7 @@ export const OperationalProposals: React.FC<ProposalsProps> = ({ onBack, user, i
                                                 background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
                                             }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                                                    <UserIdentity name={c.author_name ?? ''} size={22} />
+                                                    <UserIdentity name={c.author_name ?? ''} size="sm" />
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                         <span className="num" style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
                                                             {when.toLocaleDateString()} {when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

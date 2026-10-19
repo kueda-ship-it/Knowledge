@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { supabaseRealtime } from '../lib/supabaseRealtime';
 import { supabaseEquipment } from '../lib/supabaseEquipment';
 import { KnowledgeItem, MasterData, User, Attachment, EditHistory, AppNotification, KnowledgeGroup, ChatAction, OperationalProposal, ProposalProblem, ReactionType, KnowledgeComment, ActivityEvent } from '../types';
+import { fetchAllPages, pagedPath } from '../utils/fetchAllPages';
 
 // localStorage から JWT と有効期限を直接読む (supabase-js の auth ロック待ち回避)。
 // supabase-js v2 の保存形式は access_token / expires_at(秒) を持つ。
@@ -149,6 +150,17 @@ async function rawRest(
         }
     }
     return res;
+}
+
+// 1000 行を超えうる一覧・マスタの読み取り。1000 行ずつ区切って最後まで読む（設計基準 M38）。
+// PostgREST は 1 回 1000 行で黙って切るため。path には一意になる列まで含めた order= を必ず付ける。
+// 失敗時の文言は従来どおり「<label>に失敗 (status): 本文」。
+async function rawRestGetAll<T>(path: string, label: string): Promise<T[]> {
+    return fetchAllPages<T>(async (offset, limit) => {
+        const res = await rawRest(pagedPath(path, offset, limit), { method: 'GET' });
+        if (!res.ok) throw new Error(`${label}に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
+        return ((await res.json()) as T[]) ?? [];
+    });
 }
 
 const WRITE_TIMEOUT_MS = 15000;
@@ -387,11 +399,10 @@ export const apiClient = {
     // ハングし「接続中...」のまま固まる事例があるため (write 系と同じ既知問題)。
     async fetchAll(currentUserId?: string): Promise<KnowledgeItem[]> {
         const select = 'id,title,machine,property,req_num,category,incidents,tags,content,phenomenon,countermeasure,status,record_type,created_at,updated_at,author,updated_by,claim_level,attachments,knowledge_reactions(type,user_id)';
-        const res = await rawRest(`/rest/v1/knowledge?select=${select}&order=created_at.desc`, { method: 'GET' });
-        if (!res.ok) throw new Error(`ナレッジの取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
-        const data = (await res.json()) as any[];
+        // 1000 件を超えても全件読む (id を同時刻の並びの決め手にする)
+        const data = await rawRestGetAll<any>(`/rest/v1/knowledge?select=${select}&order=created_at.desc,id.desc`, 'ナレッジの取得');
 
-        return (data ?? []).map(row => {
+        return data.map(row => {
             const item = toItem(row);
             applyReactionAggregates(item, (row.knowledge_reactions as any[]) || [], currentUserId);
             return item;
@@ -420,11 +431,13 @@ export const apiClient = {
             if (!res.ok) throw new Error(`${label}の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
             return (await res.json()) as any[];
         };
+        // インシデント・区分マスタは十数件で増えないので 1 回で読む。
+        // ユーザーマスタ (共有 profiles) と担当区分は人数とともに増えるので、1000 行ずつ全件読む
         const [incidents, categories, profiles, profCats] = await Promise.all([
             getJson('/rest/v1/master_incidents?select=name&order=name', 'インシデントマスタ'),
             getJson('/rest/v1/master_categories?select=name&order=name', '区分マスタ'),
-            getJson('/rest/v1/profiles?select=id,email,display_name,knl_role,avatar_url,grp:group,leader&order=display_name', 'ユーザーマスタ'),
-            getJson('/rest/v1/profile_categories?select=user_id,category', '担当区分'),
+            rawRestGetAll<any>('/rest/v1/profiles?select=id,email,display_name,knl_role,avatar_url,grp:group,leader&order=display_name,id', 'ユーザーマスタの取得'),
+            rawRestGetAll<any>('/rest/v1/profile_categories?select=user_id,category&order=user_id,category', '担当区分の取得'),
         ]);
 
         const catsByUser = new Map<string, string[]>();
@@ -601,10 +614,9 @@ export const apiClient = {
     },
 
     // 一覧カードのコメント数バッジ用: 全コメントを knowledge_id ごとに集計 (id のみ取得で軽量)
+    // コメントは増え続けるので 1000 行ずつ全件読む (切れると件数バッジが少なく出る)
     async fetchAllCommentCounts(): Promise<Record<string, number>> {
-        const res = await rawRest(`/rest/v1/knowledge_comments?select=knowledge_id`, { method: 'GET' });
-        if (!res.ok) throw new Error(`コメント数の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
-        const rows = (await res.json()) as Array<{ knowledge_id: string }>;
+        const rows = await rawRestGetAll<{ knowledge_id: string }>(`/rest/v1/knowledge_comments?select=knowledge_id&order=id`, 'コメント数の取得');
         const map: Record<string, number> = {};
         for (const r of rows) map[r.knowledge_id] = (map[r.knowledge_id] ?? 0) + 1;
         return map;
@@ -732,19 +744,15 @@ export const apiClient = {
 
     // フィードのタイトル解決用: 全ナレッジの id / title / author だけ軽量取得
     async fetchKnowledgeTitles(): Promise<Record<string, { title: string; author: string }>> {
-        const res = await rawRest(`/rest/v1/knowledge?select=id,title,author`, { method: 'GET' });
-        if (!res.ok) throw new Error(`タイトルの取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
-        const rows = (await res.json()) as Array<{ id: string; title: string; author: string }>;
+        const rows = await rawRestGetAll<{ id: string; title: string; author: string }>(`/rest/v1/knowledge?select=id,title,author&order=id`, 'タイトルの取得');
         const map: Record<string, { title: string; author: string }> = {};
         for (const r of rows) map[r.id] = { title: r.title, author: r.author };
         return map;
     },
 
-    // 全ナレッジの延べ閲覧数 (knowledge_id → total_views)
+    // 全ナレッジの延べ閲覧数 (knowledge_id → total_views)。ビューは 1 ナレッジ 1 行なので、ナレッジ数とともに増える
     async fetchViewCounts(): Promise<Record<string, number>> {
-        const res = await rawRest(`/rest/v1/knowledge_view_counts?select=knowledge_id,total_views`, { method: 'GET' });
-        if (!res.ok) throw new Error(`閲覧数の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
-        const rows = (await res.json()) as Array<{ knowledge_id: string; total_views: number }>;
+        const rows = await rawRestGetAll<{ knowledge_id: string; total_views: number }>(`/rest/v1/knowledge_view_counts?select=knowledge_id,total_views&order=knowledge_id`, '閲覧数の取得');
         const map: Record<string, number> = {};
         for (const r of rows) map[r.knowledge_id] = r.total_views;
         return map;
@@ -905,18 +913,17 @@ export const apiClient = {
     // Operational Proposals (運用提議)
     // Realtime 再接続ストーム中に supabase-js の auth ロックでハング (スピナー固まり) する事例が
     // あるため rawRest (PostgREST 直叩き) を使う。proposed_at 列が無ければ created_at にフォールバック。
+    // 提議は増え続けるので 1000 行ずつ全件読む (id を同時刻の並びの決め手にする)。
     async fetchProposals(): Promise<any[]> {
-        let res = await rawRest('/rest/v1/operational_proposals?select=*&order=proposed_at.desc.nullslast', { method: 'GET' });
-        if (!res.ok) {
-            console.warn('[fetchProposals] proposed_at 順で失敗、created_at でフォールバック:', res.status);
-            res = await rawRest('/rest/v1/operational_proposals?select=*&order=created_at.desc.nullslast', { method: 'GET' });
+        let data: any[];
+        try {
+            data = await rawRestGetAll<any>('/rest/v1/operational_proposals?select=*&order=proposed_at.desc.nullslast,id.desc', '提議の取得');
+        } catch (e) {
+            console.warn('[fetchProposals] proposed_at 順で失敗、created_at でフォールバック:', (e as Error)?.message);
+            data = await rawRestGetAll<any>('/rest/v1/operational_proposals?select=*&order=created_at.desc.nullslast,id.desc', '提議の取得');
         }
-        if (!res.ok) {
-            throw new Error(`提議の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
-        }
-        const data = (await res.json()) as any[];
-        console.log('[fetchProposals] loaded:', data?.length ?? 0, 'proposals');
-        return data ?? [];
+        console.log('[fetchProposals] loaded:', data.length, 'proposals');
+        return data;
     },
 
     async updateProposalStatus(id: string, status: string, userId?: string): Promise<void> {
@@ -1090,14 +1097,12 @@ export const apiClient = {
     },
 
     // 一覧カードの進捗バッジ用: 全提議の問題点を一括取得し proposal_id ごとに集計。
-    // 件数が多くなければ十分軽量 (proposal_id, done のみ取得)。
+    // 件数が多くなければ十分軽量 (proposal_id, done のみ取得)。1000 行を超えても全件読む
     async fetchAllProblemProgress(): Promise<Record<string, { done: number; total: number }>> {
-        const res = await rawRest(
-            `/rest/v1/operational_proposal_problems?select=proposal_id,done`,
-            { method: 'GET' },
+        const rows = await rawRestGetAll<{ proposal_id: string; done: boolean }>(
+            `/rest/v1/operational_proposal_problems?select=proposal_id,done&order=id`,
+            '進捗の取得',
         );
-        if (!res.ok) throw new Error(`進捗の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
-        const rows = (await res.json()) as Array<{ proposal_id: string; done: boolean }>;
         const map: Record<string, { done: number; total: number }> = {};
         for (const r of rows) {
             const e = map[r.proposal_id] ?? { done: 0, total: 0 };
@@ -1111,12 +1116,10 @@ export const apiClient = {
     // 一覧の「自分の担当」フィルタ用: 各提議の問題点項目に割り当てられた担当者 id を集約。
     // proposal_id -> assignee_id[] (重複なし)。項目レベルの担当も一覧で拾えるようにする。
     async fetchAllProblemAssignees(): Promise<Record<string, string[]>> {
-        const res = await rawRest(
-            `/rest/v1/operational_proposal_problems?select=proposal_id,assignee_id&assignee_id=not.is.null`,
-            { method: 'GET' },
+        const rows = await rawRestGetAll<{ proposal_id: string; assignee_id: string | null }>(
+            `/rest/v1/operational_proposal_problems?select=proposal_id,assignee_id&assignee_id=not.is.null&order=id`,
+            '担当の取得',
         );
-        if (!res.ok) throw new Error(`担当の取得に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
-        const rows = (await res.json()) as Array<{ proposal_id: string; assignee_id: string | null }>;
         const map: Record<string, string[]> = {};
         for (const r of rows) {
             if (!r.assignee_id) continue;
@@ -1127,13 +1130,12 @@ export const apiClient = {
     },
 
     async getNextProposalNo(category: string): Promise<string> {
-        // supabase-js 経由だと auth ロック詰まりで追加処理が止まるため rawRest で直叩き
-        const res = await rawRest(
-            `/rest/v1/operational_proposals?select=source_no&category=eq.${encodeURIComponent(category)}`,
-            { method: 'GET' },
+        // supabase-js 経由だと auth ロック詰まりで追加処理が止まるため rawRest で直叩き。
+        // 1000 件で切れると番号が重複するので全件読んで最大値を取る
+        const rows = await rawRestGetAll<{ source_no: string | null }>(
+            `/rest/v1/operational_proposals?select=source_no&category=eq.${encodeURIComponent(category)}&order=id`,
+            '採番',
         );
-        if (!res.ok) throw new Error(`採番に失敗 (${res.status}): ${await res.text().catch(() => '')}`);
-        const rows = (await res.json()) as Array<{ source_no: string | null }>;
         const maxNo = rows.reduce((max, row) => {
             const n = parseInt(row.source_no || '0', 10);
             return n > max ? n : max;

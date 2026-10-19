@@ -1252,20 +1252,39 @@ body[data-theme="liquid"] .cursor-hint-pill:not(.is-active):hover {
 .cursor-hint-danger:active { transform: translateY(0) scale(0.98); }
 
 /* ==================================================== */
-/* User Avatar Fallback — アバターがない場合のシアングリーン */
-/* サイズ・フォントサイズは呼び出し側で inline 指定              */
+/* 人の写真（Avatar）。原本: app-template components.css    */
+/* 無いときは頭文字。大きさは Avatar の size（20/28/36px）    */
+/* 頭文字は不透明の淡いシアン地に濃い文字（白文字はライトで    */
+/* コントラストが足りないため。3テーマとも 4.5:1 以上）        */
 /* ==================================================== */
-.user-avatar-fallback {
-  display: flex;
+.profile-avatar {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 75%, white), var(--primary));
-  color: #fff;
-  font-weight: 700;
-  border: 1px solid var(--glass-border, rgba(255,255,255,0.15));
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
+  cursor: default;
+}
+.avatar {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  box-sizing: border-box;
+  object-fit: cover;
+}
+.avatar-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in oklab, var(--primary) 18%, var(--bg));
+  border-color: color-mix(in oklab, var(--primary) 45%, transparent);
+  color: color-mix(in oklab, var(--primary) var(--accent-text-mix), var(--text));
+  font-family: var(--font-sans);
+  font-weight: 700;
   line-height: 1;
+  user-select: none;
 }
 
 /* 既存クラスの hover 補完 */

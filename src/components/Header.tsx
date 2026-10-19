@@ -3,6 +3,7 @@ import { User, AppNotification } from '../types';
 import { LogOut, Moon, Sun, Bell, Droplet } from 'lucide-react';
 import { roleColor, roleShort } from '../constants/roles';
 import { describeNotification } from '../constants/notifications';
+import { ProfileAvatar } from './shared/Avatar';
 
 interface HeaderProps {
     user: User | null;
@@ -53,13 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
-                    {user.avatarUrl ? (
-                         <img src={user.avatarUrl} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} />
-                    ) : (
-                         <div className="user-avatar-fallback" style={{ width: '28px', height: '28px', fontSize: '0.7rem' }}>
-                            {user.name.charAt(0).toUpperCase()}
-                         </div>
-                    )}
+                    <ProfileAvatar />
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1 }}>
                         <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>
                             {user.name}

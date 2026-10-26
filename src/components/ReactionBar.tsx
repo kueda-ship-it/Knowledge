@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ReactionType, User } from '../types';
 import { REACTION_META, REACTION_TYPES } from '../constants/reactions';
+import { Avatar } from './shared/Avatar';
 
 interface ReactionBarProps {
     counts: Partial<Record<ReactionType, number>>;
@@ -14,8 +15,6 @@ interface ReactionBarProps {
     // summary: 非ゼロのみのコンパクト表示 / full: 全種別のトグルボタン
     variant: 'summary' | 'full';
 }
-
-const getInitial = (name: string) => name.charAt(0).toUpperCase();
 
 export const ReactionBar: React.FC<ReactionBarProps> = ({
     counts,
@@ -85,17 +84,7 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({
                                 fontSize: '0.85rem',
                                 color: 'rgba(255,255,255,0.95)',
                             }}>
-                                {u?.avatarUrl ? (
-                                    <img
-                                        src={u.avatarUrl}
-                                        alt=""
-                                        style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                                    />
-                                ) : (
-                                    <div className="user-avatar-fallback" style={{ width: 24, height: 24, fontSize: '0.7rem' }}>
-                                        {getInitial(name)}
-                                    </div>
-                                )}
+                                <Avatar name={name} url={u?.avatarUrl} size="md" />
                                 <span>{name}</span>
                             </div>
                         );

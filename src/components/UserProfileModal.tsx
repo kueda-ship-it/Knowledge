@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { FileText, Eye, Heart } from 'lucide-react';
 import { GlassModal } from './common/GlassModal';
+import { Avatar } from './shared/Avatar';
 import { KnowledgeItem, User } from '../types';
 import { REACTION_TYPES, REACTION_META, reactionCountsOf, totalReactions } from '../constants/reactions';
 
@@ -16,8 +17,6 @@ interface UserProfileModalProps {
     viewCounts?: Record<string, number>;
     onItemClick?: (item: KnowledgeItem) => void;
 }
-
-const getInitial = (name: string) => name.charAt(0).toUpperCase();
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     open,
@@ -64,13 +63,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             onClose={onClose}
             title={profileUser.name}
             maxWidth={720}
-            icon={profileUser.avatarUrl ? (
-                <img src={profileUser.avatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
-            ) : (
-                <div className="user-avatar-fallback" style={{ width: 32, height: 32, fontSize: '0.8rem' }}>
-                    {getInitial(profileUser.name)}
-                </div>
-            )}
+            icon={<Avatar name={profileUser.name} url={profileUser.avatarUrl} size="lg" />}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {/* 所属グループ */}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Radio, FileText, MessageSquare } from 'lucide-react';
 import { SpinnerBlock } from '../components/shared/Spinner';
+import { Avatar } from '../components/shared/Avatar';
 import { ActivityEvent, MasterData, ReactionType } from '../types';
 import { apiClient } from '../api/client';
 import { useRealtimeChannel } from '../hooks/useRealtimeChannel';
@@ -32,7 +33,6 @@ function timeAgo(iso: string): string {
     return new Date(iso).toLocaleDateString();
 }
 
-const getInitial = (name: string) => name.charAt(0).toUpperCase();
 
 export const Activity: React.FC<ActivityProps> = ({ onBack, onOpenKnowledge }) => {
     const [events, setEvents] = useState<ActivityEvent[]>([]);
@@ -151,13 +151,7 @@ export const Activity: React.FC<ActivityProps> = ({ onBack, onOpenKnowledge }) =
                     <Icon size={12} />
                 </span>
                 {/* アクターのアバター */}
-                {avatar ? (
-                    <img src={avatar} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
-                ) : (
-                    <div className="user-avatar-fallback" style={{ width: 24, height: 24, fontSize: '0.7rem' }}>
-                        {getInitial(actorName || '?')}
-                    </div>
-                )}
+                <Avatar name={actorName} url={avatar} size="md" title={actorName || undefined} />
                 {/* 本文 */}
                 <div style={{
                     fontSize: '0.88rem', color: 'var(--text)', lineHeight: 1.5,

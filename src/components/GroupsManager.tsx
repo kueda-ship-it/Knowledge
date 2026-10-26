@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { User } from '../types';
 import { apiClient } from '../api/client';
 import { LayoutGrid, UserPlus, UserMinus } from 'lucide-react';
+import { Avatar } from './shared/Avatar';
 
 interface Props {
     user: User;
@@ -143,17 +144,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                                 background: 'var(--btn-icon-bg)',
                                 border: '1px solid var(--glass-border)',
                             }}>
-                                {m.avatarUrl ? (
-                                    <img
-                                        src={m.avatarUrl}
-                                        alt={m.name}
-                                        style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                                    />
-                                ) : (
-                                    <div className="user-avatar-fallback" style={{ width: 26, height: 26, fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
-                                        {m.name.charAt(0).toUpperCase()}
-                                    </div>
-                                )}
+                                <Avatar name={m.name} url={m.avatarUrl} size="md" />
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontSize: '0.86rem', lineHeight: 1.3, color: 'var(--text)', overflowWrap: 'anywhere' }}>{m.name}</div>
                                     <div style={{ fontSize: '0.72rem', color: 'var(--muted)', overflowWrap: 'anywhere' }}>{m.email}</div>
@@ -195,17 +186,7 @@ export const GroupsManager: React.FC<Props> = ({ user: _user, users, categories,
                                 fontSize: '0.83rem',
                             }}>
                                 <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    {u.avatarUrl ? (
-                                        <img
-                                            src={u.avatarUrl}
-                                            alt={u.name}
-                                            style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                                        />
-                                    ) : (
-                                        <div className="user-avatar-fallback" style={{ width: 26, height: 26, fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
-                                            {u.name.charAt(0).toUpperCase()}
-                                        </div>
-                                    )}
+                                    <Avatar name={u.name} url={u.avatarUrl} size="md" />
                                     <span style={{ color: 'var(--text)', lineHeight: 1.3, overflowWrap: 'anywhere', minWidth: 0 }}>{u.name}</span>
                                     {(u.categories?.length ?? 0) > 0 && (
                                         <span style={{ fontSize: '0.7rem', color: 'var(--muted)', background: 'var(--btn-icon-bg)', padding: '1px 7px', borderRadius: 6, flexShrink: 0 }}>
